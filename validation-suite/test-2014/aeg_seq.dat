@@ -1,0 +1,49 @@
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+area_element_group_sequence_elementgroup  0  1 2
+area_element_group_sequence_element_group  0  1 2
+area_element_group_sequence_geometry  0  -geometry_brick 1
+area_element_group_sequence_geometry_method  0  -any
+area_element_group_sequence_time  0  0 0.1
+bounda_time  0  0 0 100 0
+bounda_time  1  0 -0.01 100 -0.01
+bounda_unknown  0  -ra 1 2 -ra -velx -vely
+bounda_unknown  1  -ra 3 4 -ra -vely
+control_timestep  0  0.05 0.15
+element  1  -quad4 1 2 3 4
+element_group  1  2
+geometry_brick  1  0.5 0.5 0 1.5 1.5 3 0.01
+group_materi_density  1  1
+group_materi_density  2  1
+group_materi_elasti_poisson  1  0
+group_materi_elasti_poisson  2  0
+group_materi_elasti_young  1  1000
+group_materi_elasti_young  2  2000
+group_materi_memory  1  -updated_without_rotation
+group_materi_memory  2  -updated_without_rotation
+group_type  1  -materi
+group_type  2  -materi
+node  1  0 0
+node  2  1 0
+node  3  1 1
+node  4  0 1
+options_convection   -no
+options_inertia   -no
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_point  1  0.5 0.5
+target_item  1  -post_point_dof 1 -sigyy
+target_value  1  -2 0.2
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

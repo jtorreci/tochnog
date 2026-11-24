@@ -1,0 +1,35 @@
+( F5 T4 U9e: the inactive element 2 is removed again at index 20 with
+  control_mesh_remove_really -yes: it is really removed (= Professional
+  02-08-2026). )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 4 0. 1.
+node 5 1. 1.
+node 7 0. 2.
+node 8 1. 2.
+element 1 -quad4 1 2 4 5
+element 2 -quad4 4 5 7 8
+element 3 -quad4 4 5 7 8
+element_group 2 2
+element_group 3 1
+group_type -ra 0 1 2 -ra -materi
+group_materi_elasti_young -ra 0 1 2 -ra 1000.
+group_materi_elasti_poisson -ra 0 1 2 -ra 0.2
+group_materi_density -ra 0 1 2 -ra 1.
+force_gravity 0. -10.
+bounda_dof 1 -ra 1 2 -ra -velx -vely
+control_mesh_remove 10 -method1 2 1
+control_mesh_remove_really 10 -no
+control_timestep 10 1. 1.
+control_print_database 10 -yes
+control_mesh_remove 20 -method1 2 1
+control_mesh_remove_really 20 -yes
+control_timestep 20 1. 1.
+control_print_database 20 -yes
+end_data

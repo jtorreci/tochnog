@@ -1,0 +1,96 @@
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 8
+end_initia
+
+bounda_time  0  0 0.005 100 0.005
+bounda_time  1  0 -0.005 100 -0.005
+bounda_time  2  0 0 100 0
+bounda_time  3  0 0.005 100 0.005
+bounda_time  4  0 0.005 100 0.005
+bounda_time  5  0 0 100 0
+bounda_time  6  0 -0.005 100 -0.005
+bounda_time  7  0 -0.005 100 -0.005
+bounda_time  8  0 0 100 0
+bounda_time  9  0 -0.005 100 -0.005
+bounda_time  10  0 0.005 100 0.005
+bounda_time  11  0 0 100 0
+bounda_time  12  0 0.005 100 0.005
+bounda_time  13  0 -0.005 100 -0.005
+bounda_time  14  0 0 100 0
+bounda_time  15  0 0.005 100 0.005
+bounda_time  16  0 0.005 100 0.005
+bounda_time  17  0 0 100 0
+bounda_time  18  0 -0.005 100 -0.005
+bounda_time  19  0 -0.005 100 -0.005
+bounda_time  20  0 0 100 0
+bounda_time  21  0 -0.005 100 -0.005
+bounda_time  22  0 0.005 100 0.005
+bounda_time  23  0 0 100 0
+bounda_unknown  0  1 -velx
+bounda_unknown  1  1 -vely
+bounda_unknown  2  1 -velz
+bounda_unknown  3  2 -velx
+bounda_unknown  4  2 -vely
+bounda_unknown  5  2 -velz
+bounda_unknown  6  3 -velx
+bounda_unknown  7  3 -vely
+bounda_unknown  8  3 -velz
+bounda_unknown  9  4 -velx
+bounda_unknown  10  4 -vely
+bounda_unknown  11  4 -velz
+bounda_unknown  12  5 -velx
+bounda_unknown  13  5 -vely
+bounda_unknown  14  5 -velz
+bounda_unknown  15  6 -velx
+bounda_unknown  16  6 -vely
+bounda_unknown  17  6 -velz
+bounda_unknown  18  7 -velx
+bounda_unknown  19  7 -vely
+bounda_unknown  20  7 -velz
+bounda_unknown  21  8 -velx
+bounda_unknown  22  8 -vely
+bounda_unknown  23  8 -velz
+control_print_materi_stress_force  708  -all
+control_timestep  1  0.1 0.1
+element  1  -hex8 1 2 3 4 5 6 7 8
+element_group  1  0
+group_element_selective_reduced_integration  0  -yes
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0.3
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -updated_without_rotation
+group_type  0  -materi
+node  1  0 0 0
+node  2  1 0 0
+node  3  0 1 0
+node  4  1 1 0
+node  5  0 0 1
+node  6  1 0 1
+node  7  0 1 1
+node  8  1 1 1
+options_convection   -no
+options_inertia   -no
+options_mesh   -fixed_in_space -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_calcul   -materi_stress -force
+post_calcul_materi_stress_force_direction_include   1 0 0
+post_calcul_materi_stress_force_element_group   0
+post_calcul_materi_stress_force_reference_point   1000 0.5 0.5
+target_item  0  -node_dof 8 -velx
+target_value  0  -0.005 1e-08
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  5  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  6  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  7  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  8  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

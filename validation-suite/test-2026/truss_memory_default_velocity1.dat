@@ -1,0 +1,28 @@
+(F4 T6d C11, default group_truss_memory without materi_displacement
+ (velocity-integrated truss). Node 2 moves by (-0.5, 1): the truss rotates
+ and stretches. The Professional 02-08-2026 gives the -updated_linear
+ result without a group_truss_memory record (force -50 along the initial
+ axis, node 2 rhside velx +50); explicit -updated gives 10.4587. Old GNU
+ default: -updated.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+end_initia
+node 1 0 0
+node 2 1 0
+element 1 -truss 1 2
+group_type 0 -truss
+group_truss_area 0 1.
+group_truss_elasti_young 0 100.
+bounda_dof 1 1 -velx -vely
+bounda_dof 2 2 -velx
+bounda_time 2 0. -0.5 1. -0.5
+bounda_dof 3 2 -vely
+bounda_time 3 0. 1. 1. 1.
+control_timestep 10 0.1 1.
+target_item 0 -node_rhside 2 -velx
+target_value 0 50. 1.e-6
+target_item 1 -node_rhside 2 -vely
+target_value 1 0. 1.e-6
+end_data

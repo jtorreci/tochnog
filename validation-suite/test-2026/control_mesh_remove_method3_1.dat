@@ -1,0 +1,25 @@
+( F5 T4 U9f: -method3 (manual 6.229): element 2 has an mpc on every node
+  (each node is the constrained node of an mpc_node_number), so it is
+  removed; element 1 has a node without mpc (= Professional 02-08-2026). )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 2 0
+node 6 2 1
+element 1 -quad4 1 2 3 4
+element 2 -quad4 2 5 4 6
+mpc_node_number 1 2 -velx 1 -velx
+mpc_node_number 2 5 -velx 1 -velx
+mpc_node_number 3 4 -velx 1 -velx
+mpc_node_number 4 6 -velx 1 -velx
+control_mesh_remove 10 -method3
+group_type -ra 0 1 2 3 -ra -materi
+group_materi_elasti_young -ra 0 1 2 3 -ra 1.
+end_data

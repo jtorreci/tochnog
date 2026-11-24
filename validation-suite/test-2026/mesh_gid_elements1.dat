@@ -1,0 +1,46 @@
+(
+mesh_gid_* geometry records (manual Professional 6.818-6.853) and
+control_mesh_gid_batch (6.200), 2D surfaces: one surface for each element
+type of mesh_gid_surface_element (-tria3 ... -hex27; tet4 writes no
+element type, the quadratic types set Model(QuadraticType) 1 or 2), a
+surface without the record (triangles in 2D), structured surfaces by
+number and by size and point, line and surface conditions. build_safe.sh
+runs this test in a scratch copy without gid on the PATH and compares
+GidMeshBatch.bch byte by byte with mesh_gid_elements1.bch (= the file the
+Professional 02-08-2026 writes for this input).
+)
+echo -no
+number_of_space_dimensions 2
+end_initia
+mesh_gid_surface_line 1 1 2 3 4
+mesh_gid_surface_element 1 -tria3
+mesh_gid_surface_line 2 1 2 3 4
+mesh_gid_surface_element 2 -tria6
+mesh_gid_surface_line 3 1 2 3 4
+mesh_gid_surface_element 3 -quad4
+mesh_gid_surface_line 4 1 2 3 4
+mesh_gid_surface_element 4 -quad8
+mesh_gid_surface_line 5 1 2 3 4
+mesh_gid_surface_element 5 -quad9
+mesh_gid_surface_line 6 1 2 3 4
+mesh_gid_surface_element 6 -tet4
+mesh_gid_surface_line 7 1 2 3 4
+mesh_gid_surface_element 7 -tet10
+mesh_gid_surface_line 8 1 2 3 4
+mesh_gid_surface_element 8 -hex8
+mesh_gid_surface_line 9 1 2 3 4
+mesh_gid_surface_element 9 -hex20
+mesh_gid_surface_line 10 1 2 3 4
+mesh_gid_surface_element 10 -hex27
+mesh_gid_surface_line 11 1 2 3 4
+mesh_gid_surface_structured_nel 11 2 0 3 0
+mesh_gid_surface_structured_size 11 0.2
+mesh_gid_surface_element_group 11 2
+mesh_gid_assign_conditions_point 1 1 2 3
+mesh_gid_assign_conditions_point 2 7
+mesh_gid_assign_conditions_line 11 2
+mesh_gid_assign_conditions_line 12 5 6
+mesh_gid_assign_conditions_surface 21 11
+mesh_gid_size 0.2
+control_mesh_gid_batch 10 -yes
+end_data

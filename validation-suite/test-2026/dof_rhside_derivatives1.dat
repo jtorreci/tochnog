@@ -1,0 +1,47 @@
+( F4 T6a / BACKLOG C55: control_print_dof_rhside with the derivatives
+  initia [nder = 4, so the dof index iuknwn = ipuknwn*nder differs from
+  the principal index ipuknwn]. One quad4, 1000/0.2, bottom fixed in y,
+  left fixed in x, top pushed down with vely -0.01. NODE_RHSIDE holds
+  one value per principal unknown; the old GNU printed it with the dof
+  index: vely_rhside.31 = 0 [it printed the velx column] and the last
+  principal unknowns read past the record [ASan heap overflow, garbage
+  such as 4.7e-310 in disy_rhside.31]. The Professional 02-08-2026 and
+  the GNU without derivatives print vely_rhside.31 = -1.04166666667 at
+  the bottom nodes and +1.04166666667 at the top nodes and
+  sigyy_rhside.31 = -2.08333333333 at every node [build_safe.sh checks
+  the files]. )
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+element  1  -quad4 1 2 3 4
+group_type  0  -materi
+group_materi_elasti_young  0  1000
+group_materi_elasti_poisson  0  0.2
+group_materi_memory  0  -total_linear
+
+bounda_dof  0  1 -velx -vely
+bounda_time  0  0. 0. 100. 0.
+bounda_dof  1  2 -vely
+bounda_time  1  0. 0. 100. 0.
+bounda_dof  2  3 -velx
+bounda_time  2  0. 0. 100. 0.
+bounda_dof  3  3 -vely
+bounda_time  3  0. -0.01 100. -0.01
+bounda_dof  4  4 -vely
+bounda_time  4  0. -0.01 100. -0.01
+
+control_timestep  31  0.1 0.2
+control_print_dof_rhside  31  -yes
+
+target_item  0  -node_dof 4 -disy
+target_value  0  -0.002 1.e-8
+end_data

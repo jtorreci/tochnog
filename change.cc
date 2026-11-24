@@ -62,6 +62,13 @@ void change_geometry( long int task, double dtime, double time_current )
         for ( igeom=0; igeom<ngeom; igeom++ ) {
           geometry_name = geometry_entities[igeom*2+0];
           geometry_index = geometry_entities[igeom*2+1];
+          // a geometry_list holds node numbers (integers), not changeable
+          // geometry parameters; reject it before the GET (which would
+          // overflow idum)
+          if ( geometry_name==-GEOMETRY_LIST ) {
+            pri( "Sorry: CHANGE_GEOMETRY not available for GEOMETRY_LIST." );
+            exit(TN_EXIT_STATUS);
+          }
           db( geometry_name, geometry_index, idum, dval, length, VERSION_NORMAL, GET );
           if      ( geometry_name==-GEOMETRY_BRICK ) {
             nindex = 1;

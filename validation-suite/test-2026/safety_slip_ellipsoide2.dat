@@ -1,0 +1,226 @@
+(F5 T6 U6: rotated ellipsoid: middle 2 2 2, base1 1 1 0, base2 -1 1 0.5,
+ a b c 1.5 1 0.8, 8 x 8 angles. Normal: the normalized gradient
+ (r1/a^2, r2/b^2, r3/c^2) in the base; the result record writes the
+ normalized bases (0.7071067811865 0.7071067811865 0, -0.6666666666667
+ 0.6666666666667 0.3333333333333).
+ 3x3x3-node hex8 mesh of the cube [0,4]^3 under a uniform strain:
+ sigxx = sigyy = sigzz = -1, sigxy = 0.5, Mohr-Coulomb c 1, phi 30 deg
+ (elastic).
+ Fs 9.298529656311 = Professional 02-08-2026.)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 2 0 0
+node 3 4 0 0
+node 4 0 2 0
+node 5 2 2 0
+node 6 4 2 0
+node 7 0 4 0
+node 8 2 4 0
+node 9 4 4 0
+node 10 0 0 2
+node 11 2 0 2
+node 12 4 0 2
+node 13 0 2 2
+node 14 2 2 2
+node 15 4 2 2
+node 16 0 4 2
+node 17 2 4 2
+node 18 4 4 2
+node 19 0 0 4
+node 20 2 0 4
+node 21 4 0 4
+node 22 0 2 4
+node 23 2 2 4
+node 24 4 2 4
+node 25 0 4 4
+node 26 2 4 4
+node 27 4 4 4
+element 1 -hex8 1 2 4 5 10 11 13 14
+element 2 -hex8 2 3 5 6 11 12 14 15
+element 3 -hex8 4 5 7 8 13 14 16 17
+element 4 -hex8 5 6 8 9 14 15 17 18
+element 5 -hex8 10 11 13 14 19 20 22 23
+element 6 -hex8 11 12 14 15 20 21 23 24
+element 7 -hex8 13 14 16 17 22 23 25 26
+element 8 -hex8 14 15 17 18 23 24 26 27
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0. 1. 0 2. 0
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0. 1. 0 2. 0
+bounda_dof 2 1 -velz
+bounda_time 2 0. 0. 1. -0 2. -0
+bounda_dof 3 2 -velx
+bounda_time 3 0. 0. 1. -0.002 2. -0.002
+bounda_dof 4 2 -vely
+bounda_time 4 0. 0. 1. 0 2. 0
+bounda_dof 5 2 -velz
+bounda_time 5 0. 0. 1. -0 2. -0
+bounda_dof 6 3 -velx
+bounda_time 6 0. 0. 1. -0.004 2. -0.004
+bounda_dof 7 3 -vely
+bounda_time 7 0. 0. 1. 0 2. 0
+bounda_dof 8 3 -velz
+bounda_time 8 0. 0. 1. -0 2. -0
+bounda_dof 9 4 -velx
+bounda_time 9 0. 0. 1. 0.002 2. 0.002
+bounda_dof 10 4 -vely
+bounda_time 10 0. 0. 1. -0.002 2. -0.002
+bounda_dof 11 4 -velz
+bounda_time 11 0. 0. 1. -0 2. -0
+bounda_dof 12 5 -velx
+bounda_time 12 0. 0. 1. 0 2. 0
+bounda_dof 13 5 -vely
+bounda_time 13 0. 0. 1. -0.002 2. -0.002
+bounda_dof 14 5 -velz
+bounda_time 14 0. 0. 1. -0 2. -0
+bounda_dof 15 6 -velx
+bounda_time 15 0. 0. 1. -0.002 2. -0.002
+bounda_dof 16 6 -vely
+bounda_time 16 0. 0. 1. -0.002 2. -0.002
+bounda_dof 17 6 -velz
+bounda_time 17 0. 0. 1. -0 2. -0
+bounda_dof 18 7 -velx
+bounda_time 18 0. 0. 1. 0.004 2. 0.004
+bounda_dof 19 7 -vely
+bounda_time 19 0. 0. 1. -0.004 2. -0.004
+bounda_dof 20 7 -velz
+bounda_time 20 0. 0. 1. -0 2. -0
+bounda_dof 21 8 -velx
+bounda_time 21 0. 0. 1. 0.002 2. 0.002
+bounda_dof 22 8 -vely
+bounda_time 22 0. 0. 1. -0.004 2. -0.004
+bounda_dof 23 8 -velz
+bounda_time 23 0. 0. 1. -0 2. -0
+bounda_dof 24 9 -velx
+bounda_time 24 0. 0. 1. 0 2. 0
+bounda_dof 25 9 -vely
+bounda_time 25 0. 0. 1. -0.004 2. -0.004
+bounda_dof 26 9 -velz
+bounda_time 26 0. 0. 1. -0 2. -0
+bounda_dof 27 10 -velx
+bounda_time 27 0. 0. 1. 0 2. 0
+bounda_dof 28 10 -vely
+bounda_time 28 0. 0. 1. 0 2. 0
+bounda_dof 29 10 -velz
+bounda_time 29 0. 0. 1. -0.002 2. -0.002
+bounda_dof 30 11 -velx
+bounda_time 30 0. 0. 1. -0.002 2. -0.002
+bounda_dof 31 11 -vely
+bounda_time 31 0. 0. 1. 0 2. 0
+bounda_dof 32 11 -velz
+bounda_time 32 0. 0. 1. -0.002 2. -0.002
+bounda_dof 33 12 -velx
+bounda_time 33 0. 0. 1. -0.004 2. -0.004
+bounda_dof 34 12 -vely
+bounda_time 34 0. 0. 1. 0 2. 0
+bounda_dof 35 12 -velz
+bounda_time 35 0. 0. 1. -0.002 2. -0.002
+bounda_dof 36 13 -velx
+bounda_time 36 0. 0. 1. 0.002 2. 0.002
+bounda_dof 37 13 -vely
+bounda_time 37 0. 0. 1. -0.002 2. -0.002
+bounda_dof 38 13 -velz
+bounda_time 38 0. 0. 1. -0.002 2. -0.002
+bounda_dof 39 15 -velx
+bounda_time 39 0. 0. 1. -0.002 2. -0.002
+bounda_dof 40 15 -vely
+bounda_time 40 0. 0. 1. -0.002 2. -0.002
+bounda_dof 41 15 -velz
+bounda_time 41 0. 0. 1. -0.002 2. -0.002
+bounda_dof 42 16 -velx
+bounda_time 42 0. 0. 1. 0.004 2. 0.004
+bounda_dof 43 16 -vely
+bounda_time 43 0. 0. 1. -0.004 2. -0.004
+bounda_dof 44 16 -velz
+bounda_time 44 0. 0. 1. -0.002 2. -0.002
+bounda_dof 45 17 -velx
+bounda_time 45 0. 0. 1. 0.002 2. 0.002
+bounda_dof 46 17 -vely
+bounda_time 46 0. 0. 1. -0.004 2. -0.004
+bounda_dof 47 17 -velz
+bounda_time 47 0. 0. 1. -0.002 2. -0.002
+bounda_dof 48 18 -velx
+bounda_time 48 0. 0. 1. 0 2. 0
+bounda_dof 49 18 -vely
+bounda_time 49 0. 0. 1. -0.004 2. -0.004
+bounda_dof 50 18 -velz
+bounda_time 50 0. 0. 1. -0.002 2. -0.002
+bounda_dof 51 19 -velx
+bounda_time 51 0. 0. 1. 0 2. 0
+bounda_dof 52 19 -vely
+bounda_time 52 0. 0. 1. 0 2. 0
+bounda_dof 53 19 -velz
+bounda_time 53 0. 0. 1. -0.004 2. -0.004
+bounda_dof 54 20 -velx
+bounda_time 54 0. 0. 1. -0.002 2. -0.002
+bounda_dof 55 20 -vely
+bounda_time 55 0. 0. 1. 0 2. 0
+bounda_dof 56 20 -velz
+bounda_time 56 0. 0. 1. -0.004 2. -0.004
+bounda_dof 57 21 -velx
+bounda_time 57 0. 0. 1. -0.004 2. -0.004
+bounda_dof 58 21 -vely
+bounda_time 58 0. 0. 1. 0 2. 0
+bounda_dof 59 21 -velz
+bounda_time 59 0. 0. 1. -0.004 2. -0.004
+bounda_dof 60 22 -velx
+bounda_time 60 0. 0. 1. 0.002 2. 0.002
+bounda_dof 61 22 -vely
+bounda_time 61 0. 0. 1. -0.002 2. -0.002
+bounda_dof 62 22 -velz
+bounda_time 62 0. 0. 1. -0.004 2. -0.004
+bounda_dof 63 23 -velx
+bounda_time 63 0. 0. 1. 0 2. 0
+bounda_dof 64 23 -vely
+bounda_time 64 0. 0. 1. -0.002 2. -0.002
+bounda_dof 65 23 -velz
+bounda_time 65 0. 0. 1. -0.004 2. -0.004
+bounda_dof 66 24 -velx
+bounda_time 66 0. 0. 1. -0.002 2. -0.002
+bounda_dof 67 24 -vely
+bounda_time 67 0. 0. 1. -0.002 2. -0.002
+bounda_dof 68 24 -velz
+bounda_time 68 0. 0. 1. -0.004 2. -0.004
+bounda_dof 69 25 -velx
+bounda_time 69 0. 0. 1. 0.004 2. 0.004
+bounda_dof 70 25 -vely
+bounda_time 70 0. 0. 1. -0.004 2. -0.004
+bounda_dof 71 25 -velz
+bounda_time 71 0. 0. 1. -0.004 2. -0.004
+bounda_dof 72 26 -velx
+bounda_time 72 0. 0. 1. 0.002 2. 0.002
+bounda_dof 73 26 -vely
+bounda_time 73 0. 0. 1. -0.004 2. -0.004
+bounda_dof 74 26 -velz
+bounda_time 74 0. 0. 1. -0.004 2. -0.004
+bounda_dof 75 27 -velx
+bounda_time 75 0. 0. 1. 0 2. 0
+bounda_dof 76 27 -vely
+bounda_time 76 0. 0. 1. -0.004 2. -0.004
+bounda_dof 77 27 -velz
+bounda_time 77 0. 0. 1. -0.004 2. -0.004
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.
+group_materi_plasti_mohr_coul 0 0.5235987756 1.0 0.
+control_timestep 10 1. 1.
+control_safety_slip 10 -yes
+safety_slip_ellipsoide 0 2. 2. 2. 1. 1. 0. -1. 1. 0.5 1.5 1. 0.8
+safety_slip_ellipsoide_segment_n 0 8
+target_item 0 -safety_slip_ellipsoide_result 0 12
+target_value 0 9.298529656311 1.e-7
+target_item 1 -safety_slip_ellipsoide_result 0 3
+target_value 1 0.7071067811865 1.e-12
+target_item 2 -safety_slip_ellipsoide_result 0 6
+target_value 2 -0.6666666666667 1.e-12
+target_item 3 -safety_slip_ellipsoide_result 0 8
+target_value 3 0.3333333333333 1.e-12
+target_item 4 -safety_slip_ellipsoide_result 0 9
+target_value 4 1.5 1.e-12
+end_data

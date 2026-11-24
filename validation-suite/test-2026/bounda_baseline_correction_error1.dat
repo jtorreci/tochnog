@@ -1,0 +1,23 @@
+( bounda_baseline_correction with fewer than 3 time steps in
+  [time_start,time_end]: the three coefficients cannot be fitted, F5 T5 U9.
+  EXPECTED_ERROR: Error: bounda_baseline_correction needs at least 3 time steps
+)
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof  10  1 -accx
+bounda_time 10  0. 1.  0.5 1.  1. 1.  2. 0.
+bounda_baseline_correction 0. 1.
+control_timestep 10  0.5 1.
+end_data

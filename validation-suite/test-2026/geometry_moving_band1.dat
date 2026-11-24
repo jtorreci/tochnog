@@ -1,0 +1,38 @@
+(
+F5 T4 U8: geometry_moving {manual Professional 6.533-6.538} sample points against the analytic volume fraction.
+A 2 x 2 quad4 mesh on 0..1 x 0..1. A -geometry_point of radius 0.1 starts at -0.5 0.25 and translates with velocity 1 0 from time 0 to 2: it sweeps the band y 0.15..0.35.
+The bottom elements {height 0.5} lie 0.2 / 0.5 = 0.4 inside the band; geometry_moving_n 20 10 gives 10 x 10 cell midpoints, 4 of the 10 rows {y 0.175 0.225 0.275 0.325} enter: part 0.4 = analytic.
+Entry times {sample before the first moment inside}: element 1 0.4 and 0.9, element 2 0.9 and 1.4; leave times {last moment inside}: element 1 0.5 and 1.0, element 2 1.0 and 1.5. The top elements are not touched {no records}.
+The Professional 02-08-2026 tests the nodes {none is within 0.1 of the path}: no element is excavated, class D divergence GEOMETRY-MOVING-SAMPLING.
+control_geometry_moving at an index without timesteps: the records are written at the initialisation.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0. 0.
+node 2 0.5 0.
+node 3 1. 0.
+node 4 0. 0.5
+node 5 0.5 0.5
+node 6 1. 0.5
+node 7 0. 1.
+node 8 0.5 1.
+node 9 1. 1.
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element 3 -quad4 4 5 7 8
+element 4 -quad4 5 6 8 9
+group_type 0 -materi
+group_materi_elasti_young 0 1.e4
+group_materi_memory 0 -total_linear
+geometry_moving 10 -geometry_point
+geometry_moving_parameter 10 -0.5 0.25 0.1
+geometry_moving_operat 10 -translate
+geometry_moving_operat_parameter 10 1. 0.
+geometry_moving_operat_time 10 0. 2.
+geometry_moving_n 10 20 10
+control_geometry_moving 5 -initialise
+end_data

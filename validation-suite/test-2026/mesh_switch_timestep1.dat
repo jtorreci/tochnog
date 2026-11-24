@@ -1,0 +1,24 @@
+( F4 T7: control_mesh_switch on the SAME index as a two-step
+  control_timestep. The Professional 02-08-2026 swaps the axes once per
+  control index [its node 3: 1 0 -> 0 1]. Old GNU: swapped on every
+  step, twice = not swapped. build_safe.sh checks the coordinates of
+  node 3 in the .dbs: 1 0 -> 0 1 [F4 T8: GNU macro numbering = Pro]. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+geometry_line 1 -10. 0. 10. 0. 1.e-4
+bounda_dof 1 -geometry_line 1 -velx -vely
+group_type 0  -materi
+group_materi_elasti_young   0  1.0e6
+group_materi_elasti_poisson 0  0.2
+group_materi_density   0  1.0
+control_mesh_macro 0   -rectangle 0 3 2
+control_mesh_macro_parameters 0   0.5 0.5 1. 1.
+control_timestep 0 0.1 0.1
+control_mesh_switch 1 -y -x
+control_timestep 1 0.1 0.2
+end_data

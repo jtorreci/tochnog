@@ -1,0 +1,87 @@
+( Static phreatic level ABOVE the mesh top without a pressure unknown,
+  audit cluster K22 (the main use case of manual Professional 6.574
+  groundflow_phreatic_level_static: the heads are not solved and the
+  level may lie above the mesh part).
+  A 1 x 100 soil column (top y=0, bottom y=-100) under 10 m of free
+  water: groundflow_phreatic_level 10, gravity 10, groundflow_density 1,
+  wet/dry densities 2.0/1.5, group_type -materi -groundflow, NO
+  groundflow_pressure unknown. The water above the column loads its
+  top through force_edge_water -yes (rho*g*10 = 100 on the top edge).
+  The whole column is submerged, so every element takes the wet density
+  and the pore pressure -1*10*(10-y).
+  Analytic effective sigyy: -(2.0-1.0)*10*(0-y) (buoyant weight only;
+  the top water load and the pore pressure cancel in the effective
+  stress), -1000 at the bottom. Nodal values are element averages, so
+  the bottom node holds the bottom element centre value
+  -10*99.75 = -997.5 and the node at y=-50 holds -500. Static total
+  pressure at the bottom: -1*10*110 = -1100.
+  Pro 02-08-2026: -997.5, -500, -1100 (post_calcul -total_pressure is
+  needed there for the pore pressure to act on the skeleton).
+  Pre-fix GNU: -2095 at the bottom (wet weight plus top water load,
+  no pore pressure). )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+start_define
+  eps_geometry  1.e-5
+end_define
+
+start_define
+  right_edge geometry_line 1
+end_define
+right_edge 1. -100. 1. 0. eps_geometry
+
+start_define
+  left_edge geometry_line 2
+end_define
+left_edge 0. -100. 0. 0. eps_geometry
+
+start_define
+  lower_edge geometry_line 3
+end_define
+lower_edge 0. -100. 1. -100. eps_geometry
+
+start_define
+  upper_edge geometry_line 4
+end_define
+upper_edge 0. 0. 1. 0. eps_geometry
+
+bounda_dof  10  -left_edge -velx
+bounda_dof  20  -right_edge -velx
+bounda_dof  30  -lower_edge -velx -vely
+
+control_mesh_macro              0 -rectangle 0 2 201
+control_mesh_macro_parameters   0  0.5 -50. 1. 100.
+
+force_gravity 0. -10.
+
+groundflow_density 1.
+groundflow_phreatic_level   10.
+groundflow_phreatic_level_static   -yes
+
+force_edge_water           10 -yes
+force_edge_water_geometry  10 -upper_edge
+
+group_type 0  -materi -groundflow
+group_materi_density_groundflow 0  2.0 1.5
+group_materi_elasti_young 0  1.0e6
+group_materi_memory 0  -total_linear
+
+post_calcul -groundflow_pressure -total_pressure
+post_point  1  0.5 -100.
+post_point  2  0.5 -50.
+
+control_timestep   10  1. 1.
+control_timestep_iterations 10 5
+
+target_item  0   -post_point_dof 1 -sigyy
+target_value 0   -997.5 1.e-2
+target_item  1   -post_point_dof 2 -sigyy
+target_value 1   -500.0 1.e-2
+target_item  2   -post_point_dof_calcul 1 0
+target_value 2   -1100.0 1.e-2
+end_data

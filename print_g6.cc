@@ -39,13 +39,14 @@
 						for Gid 6
 */
 #include "tochnog.h"
-#define MTYPES 11 //In print_g5.cc this is set to 10, so, no trussbeam are printed
+#define MTYPES 12 //In print_g5.cc this is set to 10, so, no trussbeam are printed
+                  //spring2 (the 12th): 1 node by default, 2 with control_print_gid_spring2 2
 
 
 int print_coordinates (ofstream & outmesh)
 {
 double coord_start_refined[MDIM];
-long int ldum=0, idum[1], max_node=0;
+long int max_node=0;
 int inod,idim;
 
  db_highest_index( NODE, max_node, VERSION_PRINT );
@@ -55,7 +56,9 @@ int inod,idim;
 	if ( db_active_index( NODE_START_REFINED, inod, VERSION_PRINT ) )
 	{
  		outmesh << inod << "\t";      		
- 		db( NODE_START_REFINED, inod, idum, coord_start_refined, ldum, VERSION_PRINT, GET );
+ 		// control_print_gid_node_type: -node_start_refined (default), -node
+ 		// or -node_deformed_mesh coordinates
+ 		print_gid_node_coord( inod, coord_start_refined );
  		for ( idim=0; idim<ndim; idim++ )
    		outmesh << coord_start_refined[idim] << "\t";      						
  		outmesh << "\n";
@@ -67,10 +70,11 @@ return 1;
 }
 
 
-long int print_gid_6( long int task )
+long int print_gid_6( long int task, long int icontrol )
 
 {
-  long int inod=0, element=0, max_node=0, max_element=0, max_group=0, name=0, itype,
+  long int gid_node=0, gid_element=0,
+    inod=0, element=0, max_node=0, max_element=0, max_group=0, name=0, itype,
     eltype[MTYPES],
     element_group=0, length=0, idim=0, jdim=0, ipuknwn=0, iuknwn=0,
     icalcul=0, nval=0, ready=0, indx=0, eigen_analysis=0, neigen=0,
@@ -79,7 +83,8 @@ long int print_gid_6( long int task )
     n=0, swit=0, ldum=0, nnol=0, ieigen=0,
     bound_elements=0,
     nmesh=0,first_time_gid=0,
-    print_deformation=0, element_empty=-NO, icontrol=0,
+    print_deformation=0, element_empty=-NO, max_node_old=-1,
+    max_element_old=-1, *old_node_numbers=NULL, *old_element_numbers=NULL,
     control_print_gid_mesh=0, idum[1],
     *dof_amount=NULL, *dof_label=NULL, *dof_type=NULL,
     *post_calcul_scal_vec_mat=NULL, *dof_scal_vec_mat=NULL,
@@ -114,7 +119,6 @@ long int print_gid_6( long int task )
   element_tendon_intersections = get_new_dbl(DATA_ITEM_SIZE);
   control_eigen_values = get_new_dbl(DATA_ITEM_SIZE);
 
-  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( db( CONTROL_PRINT_GID_TIME, 0, idum, &control_print_gid_time,
        ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
@@ -129,12 +133,29 @@ long int print_gid_6( long int task )
   db_copy( NODE_RHSIDE, NODE_RHSIDE_PRINT, VERSION_NORMAL );
   db_version_copy( VERSION_NORMAL, VERSION_PRINT );
 
-  renumbering( VERSION_PRINT, NO, 1, 1, idum, idum );
+  // the old node numbers map the print version back to the records that
+  // are kept only in the normal version (node_bounded, mpc_node_number)
+  db_max_index( NODE, max_node_old, VERSION_PRINT, GET );
+  db_max_index( ELEMENT, max_element_old, VERSION_PRINT, GET );
+  old_node_numbers = get_new_int( max_node_old+2 );
+  old_element_numbers = get_new_int( max_element_old+2 );
+  array_set( old_node_numbers, -1, max_node_old+2 );
+  array_set( old_element_numbers, -1, max_element_old+2 );
+  renumbering( VERSION_PRINT, YES, 1, 1, old_node_numbers, old_element_numbers );
 
   db_highest_index( NODE, max_node, VERSION_PRINT );
-  if ( max_node<0 ) return 1;
   db_highest_index( ELEMENT, max_element, VERSION_PRINT );
-  if ( max_element<0 ) return 1;
+  if ( max_node<0 || max_element<0 ) {
+    delete[] old_node_numbers;
+    delete[] old_element_numbers;
+    return 1;
+  }
+
+  // GiD output options of this control index (control_print_gid_* and the
+  // global print_gid_*), print_gi.cc; nodal smoothing of the print version
+  print_gid_options_get( icontrol, max_node, old_node_numbers,
+    max_element_old+2, old_element_numbers );
+  print_gid_smooth( max_node, old_node_numbers );
   db_highest_index( ELEMENT_GROUP, max_group, VERSION_PRINT );
   //if (max_group<0) return 1;
   if (max_group<0) max_group=0;
@@ -201,6 +222,7 @@ eltype[7]=  -HEX27;
 eltype[8]=  -TRUSS;
 eltype[9]=  -BEAM;
 eltype[10]= -TRUSSBEAM;
+eltype[11]= -SPRING2;
 
 if(first_time_gid || task==-SEPARATE) {//prints mesh only once 
 for (itype=0; itype<MTYPES; itype++)
@@ -219,7 +241,10 @@ for (int igroup=0; igroup<=max_group; igroup++)
         db( ELEMENT_GROUP, element, &element_group, ddum, ldum, VERSION_PRINT, GET );
       else
         element_group = 0;
-      if ((name==eltype[itype])&&(element_group==igroup))
+      // control_print_gid_element_group, _element_mpc and _spring2
+      if ((name==eltype[itype])&&(element_group==igroup)&&
+          print_gid_element_selected( element, name, element_group,
+            length-1, &el[1] ))
       {
 	    element_empty=-NO;
   	    db( ELEMENT_EMPTY, element, &element_empty, ddum,
@@ -278,6 +303,13 @@ for (int igroup=0; igroup<=max_group; igroup++)
            				 outmesh <<"MESH TrussBeamGr"<< igroup<<" dimension "<<ndim;
 		           		 outmesh <<" ElemType Linear Nnode 2"<<endl;
 			      		 outmesh <<" Coordinates" << endl; break;
+                    case -SPRING2:
+                         outmesh <<"MESH Spring2Gr"<< igroup<<" dimension "<<ndim;
+                         if ( print_gid_spring2_nodes()==2 )
+                           outmesh <<" ElemType Linear Nnode 2"<<endl;
+                         else
+                           outmesh <<" ElemType Point Nnode 1"<<endl;
+                         outmesh <<" Coordinates" << endl; break;
 			      		
 			     }		
 	      		if (number_of_meshes==0)
@@ -344,6 +376,11 @@ for (int igroup=0; igroup<=max_group; igroup++)
 			                         outmesh << nodes[0] << "\t" << nodes[1] << "\t"; break;
 			case -TRUSSBEAM:
 			                         outmesh << nodes[0] << "\t" << nodes[1] << "\t"; break;
+            case -SPRING2:
+                                 outmesh << nodes[0] << "\t";
+                                 if ( print_gid_spring2_nodes()==2 )
+                                   outmesh << nodes[1] << "\t";
+                                 break;
 	
       	}
     	     outmesh << element_group << endl;
@@ -354,6 +391,14 @@ for (int igroup=0; igroup<=max_group; igroup++)
  if (nmesh)  outmesh << "end elements" << endl;
 }
 }
+  // slip surfaces of control_safety_slip (manual Professional 6.310)
+  // the slip surfaces and the post points number their nodes and elements
+  // after the mesh, in this order
+  gid_node = max_node; gid_element = max_element;
+  safety_slip_print_gid_mesh( outmesh, gid_node, gid_element );
+  print_gid_post_point_mesh( outmesh, gid_node, gid_element );
+  // Gauss points of the element results (control_print_gid_group, ...)
+  print_gid_gauss_points( outres, max_element );
 }//end first time gid
 
   if ( bound_elements )
@@ -388,6 +433,11 @@ for (int igroup=0; igroup<=max_group; igroup++)
       ipuknwn = 0; ready = 0;
       while ( !ready ) {
         iuknwn = ipuknwn*nder;
+        // control_print_gid_dof: a field that is not selected is skipped;
+        // the stream ignores the output while it is in the fail state
+        // (cleared after End Values)
+        if ( !print_deformation && !print_gid_dof_selected( dof_type[iuknwn] ) )
+          outres.setstate( ios::failbit );
         if      ( print_deformation )
         {
         	outres <<"Result "<<"\"mesh deform\""<<"\t"<<"\"Load Analysis\"";
@@ -512,9 +562,11 @@ for (int igroup=0; igroup<=max_group; igroup++)
           outres << endl;
         }
         outres <<"End Values" <<endl;
+        outres.clear();
         ipuknwn += nval;
         if ( ipuknwn>=npuknwn ) {
-          if      ( materi_velocity && !print_deformation ) {
+          // control_print_gid_other -no: no mesh deform
+          if      ( materi_velocity && !print_deformation && print_gid_other() ) {
             print_deformation = 1;
           }
           else
@@ -531,6 +583,9 @@ for (int igroup=0; igroup<=max_group; igroup++)
         icalcul = idim = ready = 0;
         while ( !ready ) {
           strcpy( outname, post_calcul_names_without_extension[icalcul] );
+          // control_print_gid_dof_calcul: skip a post field not selected
+          if ( !print_gid_post_selected( icalcul ) )
+            outres.setstate( ios::failbit );
           if      ( post_calcul_scal_vec_mat[icalcul]==-SCALAR ) {
             nval = 1;
             data_type = 1;
@@ -556,6 +611,7 @@ for (int igroup=0; igroup<=max_group; igroup++)
             nval = 6;
             data_type = 3;
             desc_comp = 1;
+            (void)load_type; (void)data_type; (void)data_loc; (void)desc_comp;
             strcpy( descr_menu, outname );
             string_shorten( descr_menu, 15 );
             outres <<"Result  \""<<descr_menu<<"\"     \""<<"Load Analysis"<< "\"\t"<<step_val<<" Matrix OnNodes"<<endl;
@@ -595,6 +651,7 @@ for (int igroup=0; igroup<=max_group; igroup++)
             outres  << endl;
           }
           outres <<"End Values "<<endl;
+          outres.clear();
           icalcul += nval;
           ready = (icalcul>=length_post_calcul_scal_vec_mat);
         }
@@ -603,7 +660,14 @@ for (int igroup=0; igroup<=max_group; igroup++)
 
     }
 
+    // control_print_gid_coord, _group, _truss_vector, _beam_vectors
+    print_gid_coord_result( outres, step_val, max_node );
+    print_gid_element_results( outres, step_val, max_element );
+
   }
+
+  if ( !eigen_analysis )
+    safety_slip_print_gid_results( outres, time_current, max_node );
 
   delete[] dof_amount;
   delete[] dof_label;
@@ -614,6 +678,9 @@ for (int igroup=0; igroup<=max_group; igroup++)
   delete[] el;
   delete[] element_tendon_intersections;
   delete[] control_eigen_values;
+  delete[] old_node_numbers;
+  delete[] old_element_numbers;
+  print_gid_options_free();
 
   outmesh.close();
   outres.close();

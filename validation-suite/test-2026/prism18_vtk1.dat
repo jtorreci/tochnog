@@ -1,0 +1,41 @@
+( F5 T4 U9b: VTK output of the -prism18 {owner rule 2026-11-09}: the native
+  cell type 32 VTK_BIQUADRATIC_QUADRATIC_WEDGE with 18 points: corners
+  0 2 5 12 14 17, base mid-edge 1 4 3, top 13 16 15, vertical 6 8 11, side
+  face centres 7 10 9. The Professional 02-08-2026 writes the 6 corners
+  as type 13 [DIVERGENCES VTK-PRISM18]. Same element as prism18_gauss1. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 0 0 0.5
+node 8 0.5 0 0.5
+node 9 1 0 0.5
+node 10 0 0.5 0.5
+node 11 0.5 0.5 0.5
+node 12 0 1 0.5
+node 13 0 0 1
+node 14 0.5 0 1
+node 15 1 0 1
+node 16 0 0.5 1
+node 17 0.5 0.5 1
+node 18 0 1 1
+element 1 -prism18 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18
+group_type 0 -materi
+group_materi_elasti_young 0 1.0e6
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+force_gravity 0. 0. -1.
+bounda_dof 10 -ra 1 2 3 4 5 6 -ra -velx -vely -velz
+bounda_time 10 0.
+control_timestep 10 0.5 1.0
+control_print_vtk 10 -yes
+end_data

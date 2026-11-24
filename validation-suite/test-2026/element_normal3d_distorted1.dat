@@ -1,0 +1,125 @@
+( element_normal, manual Professional 6.445, 3D distorted mesh.
+  2x2x2 hex8 mesh with non-planar faces. Rule (measured on the
+  Professional): a node normal is the normalized sum over the boundary
+  faces of the node of the consistent face normal integral( N_node n dA )
+  (bilinear face, exact Gauss integration); the element_normal is the
+  normalized sum of the node normals of the element nodes. Every element
+  is a corner element. The targets are the Pro 02-08-2026 values (the
+  consistent weighting matters: a plain face-area weighting differs by
+  up to 8.e-3). Before the 2026-09-30 fix the GNU used the cross product
+  of two edges of the first element face. )
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node 1 0.0 0.0 0.0
+node 2 1.0 0.15 0.07
+node 3 2.0 0.3 0.14
+node 4 0.0 1.0 0.0
+node 5 1.1 1.15 0.17
+node 6 2.2 1.3 0.34
+node 7 0.0 2.0 0.0
+node 8 1.2 2.15 0.27
+node 9 2.4 2.3 0.54
+node 10 0.0 0.05 1.0
+node 11 1.0 0.2 1.07
+node 12 2.0 0.35 1.1400000000000001
+node 13 0.2 1.05 1.0
+node 14 1.3 1.2 1.1700000000000002
+node 15 2.4000000000000004 1.35 1.3399999999999999
+node 16 0.4 2.05 1.0
+node 17 1.5999999999999999 2.1999999999999997 1.27
+node 18 2.8 2.3499999999999996 1.54
+node 19 0.0 0.2 2.0
+node 20 1.0 0.35 2.07
+node 21 2.0 0.5 2.14
+node 22 0.4 1.2 2.0
+node 23 1.5 1.3499999999999999 2.17
+node 24 2.6 1.5 2.3400000000000003
+node 25 0.8 2.2 2.0
+node 26 2.0 2.35 2.27
+node 27 3.1999999999999997 2.5 2.54
+element 1 -hex8 1 2 4 5 10 11 13 14
+element 2 -hex8 2 3 5 6 11 12 14 15
+element 3 -hex8 4 5 7 8 13 14 16 17
+element 4 -hex8 5 6 8 9 14 15 17 18
+element 5 -hex8 10 11 13 14 19 20 22 23
+element 6 -hex8 11 12 14 15 20 21 23 24
+element 7 -hex8 13 14 16 17 22 23 25 26
+element 8 -hex8 14 15 17 18 23 24 26 27
+
+element_group 1 1
+element_group 2 2
+element_group 3 2
+element_group 4 2
+element_group 5 2
+element_group 6 2
+element_group 7 2
+element_group 8 2
+
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+group_materi_plasti_tension_direct 1  1.e10
+group_materi_plasti_tension_direct_normal_automatic 1  -yes
+
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+
+bounda_dof  0  -ra 1 9 -ra -velx -vely -velz
+
+control_timestep 0  1. 1.
+
+target_item    0  -element_normal 1 0
+target_value   0  5.467801628069e-01 1.e-10
+target_item    1  -element_normal 1 1
+target_value   1  5.835455689893e-01 1.e-10
+target_item    2  -element_normal 1 2
+target_value   2  6.004215373167e-01 1.e-10
+target_item    3  -element_normal 2 0
+target_value   3  -5.971443387510e-01 1.e-10
+target_item    4  -element_normal 2 1
+target_value   4  5.956051489958e-01 1.e-10
+target_item    5  -element_normal 2 2
+target_value   5  5.372831145563e-01 1.e-10
+target_item    6  -element_normal 3 0
+target_value   6  5.298754702079e-01 1.e-10
+target_item    7  -element_normal 3 1
+target_value   7  -6.777946900119e-01 1.e-10
+target_item    8  -element_normal 3 2
+target_value   8  5.097316394571e-01 1.e-10
+target_item    9  -element_normal 4 0
+target_value   9  -5.485260119402e-01 1.e-10
+target_item    10  -element_normal 4 1
+target_value   10  -4.808412963501e-01 1.e-10
+target_item    11  -element_normal 4 2
+target_value   11  6.840401025885e-01 1.e-10
+target_item    12  -element_normal 5 0
+target_value   12  5.714005791032e-01 1.e-10
+target_item    13  -element_normal 5 1
+target_value   13  4.599574058374e-01 1.e-10
+target_item    14  -element_normal 5 2
+target_value   14  -6.796620947323e-01 1.e-10
+target_item    15  -element_normal 6 0
+target_value   15  -4.762451886559e-01 1.e-10
+target_item    16  -element_normal 6 1
+target_value   16  7.131750627974e-01 1.e-10
+target_item    17  -element_normal 6 2
+target_value   17  -5.143654829847e-01 1.e-10
+target_item    18  -element_normal 7 0
+target_value   18  5.817210056819e-01 1.e-10
+target_item    19  -element_normal 7 1
+target_value   19  -6.052837057361e-01 1.e-10
+target_item    20  -element_normal 7 2
+target_value   20  -5.433528385118e-01 1.e-10
+target_item    21  -element_normal 8 0
+target_value   21  -5.931968996771e-01 1.e-10
+target_item    22  -element_normal 8 1
+target_value   22  -5.203065282409e-01 1.e-10
+target_item    23  -element_normal 8 2
+target_value   23  -6.143277259602e-01 1.e-10
+end_data

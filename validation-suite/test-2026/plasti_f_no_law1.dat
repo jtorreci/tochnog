@@ -1,0 +1,61 @@
+(
+K13 follow-up (2026-10-06): an element without a yield law reports
+materi_plasti_f = 0 (the Professional 02-08-2026), not the internal
+"no yield law" value -1e10. Derived from the Professional test
+tension_direct1 (one element with tension_direct 0 on its element_normal,
+the element of nodes 1 2 elastic) with materi_strain_elasti/_plasti/materi_plasti_f
+added: f 0 at every node (GNU before: -1e10 at nodes 1 2, -3.3e9 at the
+shared nodes 3 4). Original test text:
+ test tension limit plasticity
+  The lower element has a tension limit 0.0 on the element_normal 
+  The element_normal in the lower element actually is the vertical direction.
+  So the verical stress sigyy should become 0.0
+)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_elasti
+materi_strain_plasti
+materi_plasti_f
+materi_stress
+end_initia
+
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+node 5  0 2
+node 6  1 2
+element 1  -quad4 1 2 3 4
+element 2  -quad4 3 4 5 6
+
+element_group 1 1
+element_group 2 2
+
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+group_materi_plasti_tension_direct 2  0.0
+group_materi_plasti_tension_direct_normal_automatic 2  -yes
+
+bounda_dof  0  -ra 1 2 -ra -velx -vely
+bounda_dof  1  -ra 5 6 -ra -vely
+bounda_time 1  1.
+
+control_timestep 0  1. 1.
+(
+control_print    0  -time_current -node_dof
+)
+
+target_item    0  -node_dof 1 -sigyy
+target_value   0  0. 1.e-8
+target_item    1  -node_dof 1 -f
+target_value   1  0. 1.e-12
+target_item    2  -node_dof 3 -f
+target_value   2  0. 1.e-12
+end_data

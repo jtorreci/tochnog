@@ -1,0 +1,49 @@
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_strain_total
+materi_strain_plasti
+materi_stress
+materi_plasti_diprisco_history 11
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_time  1  0 0 100 0
+bounda_time  2  0 -1 100 -1
+bounda_time  3  0 0.5 100 0.5
+bounda_unknown  0  -geometry_line 0 -velx
+bounda_unknown  1  -geometry_line 1 -vely
+bounda_unknown  2  -geometry_line 2 -vely
+bounda_unknown  3  -geometry_line 3 -velx
+control_print_data_versus_data  20  -post_point_dof 1 -eptyy -post_point_dof 1 -sigxx -post_point_dof 1 -sigyy -post_point_dof 1 -dipriscohis10
+control_timestep  20  1e-05 0.01
+control_timestep_iterations  20  3
+element  1  -quad4 1 2 3 4
+geometry_line  0  0 0 0 1 1e-05
+geometry_line  1  0 0 1 0 1e-05
+geometry_line  2  0 1 1 1 1e-05
+geometry_line  3  1 0 1 1 1e-05
+group_axisymmetric  0  -yes
+group_integration_points  0  -minimal
+group_materi_elasti_lade  0  1028 0.25 0.28
+group_materi_memory  0  -updated_without_rotation
+group_materi_plasti_diprisco  0  3.62 0.5 0.0049 18 10 0.253 0.1184 -0.2585 -0.1178 1.1
+group_type  0  -materi
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+options_convection   -no
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_point  1  0.5 0.5
+target_item  0  -post_point_dof 1 -dipriscohis10
+target_value  0  -152.795 1
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 -100 0 0 -100 0 -100 0.57735 0 0 0 0.57735 0 0 0 0.57735 0.0001 -173.205
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 -100 0 0 -100 0 -100 0.57735 0 0 0 0.57735 0 0 0 0.57735 0.0001 -173.205
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 -100 0 0 -100 0 -100 0.57735 0 0 0 0.57735 0 0 0 0.57735 0.0001 -173.205
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 -100 0 0 -100 0 -100 0.57735 0 0 0 0.57735 0 0 0 0.57735 0.0001 -173.205
+(C100: the initial state comes from node_dof; the default is -no)
+global_element_dof_from_node_dof -yes
+end_data

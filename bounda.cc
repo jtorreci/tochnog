@@ -22,11 +22,540 @@
 
 #define EPS_ATAN 1.e-10
 
+// normal component below this size is treated as zero when the -veln
+// mpc slave axis is selected (axis-aligned walls have an EXACT zero
+// component: the line normal is the cross product of its endpoints)
+#define EPS_VELN_ZERO 1.e-12
+
+// ---------------------------------------------------------------------------
+// group_time (manual 6.769 is silent here; measured on the Professional
+// 02-08-2026 with Pro test/other/truss8 and birth/death probes): a node
+// whose elements are ALL inactive at time_total (group not yet born or
+// already dead) is not driven by bounda_dof/bounda_unknown; it stays at
+// rest like any node without stiffness. Returns NULL when no group_time
+// record exists (nothing to do), else an array [0..max_node] with 1 for
+// a dormant node. Nodes that belong to no element at all are NOT marked
+// (old behaviour kept; the Professional refuses such a model).
+// ---------------------------------------------------------------------------
+//
+// empty_type (global_node_dof_empty, manual Professional 6.552): count the
+// elements of a group whose group_type has only -empty / -none types and
+// the group_time elements that are not alive as inactive (the Professional
+// 02-08-2026 treats both alike, probes f5/v5b c_*), but NOT the groups
+// excluded by (control_)mesh_element_group_apply; NULL is then returned
+// only when the mesh has no element.
+// ---------------------------------------------------------------------------
+static long int bounda_group_type_empty( long int element_group )
+{
+  long int itype=0, len_type=0, types[DATA_ITEM_SIZE];
+  double ddum[1];
+
+  if ( !db( GROUP_TYPE, element_group, types, ddum, len_type,
+      VERSION_NORMAL, GET_IF_EXISTS ) || len_type<=0 ) return 0;
+  for ( itype=0; itype<len_type; itype++ )
+    if ( types[itype]!=-EMPTY && types[itype]!=-NONE ) return 0;
+  return 1;
+}
+
+static long int *bounda_node_dormant( long int max_node, double time_total,
+  long int empty_type=0 )
+{
+  long int max_group_time=-1, max_element=-1, element=0, element_group=0,
+    length=0, inol=0, inod=0, alive=0, ldum=0, *el=NULL, *has_element=NULL,
+    *dormant=NULL;
+  double ddum[1];
+
+  db_max_index( GROUP_TIME, max_group_time, VERSION_NORMAL, GET );
+  {
+    long int max_group_time_fill=-1;
+    db_max_index( GROUP_TIME_FILL, max_group_time_fill, VERSION_NORMAL, GET );
+    if ( max_group_time_fill>max_group_time ) max_group_time = max_group_time_fill;
+  }
+  if ( !empty_type && max_group_time<0 && !element_group_apply_active() )
+    return NULL;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  if ( max_element<0 ) return NULL;
+
+  has_element = get_new_int( 1+max_node );
+  dormant = get_new_int( 1+max_node );
+  array_set( has_element, 0, 1+max_node );
+  array_set( dormant, 1, 1+max_node );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( empty_type )
+      // a group excluded by (control_)mesh_element_group_apply keeps its
+      // state (F5 W1 U5, control_mesh_element_group_apply1): not empty
+      alive = group_time_alive( element_group, time_total ) &&
+        !bounda_group_type_empty( element_group );
+    else
+      alive = group_time_alive( element_group, time_total ) &&
+        element_group_applied( element_group );
+    length = db_len( ELEMENT, element, VERSION_NORMAL );
+    el = db_int( ELEMENT, element, VERSION_NORMAL );
+    for ( inol=1; inol<length; inol++ ) {
+      inod = el[inol];
+      if ( inod<0 || inod>max_node ) continue;
+      has_element[inod] = 1;
+      if ( alive ) dormant[inod] = 0;
+    }
+  }
+  for ( inod=0; inod<=max_node; inod++ )
+    if ( !has_element[inod] ) dormant[inod] = 0;
+  delete[] has_element;
+
+  return dormant;
+}
+
+// ---------------------------------------------------------------------------
+// bounda_dof/bounda_unknown ... -veln (manual Professional 6.22):
+// prescribe that nodes do not move in the direction NORMAL to a plane
+// (zero normal velocity). Internally Tochnog generates mpc records to
+// impose the condition (the Professional writes mpc_node_number/
+// mpc_node_factor + mpc_from_bounda -yes records to its .dbs).
+//
+// Semantics measured against the Professional binary (25-10-2023) on
+// validation_8 and dedicated oblique/vertical wall probes (slopes -2
+// .. +2, vertical line, node sets on the horizontal/oblique walls):
+//  - the plane normal of a node selected through a geometry entity is
+//    the normal of the FIRST entity of the record (a geometry_set is
+//    scanned in record order) that contains the node - the geometry()
+//    first-match normal; nodes selected through a node range use the
+//    bounda_normal vector of the same bounda index (manual 6.22: the
+//    normal has to be given when no geometrical entity is used);
+//  - one mpc record per boundary node, slave dof = the FIRST velocity
+//    axis whose normal component is non-zero (x, y, z order), masters
+//    = the remaining axes with a non-zero component and factor
+//    -n_master/n_slave. A zero-component master is OMITTED, so an
+//    axis-aligned wall collapses to a masterless record bounding the
+//    remaining normal dof to zero. Measured records: oblique wall of
+//    slope -0.1 -> [node -velx node -vely] with factor -10 (slope +0.1
+//    -> +10, slope +2 -> +0.5, slope -1.5 -> -0.667), vertical wall ->
+//    [node -velx] alone, horizontal wall -> [node -vely] alone;
+//  - the generated records are marked with mpc_from_bounda <index>
+//    -yes and are regenerated when the mesh changes (per-bounda-record
+//    mesh fingerprint, the mpc_linear_quadratic pattern).
+// ---------------------------------------------------------------------------
+static void bounda_veln_mpc( long int iboun, long int val[],
+  long int use_geom, long int use_range, long int use_all,
+  long int use_node_set, long int integer_range[], long int range_length,
+  long int bounda_geometry_method, double bounda_normal_vec[] )
+
+{
+  long int ldum=0, idum[1], stored_len=0, length_put=0, max_node=0,
+    inod=0, found=0, in=0, ready=0, i=0, count=0, start_index=0,
+    islave=-1, im=0, nmaster=0, node_type=0;
+  double ddum[MDIM], rdum=0., nvec[MDIM];
+
+  // per-bounda-record fingerprint: (re)generate only when the mesh
+  // changed (same fingerprint the mpc_linear_quadratic /
+  // mpc_element_group generators use)
+  long int fingerprint = mpc_mesh_fingerprint_get();
+  long int stored[3] = { -1, -1, 0 };
+  db( BOUNDA_VELN_MESH_FINGERPRINT, iboun, stored, ddum, stored_len,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( stored_len>=3 && stored[0]==fingerprint ) return;
+
+  // remove the records generated for the previous mesh state
+  if ( stored_len>=3 && stored[2]>0 ) {
+    for ( i=0; i<stored[2]; i++ ) {
+      db_delete_index( MPC_NODE_NUMBER, stored[1]+i, VERSION_NORMAL );
+      db_delete_index( MPC_NODE_FACTOR, stored[1]+i, VERSION_NORMAL );
+      db_delete_index( MPC_FROM_BOUNDA, stored[1]+i, VERSION_NORMAL );
+    }
+  }
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  if ( max_node<0 ) {
+    // nothing to constrain; remember the fingerprint so the empty
+    // state is not regenerated on every iteration
+    stored[0] = fingerprint; stored[1] = -1; stored[2] = 0;
+    stored_len = 3;
+    db( BOUNDA_VELN_MESH_FINGERPRINT, iboun, stored, ddum, stored_len,
+      VERSION_NORMAL, PUT );
+    return;
+  }
+
+  long int dof_label[MUKNWN];
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  // generated records start after the highest ACTIVE mpc record (the
+  // mpc_linear_quadratic/mpc_element_group convention)
+  db_highest_index( MPC_NODE_NUMBER, start_index, VERSION_NORMAL );
+  start_index++;
+  count = 0;
+
+  long int vals[DATA_ITEM_SIZE];
+  double weights[MUKNWN];
+
+  // node iteration mirrors the selector logic of the bounda() node
+  // loop (ascending node order, matching the record order the
+  // Professional writes to its .dbs)
+  for ( in=0, ready=0; !ready; in++ ) {
+    inod = -1;
+    if      ( use_range ) {
+      if ( in>=range_length ) ready = 1;
+      else inod = integer_range[in];
+    }
+    else if ( use_all ) {
+      if ( in>max_node ) ready = 1;
+      else if ( db_active_index( NODE, in, VERSION_NORMAL ) ) inod = in;
+    }
+    else if ( use_geom ) {
+      if ( in>max_node ) ready = 1;
+      else if ( nodes_in_geometry[in] ) {
+        node_type = NODE_START_REFINED;
+        if ( bounda_geometry_method!=0 ) node_type = bounda_geometry_method;
+        geometry( in, ddum, val, found, rdum, nvec, rdum, ddum,
+          node_type, PROJECT_EXACT, VERSION_NORMAL );
+        if ( found ) inod = in;
+      }
+    }
+    else if ( use_node_set ) {
+      if ( in>max_node ) ready = 1;
+      else if ( db_active_index( NODE_SET, in, VERSION_NORMAL ) ) inod = in;
+    }
+    else {
+      inod = val[0];
+      ready = 1;
+    }
+    if ( ready ) break;
+    if ( inod<0 ) continue;
+    if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+    if ( !use_geom ) {
+      // node ranges: the normal is the bounda_normal of the record
+      // (required; a zero vector cannot define the plane)
+      array_move( bounda_normal_vec, nvec, ndim );
+      if ( scalar_dabs(nvec[0])<=EPS_VELN_ZERO &&
+           scalar_dabs(nvec[1])<=EPS_VELN_ZERO &&
+           scalar_dabs(nvec[2])<=EPS_VELN_ZERO ) {
+        pri( "Error: -veln in bounda record ", iboun );
+        pri( "requires a geometry entity or a bounda_normal." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+    // slave axis: the FIRST axis with a non-zero normal component
+    islave = -1;
+    for ( im=0; im<ndim; im++ ) {
+      if ( scalar_dabs( nvec[im] )>EPS_VELN_ZERO ) { islave = im; break; }
+    }
+    if ( islave<0 ) continue;
+    nmaster = 0;
+    long int iv = 0;
+    vals[iv++] = inod;
+    vals[iv++] = dof_label[vel_indx + islave*nder];
+    for ( im=0; im<ndim; im++ ) {
+      if ( im==islave ) continue;
+      if ( scalar_dabs( nvec[im] )>EPS_VELN_ZERO ) {
+        vals[iv++] = inod;
+        vals[iv++] = dof_label[vel_indx + im*nder];
+        weights[nmaster] = -nvec[im]/nvec[islave];
+        nmaster++;
+      }
+    }
+    length_put = iv;
+    db( MPC_NODE_NUMBER, start_index+count, vals, ddum, length_put,
+      VERSION_NORMAL, PUT );
+    if ( nmaster>0 ) {
+      length_put = nmaster;
+      db( MPC_NODE_FACTOR, start_index+count, idum, weights, length_put,
+        VERSION_NORMAL, PUT );
+    }
+    {
+      long int yes_value = -YES;
+      length_put = 1;
+      db( MPC_FROM_BOUNDA, start_index+count, &yes_value, ddum, length_put,
+        VERSION_NORMAL, PUT );
+    }
+    count++;
+  }
+
+  stored[0] = fingerprint; stored[1] = start_index; stored[2] = count;
+  stored_len = 3;
+  db( BOUNDA_VELN_MESH_FINGERPRINT, iboun, stored, ddum, stored_len,
+    VERSION_NORMAL, PUT );
+
+}
+
+// ---------------------------------------------------------------------------
+// global_node_dof_empty (manual Professional 6.552, default -yes): the dofs
+// of a node that is only connected to empty elements (group_type -empty /
+// -none, a group_time group that is not alive) are set to zero at the end
+// of every time step (after the nodal update, before dof_limit). -no leaves
+// them. A group excluded by (control_)mesh_element_group_apply is not empty:
+// it keeps its state (F5 W1 U5; the Professional ignores that record
+// outside index 0, so it cannot be compared).
+// Measured on the Professional 02-08-2026 (probes f5/v5b c_*, c2_*): every
+// dof of such a node is zero with -yes (temperature, strains, stresses,
+// kappa, work) EXCEPT the displacement, which keeps its value; the manual
+// says "the dof's in a node are set to zero", so the displacement is the
+// open owner decision GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT (the GNU keeps it,
+// as the Professional). Nodes without any element are not touched.
+// ---------------------------------------------------------------------------
+void node_dof_empty_apply( void )
+{
+  long int node_dof_empty=-YES, max_node=-1, inod=0, iuknwn=0, ldum=0,
+    idum[1], *dormant=NULL;
+  double dtime=0., time_current=0., ddum[1], *node_dof_new=NULL,
+    *node_dof_old=NULL;
+
+  db( GLOBAL_NODE_DOF_EMPTY, 0, &node_dof_empty, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( node_dof_empty!=-YES || nuknwn<=0 ) return;
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  if ( max_node<0 ) return;
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
+  db( TIME_CURRENT, 0, idum, &time_current, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  dormant = bounda_node_dormant( max_node, time_current+dtime, 1 );
+  if ( dormant==NULL ) return;
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( !dormant[inod] || !db_active_index( NODE, inod, VERSION_NORMAL ) )
+      continue;
+    node_dof_new = db_dbl( NODE_DOF, inod, VERSION_NEW );
+    node_dof_old = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+    for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ ) {
+      // the displacement keeps the value of the start of the step: the
+      // zero velocity adds no increment (the GNU leaves the velocity of a
+      // node without stiffness unchanged during the step, so the
+      // old + v*dt update of dof.cc would otherwise drift; Professional
+      // c2_def: disx/disy = input values)
+      if ( materi_displacement && iuknwn>=dis_indx &&
+           iuknwn<dis_indx+ndim*nder )
+        node_dof_new[iuknwn] = node_dof_old[iuknwn];
+      else
+        node_dof_new[iuknwn] = 0.;
+    }
+  }
+  delete[] dormant;
+}
+
+// ---------------------------------------------------------------------------
+// bounda_baseline_correction (manual Professional 6.19/6.20). The value of
+// a time-value bounda_time table at t (piecewise linear, 0 outside the
+// table, the same rule as the bounda() time loop).
+// ---------------------------------------------------------------------------
+static double bounda_baseline_table( const double bounda_time[],
+  long int length_bounda_time, double t )
+
+{
+  long int inc=0;
+  double time0=0., time1=0.;
+
+  if ( length_bounda_time==1 ) return bounda_time[0];
+  for ( inc=0; inc<length_bounda_time/2-1; inc++ ) {
+    time0 = bounda_time[inc*2+0];
+    time1 = bounda_time[inc*2+2];
+    if ( t>=(time0-1.e-10) && t<=time1 )
+      return bounda_time[inc*2+1] + ( bounda_time[inc*2+3] -
+        bounda_time[inc*2+1] ) * ( t - time0 ) / ( time1 - time0 );
+  }
+  return 0.;
+}
+
+// The correction p(tau) = c0 + c1*tau + c2*tau^2, tau = (t-ts)/(te-ts),
+// added to the prescribed acceleration of record iboun at time_total
+// (0 outside [ts,te] or without bounda_baseline_correction). Without a
+// bounda_baseline_correction_parameters record the coefficients are fitted
+// once and stored: minimal sum of the squared velocities v_k of the time
+// steps t_k = ts + k*h, k = 1..n, h = (te-ts)/n with n the number of steps
+// of size dtime, v_k = v_k-1 + (a(t_k)+p(tau_k))*h (the backward
+// integration of the prescribed acceleration below).
+static double bounda_baseline_load( long int iboun, long int table,
+  const double bounda_time[], long int length_bounda_time,
+  double time_total, double dtime )
+
+{
+  long int ldum=0, idum[1], n=0, k=0, i=0, j=0, ipiv=0;
+  double range[2], c[3], m[3][4], basis[3], vel=0., h=0., t=0., tau=0.,
+    ts=0., te=0., tmp=0.;
+
+  if ( !db( BOUNDA_BASELINE_CORRECTION, 0, idum, range, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) return 0.;
+  ts = range[0];
+  te = range[1];
+  if ( te<=ts ) db_error( BOUNDA_BASELINE_CORRECTION, 0 );
+  if ( time_total<ts-1.e-10 || time_total>te+1.e-10 ) return 0.;
+
+  if ( !db( BOUNDA_BASELINE_CORRECTION_PARAMETERS, iboun, idum, c, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    if ( !table ) {
+      pri( "Error: bounda_baseline_correction needs a bounda_time table "
+        "of time-value pairs for bounda index ", iboun );
+      exit(TN_EXIT_STATUS);
+    }
+    n = 0;
+    if ( dtime>0. ) n = (long int) floor( (te-ts)/dtime + 0.5 );
+    if ( n<3 ) {
+      pri( "Error: bounda_baseline_correction needs at least 3 time steps "
+        "between time_start and time_end for bounda index ", iboun );
+      exit(TN_EXIT_STATUS);
+    }
+    h = ( te - ts ) / n;
+    for ( i=0; i<3; i++ ) {
+      basis[i] = 0.;
+      for ( j=0; j<4; j++ ) m[i][j] = 0.;
+    }
+    for ( k=1; k<=n; k++ ) {
+      t = ts + k*h;
+      tau = ( t - ts ) / ( te - ts );
+      vel += bounda_baseline_table( bounda_time, length_bounda_time, t ) * h;
+      basis[0] += h;
+      basis[1] += tau*h;
+      basis[2] += tau*tau*h;
+      for ( i=0; i<3; i++ ) {
+        for ( j=0; j<3; j++ ) m[i][j] += basis[i]*basis[j];
+        m[i][3] -= basis[i]*vel;
+      }
+    }
+      // normal equations, Gauss elimination with partial pivoting
+    for ( i=0; i<3; i++ ) {
+      ipiv = i;
+      for ( k=i+1; k<3; k++ )
+        if ( scalar_dabs(m[k][i])>scalar_dabs(m[ipiv][i]) ) ipiv = k;
+      for ( j=0; j<4; j++ ) {
+        tmp = m[i][j]; m[i][j] = m[ipiv][j]; m[ipiv][j] = tmp;
+      }
+      if ( scalar_dabs(m[i][i])<1.e-30 )
+        db_error( BOUNDA_BASELINE_CORRECTION, 0 );
+      for ( k=0; k<3; k++ ) {
+        if ( k==i ) continue;
+        tmp = m[k][i] / m[i][i];
+        for ( j=i; j<4; j++ ) m[k][j] -= tmp*m[i][j];
+      }
+    }
+    for ( i=0; i<3; i++ ) c[i] = m[i][3] / m[i][i];
+    ldum = 3;
+    db( BOUNDA_BASELINE_CORRECTION_PARAMETERS, iboun, idum, c, ldum,
+      VERSION_NORMAL, PUT );
+  }
+
+  tau = ( time_total - ts ) / ( te - ts );
+  return c[0] + c[1]*tau + c[2]*tau*tau;
+}
+
+// ---------------------------------------------------------------------------
+// bounda_time_smc (manual Professional 6.42-6.44): read <iboun>.smc, a USGS
+// Strong Motion CD file, into a time-value table in model units. The
+// layout is 11 text lines (the first names the data type), 48 integers
+// (the 16th is the number of comment lines), 50 reals (the 2nd is the
+// number of samples per second), the comment lines and the samples. The
+// samples are read up to the end of the file, separated by white space or
+// glued together in fields of 10 columns (-3.1556E+0-5.6333E+0); the
+// number of samples in the integer header is not used, as in the
+// Professional. Sample k lies at
+// time_offset + k/(rate*factor_time). An acceleration is multiplied by
+// factor_time^2/factor_length, a velocity by factor_time/factor_length and
+// a displacement by 1/factor_length. Returns the data type (0 acceleration,
+// 1 velocity, 2 displacement) and a new table of 2*n_pair values, freed by
+// the caller. Measured against the Professional 02-08-2026, 2026-11-23.
+// ---------------------------------------------------------------------------
+static long int bounda_time_smc_read( long int iboun, double *&table,
+  long int &length_table )
+
+{
+  long int i=0, n=0, itype=-1, ncomment=0, ldum=0, idum[1],
+    iheader[48];
+  double offset=0., rate=0., scale=0., units[2], rheader[50];
+  char str[MCHAR], filename[MCHAR], *p=NULL, *end=NULL;
+  string line, rest;
+  vector<double> sample;
+
+  if ( !db_active_index( BOUNDA_TIME_SMC_UNITS, iboun, VERSION_NORMAL ) )
+    db_error( BOUNDA_TIME_SMC_UNITS, iboun );
+  db( BOUNDA_TIME_SMC_UNITS, iboun, idum, units, ldum, VERSION_NORMAL, GET );
+  if ( units[0]<=0. || units[1]<=0. )
+    db_error( BOUNDA_TIME_SMC_UNITS, iboun );
+  db( BOUNDA_TIME_SMC_OFFSET, iboun, idum, &offset, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+
+  strcpy( filename, long_to_a(iboun,str) );
+  strcat( filename, ".smc" );
+  ifstream in( filename );
+  if ( !in ) {
+    string smc_message = "Error opening : ";
+    smc_message += filename;
+    pri( smc_message.c_str() );
+    exit(TN_EXIT_STATUS);
+  }
+  for ( i=0; i<11; i++ ) {
+    if ( !getline( in, line ) ) db_error( BOUNDA_TIME_SMC, iboun );
+    if ( i==0 ) {
+      if      ( line.find( "ACCELEROGRAM" )!=string::npos ) itype = 0;
+      else if ( line.find( "VELOCITY" )!=string::npos ) itype = 1;
+      else if ( line.find( "DISPLACEMENT" )!=string::npos ) itype = 2;
+    }
+  }
+  if ( itype<0 ) {
+    pri( "Error, dof format SMC file." );
+    exit(TN_EXIT_STATUS);
+  }
+  for ( i=0; i<48; i++ )
+    if ( !(in>>iheader[i]) ) db_error( BOUNDA_TIME_SMC, iboun );
+  for ( i=0; i<50; i++ )
+    if ( !(in>>rheader[i]) ) db_error( BOUNDA_TIME_SMC, iboun );
+  ncomment = iheader[15];
+  rate = rheader[1];
+  if ( ncomment<0 || rate<=0. || rate>1.e30 ) {
+    pri( "Error: the SMC file has no valid number of comment lines or "
+      "samples per second; file ", filename );
+    exit(TN_EXIT_STATUS);
+  }
+  getline( in, line );
+  for ( i=0; i<ncomment; i++ )
+    if ( !getline( in, line ) ) db_error( BOUNDA_TIME_SMC, iboun );
+    // the samples: white space separated words; a word longer than one
+    // field of 10 columns holds glued samples (-3.1556E+0-5.6333E+0) and
+    // is cut at the columns 10, 20, ... of the line
+  while ( getline( in, rest ) ) {
+    long int len = (long int) rest.size(), s=0, e=0, c=0, cut=0;
+    while ( s<len ) {
+      while ( s<len && isspace( (unsigned char) rest[s] ) ) s++;
+      if ( s>=len ) break;
+      e = s;
+      while ( e<len && !isspace( (unsigned char) rest[e] ) ) e++;
+      for ( c=s; c<e; c=cut ) {
+        cut = e;
+        if ( e-s>10 && (c/10+1)*10<e ) cut = (c/10+1)*10;
+        string word = rest.substr( c, cut-c );
+        p = &word[0];
+        double value = strtod( p, &end );
+        if ( end==p || *end!='\0' ) {
+          pri( "Error: the SMC file holds a sample that is not a number; "
+            "file ", filename );
+          exit(TN_EXIT_STATUS);
+        }
+        sample.push_back( value );
+      }
+      s = e;
+    }
+  }
+  in.close();
+  n = (long int) sample.size();
+  if ( n<2 ) {
+    pri( "Error: the SMC file holds less than two samples; file ", filename );
+    exit(TN_EXIT_STATUS);
+  }
+
+  if      ( itype==0 ) scale = units[0]*units[0]/units[1];
+  else if ( itype==1 ) scale = units[0]/units[1];
+  else                 scale = 1./units[1];
+  length_table = 2*n;
+  table = get_new_dbl( length_table );
+  for ( i=0; i<n; i++ ) {
+    table[2*i+0] = offset + i/(rate*units[0]);
+    table[2*i+1] = sample[i]*scale;
+  }
+  return itype;
+}
+
 void bounda( )
 
 {
   long int in=0, ready=0, iuknwn=0, inod=0, iboun=0, found=0,
-    max_bounda=0, max_bounda_unknown=0, max_bounda_force=0,
+    max_bounda=0, max_bounda_unknown=0, max_bounda_dof=0, max_bounda_force=0,
     bounda_time_user=0, ind1=0, ipuknwn=0, iu=0, iu_start=0, iu_end=0,
     inc=0, ninc=0, length=0, range_length=0, unknown=0, force=0,
     idim=0, time=0, sine=0, user=0, rotate=0, rotate_axis=0,
@@ -34,13 +563,34 @@ void bounda( )
     use_range=0, use_all=0, use_node_set=0, ifreq=0, nfreq=0, indx=0, max_node=0,
     bounda_time_file=0, length_bounda_time=0, ldum=0, idum[1], 
     *val=NULL, *integer_range=NULL, 
-    *dof_label=NULL, *dof_type=NULL, *node_bounded=NULL;
+    *dof_label=NULL, *dof_type=NULL, *node_bounded=NULL, *node_dormant=NULL;
   double load=0., time0=0., time1=0., load0=0., load1=0., factor=0.,
     time_current=0., time_total=0., dtime=0., amplitude=0., frequency=0.,
-    time_start=0., radius=0., angle_start=0.,
+    time_start=0., time_end=0., radius=0., angle_start=0., on_time=0., off_time=0.,
+    until_force=0., until_factor=1., reaction=0.,
     angle_total=0., rdum=0., ddum[MDIM], coord_start[MDIM], coord_total[MDIM],
     *bounda_time=NULL, *new_node_dof=NULL, 
     *node_dof=NULL, *bounda_sine=NULL, *node_rhside=NULL;
+  long int bounda_on_off=0, bounda_until_force=0, bounda_constant=0,
+    bounda_geometry_method=0, bounda_alternate_list[DATA_ITEM_SIZE],
+    bounda_alternate_n=0, iteration=0, bounda_water=0, topres_bounda=0;
+  double bounda_normal_vec[3], bounda_dof_radial[3],
+    bounda_dof_cylindrical[6];
+  double bounda_time_increment=0., bounda_time_offset=0., bounda_baseline=0.;
+  // bounda_factor / _parabolic_x: db() writes the stored length (up to
+  // DATA_ITEM_SIZE), only the first 4 / 3 values are used
+  double bounda_factor[DATA_ITEM_SIZE], bounda_factor_px[DATA_ITEM_SIZE],
+    bounda_time_units[2];
+  // bounda_time_until_data + bounda_time_until_value_minimum (manual
+  // Professional 6.40/6.41): reduce the load of the bounda_time record
+  // when the monitored data item falls from start to wanted.
+  long int bounda_until_data=0, until_data[3], until_data_item_name=0,
+    until_data_item_index=0, until_data_item_number=0;
+  double bounda_until_factor=1., bounda_until_first=0., bounda_until_monitor=0.,
+    bounda_until_wanted=0., bounda_until_start=0.;
+  // bounda_time_smc: the table read from the SMC file and its data type
+  long int smc=0, smc_type=0, smc_switch=0, length_smc_table=0;
+  double *smc_table=NULL;
 
   swit = set_swit(-1,-1,"bounda");
   if ( swit ) pri( "In routine BOUNDA" );
@@ -52,12 +602,24 @@ void bounda( )
   bounda_time = get_new_dbl(DATA_ITEM_SIZE);
 
   db_set_int( NODE_BOUNDED, VERSION_NORMAL );
+    // node_bounded_index (manual Professional 6.879): per principal dof
+    // the index of the bounda_dof record that bounds it, -nothing when
+    // the dof is free (Professional 02-08-2026: every node is printed)
+  db_set_int( NODE_BOUNDED_INDEX, VERSION_NORMAL );
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( db_active_index( NODE_BOUNDED_INDEX, inod, VERSION_NORMAL ) )
+      array_set( db_int( NODE_BOUNDED_INDEX, inod, VERSION_NORMAL ),
+        -NOTHING, npuknwn );
+  }
 
   groundflow_phreatic_apply();
 
   db_max_index( BOUNDA_UNKNOWN, max_bounda_unknown, VERSION_NORMAL, GET );
+  db_max_index( BOUNDA_DOF, max_bounda_dof, VERSION_NORMAL, GET );
   db_max_index( BOUNDA_FORCE, max_bounda_force, VERSION_NORMAL, GET );
-  if ( max_bounda_unknown<0 && max_bounda_force<0 ) goto end_of_bounda;
+  if ( max_bounda_unknown<0 && max_bounda_dof<0 && max_bounda_force<0 )
+    goto end_of_bounda;
 
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );
   if ( max_node<0 ) goto end_of_bounda;
@@ -71,28 +633,80 @@ void bounda( )
     VERSION_NORMAL, GET_IF_EXISTS );
   time_total = time_current + dtime;
   if ( swit ) pri( "time_total", time_total );
+  node_dormant = bounda_node_dormant( max_node, time_total );
+  db( NUMBER_ITERATIONS, 0, &iteration, ddum, ldum, VERSION_NEW, GET_IF_EXISTS );
 
   if ( max_bounda_unknown>max_bounda ) max_bounda = max_bounda_unknown;
+  if ( max_bounda_dof>max_bounda ) max_bounda = max_bounda_dof;
   if ( max_bounda_force>max_bounda ) max_bounda = max_bounda_force;
   for ( iboun=0; iboun<=max_bounda; iboun++ ) {
-    unknown = db_active_index( BOUNDA_UNKNOWN, iboun, VERSION_NORMAL );
+    unknown = db_active_index( BOUNDA_UNKNOWN, iboun, VERSION_NORMAL ) ||
+              db_active_index( BOUNDA_DOF, iboun, VERSION_NORMAL );
     force   = db_active_index( BOUNDA_FORCE, iboun, VERSION_NORMAL );
     bounda_time_user = -NO; db( BOUNDA_TIME_USER, iboun, &bounda_time_user, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    bounda_on_off = 0;
     if ( unknown || force ) {
       if ( swit ) pri( "iboun", iboun );
+      // bounda_alternate: in successive iterations, omit one of the
+      // listed bounda_dof indices (rotating). Useful for very large runs.
+      bounda_alternate_n = 0;
+      db( BOUNDA_ALTERNATE, 0, bounda_alternate_list, ddum,
+        bounda_alternate_n, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( bounda_alternate_n>0 ) {
+        long int jalt=0, skip_bounda=0;
+        for ( jalt=0; jalt<bounda_alternate_n; jalt++ ) {
+          if ( bounda_alternate_list[jalt]==iboun &&
+               (iteration % bounda_alternate_n)==jalt ) {
+            skip_bounda = 1;
+            break;
+          }
+        }
+        if ( skip_bounda ) continue;
+      }
       time =  sine = user = 0; ninc = 2;
+      smc = 0;
+      if ( smc_table!=NULL ) {
+        delete[] smc_table;
+        smc_table = NULL;
+      }
+      smc_switch = -NO;
+      db( BOUNDA_TIME_SMC, iboun, &smc_switch, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
       if      ( db_active_index( BOUNDA_SINE, iboun, VERSION_NORMAL ) ) {
         bounda_sine = db_dbl( BOUNDA_SINE, iboun, VERSION_NORMAL );
+        // Professional manual 6.34: bounda_sine index start_time end_time
+        // freq_0 amp_0 freq_1 amp_1 ... The record layout therefore starts
+        // with start_time AND end_time before the (frequency, amplitude)
+        // pairs. GNU previously assumed [start_time, freq, amp, ...], which
+        // shifted every pair by one slot (freq/amp mis-parameterized).
         time_start = bounda_sine[0];
-        nfreq = ( db_len( BOUNDA_SINE, iboun, VERSION_NORMAL ) - 1 ) / 2;
+        time_end   = bounda_sine[1];
+        nfreq = ( db_len( BOUNDA_SINE, iboun, VERSION_NORMAL ) - 2 ) / 2;
         ninc = 2;
         sine = 1;
       }
       else if ( bounda_time_user==-YES ) {
         ninc = 2;
         user = 1;
-      }          
+      }
+      else if ( smc_switch==-YES ) {
+        // bounda_time_smc (manual Professional 6.42-6.44): the samples of
+        // <index>.smc. The two samples around time_total go to bounda_time,
+        // so the time loop below interpolates linearly; before the first
+        // sample and after the last one the dofs are free (Professional).
+        smc_type = bounda_time_smc_read( iboun, smc_table, length_smc_table );
+        smc = 1;
+        time = 1;
+        ninc = 2;
+        length_bounda_time = 4;
+        bounda_time_increment = 0.;
+        {
+          long int k = 0;
+          while ( k<length_smc_table/2-2 && time_total>smc_table[2*k+2] ) k++;
+          array_move( &smc_table[2*k], bounda_time, 4 );
+        }
+      }
       else if ( db_active_index( BOUNDA_TIME_FILE, iboun, VERSION_NORMAL ) ) {
         db( BOUNDA_TIME_FILE, iboun, &bounda_time_file, ddum, ldum, 
           VERSION_NORMAL, GET_IF_EXISTS );
@@ -107,7 +721,40 @@ void bounda( )
         db( BOUNDA_TIME, iboun, idum, bounda_time, length_bounda_time, 
           VERSION_NORMAL, GET );
         time = 1;
-        if ( length_bounda_time==1 )
+        // bounda_time_units: convert time and length units in bounda_time
+        bounda_time_units[0] = 1.; bounda_time_units[1] = 1.;
+        db( BOUNDA_TIME_UNITS, iboun, idum, bounda_time_units, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( bounda_time_units[0]!=1. || bounda_time_units[1]!=1. ) {
+          long int iu=0;
+          for ( iu=0; iu<length_bounda_time; iu++ ) {
+            if ( iu%2==0 ) bounda_time[iu] *= bounda_time_units[0];
+            else bounda_time[iu] *= bounda_time_units[1];
+          }
+        }
+        // bounda_time_factor (manual Professional 6.36): multiplication
+        // factor for the LOAD values of bounda_time (odd positions; times
+        // are untouched). Handy to convert an imported time-load table
+        // whose load definition differs (e.g. fractions of g).
+        {
+          double bounda_time_factor_value = 1.;
+          if ( db( BOUNDA_TIME_FACTOR, iboun, idum,
+              &bounda_time_factor_value, ldum, VERSION_NORMAL,
+              GET_IF_EXISTS ) ) {
+            if ( length_bounda_time==1 )
+              bounda_time[0] *= bounda_time_factor_value;
+            else {
+              long int iu=0;
+              for ( iu=1; iu<length_bounda_time; iu+=2 )
+                bounda_time[iu] *= bounda_time_factor_value;
+            }
+          }
+        }
+        db( BOUNDA_TIME_INCREMENT, iboun, idum, &bounda_time_increment, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( bounda_time_increment>0. )
+          ninc = length_bounda_time;
+        else if ( length_bounda_time==1 )
           ninc = 2;
         else {
           if ( length_bounda_time<4 ) db_error( BOUNDA_TIME, iboun );
@@ -119,12 +766,96 @@ void bounda( )
         time = 1;
         length_bounda_time = 0;
       }
+      // bounda_time_until_data + bounda_time_until_value_minimum
+      // (manual Professional 6.40/6.41): reduce the load of this
+      // bounda_time when the monitored data item falls from start to
+      // wanted. Verified against the Professional binary 25-10-2023
+      // (until1.dat, E=1 and E=2 runs): the reduction factor is
+      // quadratic, ((monitor/first - wanted)/(start - wanted))^2 with
+      // clamp [0,1], where first is the initial monitor value
+      // (bounda_time_until_first) and the monitor is the data item
+      // value of the PREVIOUS time step (post_node_result is written
+      // by post() at the end of the step, so the value available here
+      // is the one of the previous step). The monitor is read here;
+      // first is captured and the factor computed in the time loop
+      // below, on the first step in which this bounda_time is active.
+      bounda_until_data = 0;
+      bounda_until_factor = 1.;
+      bounda_until_monitor = 0.;
+      if ( db_active_index( BOUNDA_TIME_UNTIL_DATA, iboun, VERSION_NORMAL ) ) {
+        db( BOUNDA_TIME_UNTIL_DATA, iboun, until_data, ddum, ldum,
+          VERSION_NORMAL, GET );
+        until_data_item_name   = labs( until_data[0] );
+        until_data_item_index  = until_data[1];
+        until_data_item_number = until_data[2];
+        {
+          double until_min[2];
+          db( BOUNDA_TIME_UNTIL_VALUE_MINIMUM, iboun, idum, until_min, ldum,
+            VERSION_NORMAL, GET );
+          bounda_until_wanted = until_min[0];
+          bounda_until_start  = until_min[1];
+        }
+        if ( data_item_value( until_data_item_name, until_data_item_index,
+            until_data_item_number, bounda_until_monitor ) )
+          bounda_until_data = 1;
+      }
+      // only periodically use the bounda_time values
+      if ( db_active_index( BOUNDA_TIME_ON_OFF, iboun, VERSION_NORMAL ) ) {
+        double on_off_tmp[2];
+        db( BOUNDA_TIME_ON_OFF, iboun, idum, on_off_tmp, ldum, 
+          VERSION_NORMAL, GET );
+        on_time = on_off_tmp[0];
+        off_time = on_off_tmp[1];
+        if ( on_time<=0. || off_time<0. ) db_error( BOUNDA_TIME_ON_OFF, iboun );
+        bounda_on_off = 1;
+      }
+      // limit the force response by reducing the prescribed velocity
+      if ( db_active_index( BOUNDA_TIME_UNTIL_FORCE, iboun, VERSION_NORMAL ) ) {
+        double until_tmp[2];
+        db( BOUNDA_TIME_UNTIL_FORCE, iboun, idum, until_tmp, ldum, 
+          VERSION_NORMAL, GET );
+        until_force = until_tmp[0];
+        until_factor = until_tmp[1];
+        if ( until_factor<=0. || until_factor>1. )
+          db_error( BOUNDA_TIME_UNTIL_FORCE, iboun );
+        bounda_until_force = 1;
+      }
+      // keep the prescribed dofs constant (bounda_constant)
+      db( BOUNDA_CONSTANT, iboun, &bounda_constant, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      db( BOUNDA_TIME_OFFSET, iboun, idum, &bounda_time_offset, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_factor, 0., 4 );
+      db( BOUNDA_FACTOR, iboun, idum, bounda_factor, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_factor_px, 0., 3 );
+      db( BOUNDA_FACTOR_PARABOLIC_X, iboun, idum, bounda_factor_px, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      db( BOUNDA_GEOMETRY_METHOD, iboun, &bounda_geometry_method, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_normal_vec, 0., 3 );
+      db( BOUNDA_NORMAL, iboun, idum, bounda_normal_vec, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_dof_radial, 0., 3 );
+      db( BOUNDA_DOF_RADIAL, iboun, idum, bounda_dof_radial, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      array_set( bounda_dof_cylindrical, 0., 6 );
+      db( BOUNDA_DOF_CYLINDRICAL, iboun, idum, bounda_dof_cylindrical, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      bounda_water = 0;
+      db( BOUNDA_WATER, iboun, &bounda_water, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
 
       if ( unknown ) {
-        db( BOUNDA_UNKNOWN, iboun, val, ddum, bounda_length, 
-          VERSION_NORMAL, GET );
+        if ( db_active_index( BOUNDA_DOF, iboun, VERSION_NORMAL ) )
+          db( BOUNDA_DOF, iboun, val, ddum, bounda_length, 
+            VERSION_NORMAL, GET );
+        else
+          db( BOUNDA_UNKNOWN, iboun, val, ddum, bounda_length, 
+            VERSION_NORMAL, GET );
         if ( bounda_length<2 ) db_error( BOUNDA_UNKNOWN, iboun );
-        rotate = 0; rotate_axis = val[bounda_length-1];
+        rotate = 0; topres_bounda = 0;
+        rotate_axis = val[bounda_length-1];
         if      ( rotate_axis==-ROTATION_X_AXIS ) {
           rotate = 1;
           val[bounda_length-1] = dof_label[vel_indx+1*nder];
@@ -142,6 +873,33 @@ void bounda( )
           val[bounda_length-1] = dof_label[vel_indx+0*nder];
           val[bounda_length-0] = dof_label[vel_indx+1*nder];
           bounda_length++;
+        }
+        // bounda_time_smc: the dofs must be of the data type of the file
+        if ( smc ) {
+          long int iu_smc=0, kind=0;
+          const char *smc_name[3] = { "materi_acceleration",
+            "materi_velocity", "materi_displacement" };
+          for ( iu_smc=1; iu_smc<bounda_length; iu_smc++ ) {
+            for ( idim=0; idim<ndim; idim++ ) {
+              kind = -1;
+              if ( materi_acceleration &&
+                   val[iu_smc]==dof_label[acc_indx+idim*nder] ) kind = 0;
+              else if ( materi_velocity &&
+                   val[iu_smc]==dof_label[vel_indx+idim*nder] ) kind = 1;
+              else if ( materi_displacement &&
+                   val[iu_smc]==dof_label[dis_indx+idim*nder] ) kind = 2;
+              if ( kind>=0 && kind!=smc_type ) {
+                string smc_message = "Error, the SMC file is for type: ";
+                smc_message += smc_name[smc_type];
+                pri( smc_message.c_str() );
+                smc_message = "The BOUNDA_DOF is for: ";
+                smc_message += smc_name[kind];
+                pri( smc_message.c_str() );
+                pri( "That is not consistent." );
+                exit(TN_EXIT_STATUS);
+              }
+            }
+          }
         }
       }
       else {
@@ -169,22 +927,41 @@ void bounda( )
             found = 1;
           }
           else {
-            time0 = bounda_time[inc*2+0];
-            load0 = bounda_time[inc*2+1];
-            time1 = bounda_time[inc*2+2];
-            load1 = bounda_time[inc*2+3];
-            if ( time0>=time1 ) db_error( BOUNDA_TIME, iboun );
-            if ( swit ) {
-              pri( "time_total", time_total );
-              pri( "time0", time0 );
-              pri( "time1", time1 );
-              pri( "load0", load0 );
-              pri( "load1", load1 );
+            if ( bounda_time_increment>0. ) {
+              // bounda_time holds load-only values; times are offset + k*increment
+              long int nload = length_bounda_time;
+              if ( time_total>=bounda_time_offset ) {
+                long int k = (long int) floor( (time_total-bounda_time_offset)
+                  / bounda_time_increment + 1.e-9 );
+                if ( k<0 ) k = 0;
+                if ( k>nload-1 ) k = nload-1;
+                load = bounda_time[k];
+                found = 1;
+              }
             }
-            if ( time_total>=(time0-1.e-10) && time_total<=time1 ) {
-              found = 1;
-              if ( time0==time1 ) load = load0;
-              else load = load0 + (load1-load0)*(time_total-time0)/(time1-time0);
+            else {
+              time0 = bounda_time[inc*2+0];
+              load0 = bounda_time[inc*2+1];
+              time1 = bounda_time[inc*2+2];
+              load1 = bounda_time[inc*2+3];
+              if ( time0>=time1 ) db_error( BOUNDA_TIME, iboun );
+              if ( swit ) {
+                pri( "time_total", time_total );
+                pri( "time0", time0 );
+                pri( "time1", time1 );
+                pri( "load0", load0 );
+                pri( "load1", load1 );
+              }
+              if ( time_total>=(time0-1.e-10) && time_total<=time1 ) {
+                found = 1;
+                if ( time0==time1 ) load = load0;
+                else load = load0 + (load1-load0)*(time_total-time0)/(time1-time0);
+              }
+            }
+            // only periodically use the bounda_time values
+            if ( found && bounda_on_off ) {
+              double phase = fmod( time_total, on_time+off_time );
+              if ( phase>=on_time ) { load = 0.; found = 0; }
             }
           }
         }
@@ -194,10 +971,68 @@ void bounda( )
           user_bounda_time( iboun, time_total, load );
         }
         else if ( sine ) 
-          found = time_current>=time_start;
+          // Professional manual 6.34: the sine is imposed only from
+          // start_time up to and including end_time; after end_time the
+          // dof is no longer prescribed and becomes free again.
+          found = time_current>=time_start && time_current<=time_end;
         else {
           load = 0.;
           found = 1;
+        }
+
+        // bounda_time_until_data (manual Professional 6.40/6.41):
+        // scale the load with the quadratic reduction factor computed
+        // from the monitored data item of the previous step. first is
+        // captured on the first active step (matches the Professional:
+        // bounda_time_until_first = monitor value of the step before
+        // the until starts reducing).
+        if ( found && bounda_until_data ) {
+          // first: initial value of the monitor (written once)
+          if ( !db( BOUNDA_TIME_UNTIL_FIRST, iboun, idum, &bounda_until_first,
+              ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+            bounda_until_first = bounda_until_monitor;
+            ldum = 1;
+            db( BOUNDA_TIME_UNTIL_FIRST, iboun, idum, &bounda_until_first,
+              ldum, VERSION_NORMAL, PUT );
+          }
+          if ( bounda_until_first!=0. &&
+               bounda_until_start>bounda_until_wanted ) {
+            double ratio = ( bounda_until_monitor/bounda_until_first
+              - bounda_until_wanted ) /
+              ( bounda_until_start - bounda_until_wanted );
+            if ( ratio<0. ) ratio = 0.;
+            if ( ratio>1. ) ratio = 1.;
+            bounda_until_factor = ratio*ratio;
+          }
+          ldum = 1;
+          db( BOUNDA_TIME_UNTIL_USED, iboun, idum, &bounda_until_factor,
+            ldum, VERSION_NORMAL, PUT );
+          load *= bounda_until_factor;
+        }
+
+        // bounda_baseline_correction (manual Professional 6.19): the
+        // parabola of the record, added below to its acceleration dofs only
+        bounda_baseline = 0.;
+        if ( found && unknown &&
+             db_active_index( BOUNDA_BASELINE_CORRECTION, 0, VERSION_NORMAL ) ) {
+          long int iu_acc=0, has_acc=0;
+          for ( iu_acc=1; iu_acc<bounda_length; iu_acc++ )
+            for ( idim=0; idim<ndim; idim++ )
+              if ( materi_acceleration &&
+                   val[iu_acc]==dof_label[acc_indx+idim*nder] ) has_acc = 1;
+          if ( has_acc && smc )
+              // the fit integrates the whole SMC table, not only the two
+              // samples around time_total
+            bounda_baseline = bounda_baseline_load( iboun, 1,
+              smc_table, length_smc_table, time_total, dtime );
+          else if ( has_acc ) {
+            long int table = time && length_bounda_time>0 &&
+              db_active_index( BOUNDA_TIME, iboun, VERSION_NORMAL ) &&
+              !db_active_index( BOUNDA_TIME_FILE, iboun, VERSION_NORMAL ) &&
+              !db_active_index( BOUNDA_TIME_INCREMENT, iboun, VERSION_NORMAL );
+            bounda_baseline = bounda_baseline_load( iboun, table,
+              bounda_time, length_bounda_time, time_total, dtime );
+          }
         }
 
         if ( found ) {
@@ -224,6 +1059,22 @@ void bounda( )
           else
             iu_start = 1;
 
+          // bounda_dof/bounda_unknown ... -veln (manual Professional
+          // 6.22): generate the mpc records that impose the zero
+          // normal-velocity condition on the nodes of this record. The
+          // bounda_time of the record is irrelevant (manual 6.22); the
+          // generator runs once per mesh state (fingerprint guard).
+          if ( unknown ) {
+            long int veln_bounda = 0, iu_scan = 0;
+            for ( iu_scan=iu_start; iu_scan<=iu_end; iu_scan++ )
+              if ( val[iu_scan]==-VELN ) veln_bounda = 1;
+            if ( veln_bounda ) {
+              bounda_veln_mpc( iboun, val, use_geom, use_range, use_all,
+                use_node_set, integer_range, range_length,
+                bounda_geometry_method, bounda_normal_vec );
+            }
+          }
+
           for ( in=0, ready=0; !ready; in++ ) {
             found = 0;
             if      ( use_range ) {
@@ -242,8 +1093,11 @@ void bounda( )
               if ( nodes_in_geometry[in] ) {
                 found = 1;
                 inod = in;
+                long int node_type = NODE_START_REFINED;
+                if ( bounda_geometry_method!=0 )
+                  node_type = bounda_geometry_method;
                 geometry( in, ddum, val, found, factor, ddum, rdum,
-                  ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+                  ddum, node_type, PROJECT_EXACT, VERSION_NORMAL );
               }
             }
             else if ( use_node_set  ) {
@@ -259,17 +1113,41 @@ void bounda( )
               found = 1;
             }
             if ( found ) {
-              if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+              if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+                   !( unknown && node_dormant!=NULL && node_dormant[inod] ) ) {
                 swit_node = swit;
                 swit = set_swit(-1,inod,"bounda");
                 if ( swit ) pri( "inod", inod );
                 for ( iu=iu_start; iu<=iu_end; iu++ ) {
-                  array_member( dof_label, val[iu], nuknwn, iuknwn );
-                  if ( iuknwn<0 ) {
-                    if ( unknown ) 
-                      db_error( BOUNDA_UNKNOWN, iboun );
-                    else 
-                      db_error( BOUNDA_FORCE, iboun );
+                  // bounda_dof ... -veln (manual Professional 6.22):
+                  // the zero normal-velocity condition is imposed by
+                  // the mpc records of bounda_veln_mpc() (generated
+                  // once per mesh state above); the token prescribes
+                  // no dof by itself.
+                  if ( unknown && val[iu]==-VELN ) continue;
+                  // bounda_dof ... -topres (manual Professional 2.4.1
+                  // groundflow): prescribe the TOTAL pore pressure
+                  // (p_total = h - rho*g*z with h the hydraulic head
+                  // dof). The parser resolves "-topres" to the
+                  // groundflow_pressure KEYWORD enum (not to the dof
+                  // label, which is what "-pres" resolves to), so it is
+                  // mapped here onto the pres dof and the prescribed
+                  // load is converted to the dof value in the load
+                  // application below (topres_bounda). Only valid when
+                  // the groundflow pressure dof is active.
+                  if ( unknown && groundflow_pressure &&
+                       val[iu]==-GROUNDFLOW_PRESSURE ) {
+                    iuknwn = pres_indx;
+                    topres_bounda = 1;
+                  }
+                  else {
+                    array_member( dof_label, val[iu], nuknwn, iuknwn );
+                    if ( iuknwn<0 ) {
+                      if ( unknown ) 
+                        db_error( BOUNDA_UNKNOWN, iboun );
+                      else 
+                        db_error( BOUNDA_FORCE, iboun );
+                    }
                   }
                   ipuknwn = iuknwn / nder;
                   if ( unknown ) {
@@ -279,11 +1157,76 @@ void bounda( )
                     if ( swit ) pri( "node_dof", node_dof, nuknwn );
                     ind1 = ipuknwn*nder + nder - 1;
                     node_bounded[ipuknwn] = 1;
+                    db_int( NODE_BOUNDED_INDEX, inod,
+                      VERSION_NORMAL )[ipuknwn] = iboun;
+                    // groundflow seepage: on a seepage edge the pore pressure
+                    // is prescribed (typically 0, free air) ONLY when water
+                    // flows OUT of the domain. When water would flow IN, the
+                    // edge is closed (no boundary condition). The normal of the
+                    // seepage geometry must point outwards the material.
+                    if ( iuknwn==pres_indx && groundflow_pressure &&
+                         db_active_index( GROUNDFLOW_SEEPAGE_EPS, 0,
+                           VERSION_NORMAL ) ) {
+                      long int in_seep=0, inod_tmp=0;
+                      double coords_tmp[MDIM], seep_normal[MDIM], flow_dot=0.;
+                      double seep_eps=0.1;
+                      db( GROUNDFLOW_SEEPAGE_EPS, 0, idum, &seep_eps, ldum,
+                        VERSION_NORMAL, GET_IF_EXISTS );
+                      // node-based seepage list
+                      if ( db_active_index( GROUNDFLOW_SEEPAGE_NODE, 0,
+                          VERSION_NORMAL ) ) {
+                        long int snode[DATA_ITEM_SIZE], lsn=0;
+                        db( GROUNDFLOW_SEEPAGE_NODE, 0, snode, ddum, lsn,
+                          VERSION_NORMAL, GET );
+                        if ( array_member( snode, inod, lsn, ldum ) ) in_seep = 1;
+                      }
+                      // geometry-based seepage list
+                      long int max_seep=0, iseep=0;
+                      db_max_index( GROUNDFLOW_SEEPAGE_GEOMETRY, max_seep,
+                        VERSION_NORMAL, GET );
+                      for ( iseep=0; iseep<=max_seep && !in_seep; iseep++ ) {
+                        if ( db_active_index( GROUNDFLOW_SEEPAGE_GEOMETRY,
+                            iseep, VERSION_NORMAL ) ) {
+                          long int gent[2];
+                          db( GROUNDFLOW_SEEPAGE_GEOMETRY, iseep, gent, ddum,
+                            ldum, VERSION_NORMAL, GET );
+                          db( NODE, inod, idum, coords_tmp, ldum,
+                            VERSION_NORMAL, GET );
+                          long int gfound=0;
+                          double gfac=0., gnor[MDIM], gpen=0., gproj[MDIM];
+                          geometry( inod, coords_tmp, gent, gfound, gfac,
+                            gnor, gpen, gproj, NODE_START_REFINED,
+                            PROJECT_EXACT, VERSION_NORMAL );
+                          if ( gfound ) {
+                            in_seep = 1;
+                            array_move( gnor, seep_normal, ndim );
+                            array_normalize( seep_normal, ndim );
+                            // flow = -k*grad(pres) ~ -gvel (Darcy velocity);
+                            // check the component along the outward normal.
+                            flow_dot = 0.;
+                            if ( groundflow_velocity ) {
+                              double *gvel = db_dbl( NODE_DOF, inod,
+                                VERSION_NORMAL );
+                              for ( inod_tmp=0; inod_tmp<ndim; inod_tmp++ )
+                                flow_dot += gvel[gvel_indx+inod_tmp*nder] *
+                                  seep_normal[inod_tmp];
+                            }
+                          }
+                        }
+                      }
+                      // water flows OUT when flow_dot>0 (Darcy velocity points
+                      // outwards). If it flows IN, close the edge: do not
+                      // impose the pressure boundary condition.
+                      if ( in_seep && flow_dot < -seep_eps ) {
+                        node_bounded[ipuknwn] = 0;
+                      }
+                    }
                     if ( sine ) {
                       new_node_dof[iuknwn] = new_node_dof[ind1] = 0.;
                       for ( ifreq=0; ifreq<nfreq; ifreq++ ) {
-                        frequency = bounda_sine[1+ifreq*2+0];
-                        amplitude = bounda_sine[1+ifreq*2+1];
+                        // offset 2: skip start_time and end_time (manual 6.34)
+                        frequency = bounda_sine[2+ifreq*2+0];
+                        amplitude = bounda_sine[2+ifreq*2+1];
                         new_node_dof[iuknwn] += factor * amplitude *
                           sin( 2. * PIRAD * frequency * time_total );
                         if ( derivatives ) new_node_dof[ind1] += 
@@ -381,9 +1324,223 @@ void bounda( )
                         ( new_node_dof[iuknwn] - node_dof[iuknwn] ) / dtime;
                     }
                     else {
-                      new_node_dof[iuknwn] = factor * load;
+                      if ( bounda_constant==-YES && iuknwn>=vel_indx &&
+                           node_dof!=NULL && !force &&
+                           node_dof[iuknwn]!=0. )
+                        new_node_dof[iuknwn] = node_dof[iuknwn];
+                      else {
+                        // coordinate-dependent factor on the load
+                        double load_factor = 1.;
+                        if ( bounda_factor[0]!=0. || bounda_factor[1]!=0. ||
+                             bounda_factor[2]!=0. || bounda_factor[3]!=0. ) {
+                          db( NODE, inod, idum, coord_start, ldum,
+                            VERSION_NORMAL, GET );
+                          load_factor = bounda_factor[0];
+                          if ( ndim>=1 ) load_factor += bounda_factor[1]*coord_start[0];
+                          if ( ndim>=2 ) load_factor += bounda_factor[2]*coord_start[1];
+                          if ( ndim==3 ) load_factor += bounda_factor[3]*coord_start[2];
+                        }
+                        if ( bounda_factor_px[0]!=0. || bounda_factor_px[1]!=0. ||
+                             bounda_factor_px[2]!=0. ) {
+                          db( NODE, inod, idum, coord_start, ldum,
+                            VERSION_NORMAL, GET );
+                          load_factor = bounda_factor_px[0]
+                            + bounda_factor_px[1]*coord_start[0]
+                            + bounda_factor_px[2]*coord_start[0]*coord_start[0];
+                        }
+                        if ( bounda_water==-YES && iuknwn==pres_indx ) {
+                          // pore pressure from the water column height:
+                          // density_water * g * (water_level - y)
+                          double coords_w[MDIM], sp=0., wl=0., dens=0.,
+                            fg[MDIM];
+                          db( NODE, inod, idum, coords_w, ndim,
+                            VERSION_NORMAL, GET );
+                          force_gravity_calculate( fg );
+                          if ( db_active_index( GROUNDFLOW_DENSITY, 0,
+                              VERSION_NORMAL ) )
+                            dens = db_dbl( GROUNDFLOW_DENSITY, 0,
+                              VERSION_NORMAL )[0];
+                          if ( db_active_index( GROUNDFLOW_PHREATICLEVEL, 0,
+                              VERSION_NORMAL ) ) {
+                            long int plen=0, idum2[1];
+                            double phreatic[DATA_ITEM_SIZE];
+                            db( GROUNDFLOW_PHREATICLEVEL, 0, idum2, phreatic,
+                              plen, VERSION_NORMAL, GET );
+                            if ( plen>=1 ) wl = phreatic[0];
+                          }
+                          sp = fg[ndim-1] * dens * ( wl - coords_w[ndim-1] );
+                          new_node_dof[iuknwn] = factor * sp;
+                        }
+                        else if ( topres_bounda && iuknwn==pres_indx &&
+                                  groundflow_pressure && !force ) {
+                          // bounda_dof ... -topres (manual Professional
+                          // 2.4.1): the bounda_time load is a TOTAL pore
+                          // pressure (p_total), not the hydraulic head
+                          // that the pres dof solves. The dof value is
+                          // set per node so that the total pressure that
+                          // groundflow_phreatic_coord() evaluates at the
+                          // node equals the prescribed load. The dof is
+                          // the DYNAMIC pressure (p_total - p_static), so
+                          // the conversion depends on the source of the
+                          // static pressure (level_source):
+                          //  - post_calcul_static_pressure_height region
+                          //    (level_source 2): the head bound follows
+                          //    the reference height: pres_dof = load -
+                          //    static (invert of total = pres + static;
+                          //    ground13 verified digit-by-digit vs the
+                          //    Professional .dbs);
+                          //  - groundflow_phreatic_level (level_source 1):
+                          //    MEASURED on the Professional binary
+                          //    (probes undrained1/groundflow): the head h
+                          //    keeps the load (h = load) and the total
+                          //    pressure follows p_total = h - rho*g*z, so
+                          //    pres_dof = p_dynamic = load - rho*g*level
+                          //    (uniform under a constant level; the
+                          //    static-pressure option of the manual 2.2.7
+                          //    undrained strategy). When the level lies
+                          //    above the whole mesh the static profile of
+                          //    to_pres = -rho*g*z reproduces the
+                          //    Professional .dbs of undrained1.
+                          //  - no level (level_source 0): total = pres -
+                          //    rho*g*z (invert: pres_dof = load +
+                          //    rho*g*z).
+                          // addtopressure is subtracted on all branches
+                          // (it is added by phreatic_coord after the
+                          // pressure split).
+                          double coords_tp[MDIM], total_tp=0., static_tp=0.,
+                            location_tp=0., dens_tp=0., addtop=0., fg_tp[MDIM];
+                          long int found_tp=0, level_source_tp=0;
+                          db( NODE, inod, idum, coords_tp, ndim,
+                            VERSION_NORMAL, GET );
+                          if ( materi_displacement ) {
+                            for ( idim=0; idim<ndim; idim++ )
+                              coords_tp[idim] +=
+                                node_dof[dis_indx+idim*nder];
+                          }
+                          db( GROUNDFLOW_DENSITY, 0, idum, &dens_tp, ldum,
+                            VERSION_NORMAL, GET_IF_EXISTS );
+                          db( GROUNDFLOW_ADDTOPRESSURE, 0, idum, &addtop,
+                            ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                          force_gravity_calculate( fg_tp );
+                          found_tp = groundflow_phreatic_coord( inod,
+                            coords_tp, node_dof, total_tp, static_tp,
+                            location_tp, &level_source_tp );
+                          if ( found_tp && level_source_tp==1 ) {
+                            // the dof reference is z_ref of the level,
+                            // not the local level (F5 T5 U3b/U3c)
+                            groundflow_phreatic_level_reference( inod,
+                              coords_tp, location_tp );
+                            new_node_dof[iuknwn] = factor * ( load
+                              - dens_tp * fg_tp[ndim-1] * location_tp
+                              - addtop );
+                          }
+                          else if ( found_tp )
+                            new_node_dof[iuknwn] =
+                              factor * ( load - static_tp - addtop );
+                          else
+                            new_node_dof[iuknwn] = factor * ( load
+                              + dens_tp * fg_tp[ndim-1] *
+                                coords_tp[ndim-1] - addtop );
+                        }
+                        else
+                          new_node_dof[iuknwn] = factor * load * load_factor;
+                        // bounda_dof -accx/-accy/-accz (manual
+                        // Professional 4.11/6.800): prescribing the
+                        // acceleration does NOT constrain the derived
+                        // acceleration record; it imposes the velocity
+                        // bound v_new = v_old + a*dt so the prescribed
+                        // acceleration integrates into velocity and
+                        // displacement (a = (v_new - v_old)/dt). The
+                        // record acc* of the bounded node then derives
+                        // to exactly the prescribed acceleration in
+                        // parallel_new_dof_diagonal (dof.cc).
+                        if ( materi_acceleration && iuknwn>=acc_indx &&
+                             iuknwn<acc_indx+ndim*nder ) {
+                          long int idim_a = ( iuknwn - acc_indx ) / nder;
+                          long int iuknwn_vel = vel_indx + idim_a*nder;
+                          node_bounded[vel_indx/nder+idim_a] = 1;
+                          new_node_dof[iuknwn] = factor *
+                            ( load + bounda_baseline ) * load_factor;
+                          new_node_dof[iuknwn_vel] = node_dof[iuknwn_vel]
+                            + factor * ( load + bounda_baseline ) *
+                              load_factor * dtime;
+                        }
+                        // bounda_dof_radial: prescribe velocity radial to a point
+                        if ( (bounda_dof_radial[0]!=0. || bounda_dof_radial[1]!=0.
+                              || bounda_dof_radial[2]!=0.) &&
+                             iuknwn>=vel_indx && iuknwn<vel_indx+ndim*nder ) {
+                          long int idim_r = ( iuknwn - vel_indx ) / nder;
+                          double coords_r[MDIM], r=0.;
+                          db( NODE, inod, idum, coords_r, ndim,
+                            VERSION_NORMAL, GET );
+                          for ( long int k=0; k<ndim; k++ ) {
+                            double dk = coords_r[k] - bounda_dof_radial[k];
+                            r += dk*dk;
+                          }
+                          r = sqrt(r);
+                          if ( r>0. && idim_r<ndim ) {
+                            double dr = coords_r[idim_r]
+                              - bounda_dof_radial[idim_r];
+                            new_node_dof[iuknwn] *= dr / r;
+                          }
+                        }
+                        // bounda_dof_cylindrical: prescribe velocity cylindrical
+                        // to a line defined by two points (radial to the line)
+                        if ( (bounda_dof_cylindrical[0]!=0. ||
+                              bounda_dof_cylindrical[1]!=0. ||
+                              bounda_dof_cylindrical[2]!=0.) &&
+                             iuknwn>=vel_indx && iuknwn<vel_indx+ndim*nder ) {
+                          long int idim_c = ( iuknwn - vel_indx ) / nder;
+                          double coords_c[MDIM], p1[MDIM], p2[MDIM],
+                            axis[MDIM], rc[MDIM], r=0.;
+                          for ( long int k=0; k<MDIM; k++ ) {
+                            p1[k] = bounda_dof_cylindrical[k];
+                            p2[k] = bounda_dof_cylindrical[k+3];
+                            axis[k] = p2[k] - p1[k];
+                          }
+                          db( NODE, inod, idum, coords_c, ndim,
+                            VERSION_NORMAL, GET );
+                          // project the node onto the line: rc = coord - p1
+                          for ( long int k=0; k<ndim; k++ )
+                            rc[k] = coords_c[k] - p1[k];
+                          // distance from the node to the line
+                          double t=0., aa=0.;
+                          for ( long int k=0; k<ndim; k++ ) {
+                            t   += rc[k]*axis[k];
+                            aa  += axis[k]*axis[k];
+                          }
+                          if ( aa>0. ) {
+                            t /= aa;
+                            double proj[MDIM];
+                            for ( long int k=0; k<ndim; k++ ) {
+                              proj[k] = p1[k] + t*axis[k];
+                              double dk = coords_c[k] - proj[k];
+                              r += dk*dk;
+                            }
+                            r = sqrt(r);
+                            if ( r>0. && idim_c<ndim ) {
+                              double dr = coords_c[idim_c]
+                                - proj[idim_c];
+                              new_node_dof[iuknwn] *= dr / r;
+                            }
+                          }
+                        }
+                      }
                       if ( derivatives ) new_node_dof[ind1] = 
                         ( new_node_dof[iuknwn] - node_dof[iuknwn] ) / dtime;
+                      // limit the force response by reducing the velocity
+                      if ( bounda_until_force && force==0 ) {
+                        long int ireac = ( iuknwn - vel_indx ) / nder;
+                        if ( db_active_index( NODE_RHSIDE_PREVIOUS, inod,
+                            VERSION_NORMAL ) ) {
+                          node_rhside = db_dbl( NODE_RHSIDE_PREVIOUS, inod,
+                            VERSION_NORMAL );
+                          reaction = scalar_dabs( node_rhside[ireac] );
+                          if ( reaction>until_force )
+                            new_node_dof[iuknwn] *= 
+                              until_factor*(until_force/reaction);
+                        }
+                      }
                     }
                     if ( dof_type[iuknwn]==-MATERI_DISPLACEMENT ) {
                       indx = vel_indx + ( iuknwn - dis_indx );
@@ -412,6 +1569,26 @@ void bounda( )
                       pri( "node_bounded", node_bounded, npuknwn );
                       pri( "new_node_dof", new_node_dof, nuknwn );
                     }
+                    // bounda_normal: restrict the node to slide on a plane
+                    // (velocity component normal to the plane is set to zero)
+                    if ( (bounda_normal_vec[0]!=0. || bounda_normal_vec[1]!=0. ||
+                          bounda_normal_vec[2]!=0.) && materi_velocity ) {
+                      double nn = bounda_normal_vec[0]*bounda_normal_vec[0]
+                        + bounda_normal_vec[1]*bounda_normal_vec[1]
+                        + bounda_normal_vec[2]*bounda_normal_vec[2];
+                      if ( nn>0. ) {
+                        double vn=0.;
+                        long int idim_n=0;
+                        for ( idim_n=0; idim_n<ndim; idim_n++ ) {
+                          long int iv = vel_indx + idim_n*nder;
+                          vn += new_node_dof[iv]*bounda_normal_vec[idim_n];
+                        }
+                        for ( idim_n=0; idim_n<ndim; idim_n++ ) {
+                          long int iv = vel_indx + idim_n*nder;
+                          new_node_dof[iv] -= vn*bounda_normal_vec[idim_n]/nn;
+                        }
+                      }
+                    }
                   }
                   else if ( force ) {
                     if      ( dof_type[iuknwn]==-MATERI_DISPLACEMENT )
@@ -427,8 +1604,9 @@ void bounda( )
                     if ( sine ) {
                       node_rhside[indx] = 0.;
                       for ( ifreq=0; ifreq<nfreq; ifreq++ ) { 
-                        frequency = bounda_sine[1+ifreq*2+0];
-                        amplitude = bounda_sine[1+ifreq*2+1];
+                        // offset 2: skip start_time and end_time (manual 6.34)
+                        frequency = bounda_sine[2+ifreq*2+0];
+                        amplitude = bounda_sine[2+ifreq*2+1];
                         node_rhside[indx] += factor*amplitude*
                           sin(2.*PIRAD*frequency*time_total);
                       }
@@ -458,14 +1636,22 @@ void bounda( )
   }
 
   delete[] nodes_in_geometry;
+  if ( node_dormant!=NULL ) delete[] node_dormant;
 
   end_of_bounda:
+
+  // multi point constraints (manual Professional 6.856-6.875): consume
+  // the mpc_node_number/mpc_node_factor records. Runs also when there
+  // are no bounda records (mpc-only models); the slave dofs are bounded
+  // and get the value sum(factor*master dof) of the current iteration.
+  mpc_node_apply();
 
   delete[] val;
   delete[] integer_range;
   delete[] dof_label;
   delete[] dof_type;
   delete[] bounda_time;
+  if ( smc_table!=NULL ) delete[] smc_table;
 
   if ( swit ) pri( "Out routine BOUNDA" );
 
@@ -504,3 +1690,33 @@ void bounda_time_file_apply( long int iboun, double time_total,
   
   in.close();
 }
+
+// Value of one entry of a DOUBLE PRECISION data item: name (enum, sign
+// ignored), index, and number (a dof label such as -sigyy, mapped through
+// dof_label and, for a record of npuknwn values, to the principal slot; or
+// a plain position). Returns 1 and sets value when the item is active and
+// the entry exists, 0 otherwise. Used by bounda_time_until_data and
+// control_timestep_until_data.
+long int data_item_value( long int name, long int index, long int number,
+  double &value )
+{
+  long int entry = 0, item_len = 0, ldum = 0, dof_label[MUKNWN];
+  double ddum[1];
+
+  name = labs( name );
+  if ( !db_active_index( name, index, VERSION_NORMAL ) ) return 0;
+  if ( number<0 ) {
+    array_set( dof_label, 0, MUKNWN );
+    db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    array_member( dof_label, number, nuknwn, entry );
+    if ( entry>=0 && db_len( name, index, VERSION_NORMAL )==npuknwn )
+      entry /= nder;
+  }
+  else
+    entry = number;
+  item_len = db_len( name, index, VERSION_NORMAL );
+  if ( entry<0 || entry>=item_len ) return 0;
+  value = db_dbl( name, index, VERSION_NORMAL )[entry];
+  return 1;
+}
+

@@ -1,0 +1,59 @@
+# control_print_interface_stress
+
+## Implementación
+
+- **Output**: `print_interface_stress()` in
+  `print_interface_stress.cc` (new file, added to the makefile as
+  `PRINT_IFACE_STRESS_OBJ`). Invoked from the control loop in `top.cc`
+  (same pattern as `print_frd`).
+- **Keywords** (data_class CONTROL) registered in `database.cc`:
+  - `control_print_interface_stress` (INTEGER, length 1).
+  - `control_print_interface_stress_2d_coordinates` (DOUBLE, length 4,
+    required control_print_interface_stress) — cut line xstart ystart
+    xend yend.
+  - `control_print_interface_stress_3d_geometry` (INTEGER, length 2),
+    `_3d_order` (INTEGER, length 1) — registered but not used.
+- **New enums**: `CONTROL_PRINT_INTERFACE_STRESS`,
+  `_2D_COORDINATES`, `_3D_GEOMETRY`, `_3D_ORDER` in `tochnog.h` /
+  `tochnog-mod.h`, between `CONTROL_PRINT_HISTORY_SMOOTH` and
+  `CONTROL_PRINT_MATLAB`.
+
+## Algoritmo (2D)
+
+- Recorre los elementos de interfaz (grupo con `GROUP_INTERFACE`).
+- Lee el strain normal acumulado `ELEMENT_INTERFACE_STRAIN_NORMAL` y la
+  rigidez `kn` del grupo; `sign = kn * strain_normal` (fuerza normal
+  total acumulada).
+- Lee la fuerza tangencial total acumulada
+  `ELEMENT_INTERFACE_FORCE_TANG` (history de la Fase 3: Mohr-Coulomb
+  acumulativo o elástica total) y la reporta como `sigt`.
+- Para cada nodo del elemento, proyecta la coordenada sobre el vector del
+  corte: `proj = ((x-xstart)*dx + (y-ystart)*dy)/len`.
+- Escribe `proj sign sigt` por nodo en `interface_stress.<index>`
+  (append por paso, serie temporal).
+
+## Detalles
+
+- `sign` y `sigt` son valores ACUMULADOS (fuerzas totales del último paso
+  convergido), leídos de VERSION_NORMAL — igual semántica que los
+  histories usados por la ley constitutiva.
+- El archivo crece por paso (append), como los otros prints.
+
+## Algoritmo (3D)
+
+- En 3D se imprime una línea por elemento de interfaz: las coordenadas
+  del **centroide** del elemento (x y z) seguidas de `sign`, `sigt1`
+  (history `ELEMENT_INTERFACE_FORCE_TANG`) y `sigt2` (history
+  `ELEMENT_INTERFACE_FORCE_TANG2`, la 2ª componente tangencial 3D).
+- `control_print_interface_stress_3d_geometry name index`: filtra por
+  geometría (patrón `geometry()` de adjust.cc) — solo los elementos de
+  interfaz con al menos un nodo dentro de la geometría se imprimen.
+- `control_print_interface_stress_3d_order -x|-y|-z`: ordena las líneas
+  por la coordenada pedida del centroide (ascendente); sin el keyword se
+  imprime en orden de elemento. Las líneas 3D se recolectan y ordenan
+  antes de escribir (los elementos no se recorren en orden de centroide).
+
+## Pendiente
+
+- El strain normal se lee de VERSION_NORMAL (el del paso anterior); el
+  valor mostrado es el del último paso completado.

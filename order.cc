@@ -20,7 +20,7 @@
 #include "tochnog.h"
 
 
-void ordered_list_apply( long int inn, long int ordered_coords[], 
+void ordered_list_apply( long int /*inn*/, long int ordered_coords[], 
   long int tmp_max_coord, double tmp_coord[], 
   double eps_coord, long int &equal, long int task ) 
 

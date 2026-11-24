@@ -1,0 +1,48 @@
+(
+mpc_element_group_keep -yes [manual 6.865]: the geometry of
+mpc_element_group_geometry moves away from the nodes [change_dataitem] and
+control_mpc_element_group -yes re-creates the records every timestep, but
+the records generated in the first timestep are kept. The Professional
+02-08-2026 ignores keep and drops them [DIVERGENCES MPC-ELEMENT-GROUP-KEEP].
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+node 1 0.0 0.0
+node 2 0.0 1.0
+node 3 1.0 0.0
+node 4 1.0 1.0
+element 1 -quad4 1 2 3 4
+node 5 1.0 0.0
+node 6 1.0 0.5
+node 7 1.0 1.0
+node 8 2.0 0.0
+node 9 2.0 0.5
+node 10 2.0 1.0
+element 2 -quad4 5 6 8 9
+element 3 -quad4 6 7 9 10
+element_group 1 1
+element_group 2 2
+element_group 3 2
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+mpc_element_group 10 2 1
+mpc_element_group_dof 10 -velx -vely
+geometry_line 1 1.0 -1.0 1.0 2.0 1.e-6
+mpc_element_group_geometry 10 -geometry_line 1
+change_dataitem 0 -geometry_line 1 0 -use
+change_dataitem_time 0 0. 1. 1.2 1. 1.5 5. 100. 5.
+change_dataitem 1 -geometry_line 1 2 -use
+change_dataitem_time 1 0. 1. 1.2 1. 1.5 5. 100. 5.
+control_mpc_element_group 20 -yes
+mpc_element_group_keep 10 -yes
+bounda_dof  10  -ra 1 2 -ra -velx -vely
+bounda_dof  20  -ra 8 9 10 -ra -velx -vely
+control_timestep  10  1. 1.0
+control_timestep  20  1. 2.0
+control_print     20  -time_current -node_dof
+end_data

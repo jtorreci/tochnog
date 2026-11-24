@@ -1,0 +1,36 @@
+(
+control_mesh_gid_batch (manual Professional 6.200) with gid on the PATH.
+build_safe.sh runs this test in a scratch copy with a fake gid script first
+on the PATH: called as "gid -n -b GidMeshBatch.bch", it writes
+mesh_gid.gid/mesh_gid.dat (4 tria3 elements in the unit square, middle
+node 5 at 0.5 0.5), as the tochnog.gid problem type does. Tochnog copies
+that file to 10.dat, removes GidMeshBatch.bch and the mesh_gid.gid
+directory, and control_input 10 reads the mesh in the same control index
+(the Professional 02-08-2026 does the same with this fake gid). The target
+checks node 5 of the mesh read.
+
+control_mesh_gid_batch3: the same mesh-only model without any dof (as the
+Professional mesh_gid examples): control_input must still create the
+node_start_refined records of the nodes it reads (before: "Error detected for
+data item : node_start_refined").
+)
+echo -no
+number_of_space_dimensions 2
+end_initia
+mesh_gid_point_coord 1 0. 0.
+mesh_gid_point_coord 2 1. 0.
+mesh_gid_point_coord 3 0. 1.
+mesh_gid_point_coord 4 1. 1.
+mesh_gid_line_point 1 1 2
+mesh_gid_line_point 2 2 4
+mesh_gid_line_point 3 4 3
+mesh_gid_line_point 4 3 1
+mesh_gid_surface_line 1 1 2 3 4
+mesh_gid_surface_element_group 1 1
+mesh_gid_assign_conditions_line 11 1
+mesh_gid_size 0.5
+control_mesh_gid_batch 10 -yes
+control_input 10 -yes
+target_item 0 -node 5 1
+target_value 0 0.5 1.e-8
+end_data

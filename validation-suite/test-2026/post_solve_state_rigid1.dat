@@ -1,0 +1,44 @@
+(
+F4 T5 / C35 (2026-10-10): post-solve material state pass, rigid
+translation (from sfnet spring4 / audit K02). A bar2 tied to the ground
+by a one-noded spring at node 1 is translated with velx 1 at node 1, ONE
+step of dt 0.01 with ONE equilibrium iteration. Rigid motion: eptxx =
+sigxx = 0 exactly at both nodes (= Professional 02-08-2026 and
+analytic), velix 0.01. Old GNU (pre-solve iterate, ip velx 0.5): eptxx =
+sigxx = -0.01.
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+node 1 0
+node 2 1
+element 1 -bar2 1 2
+element_group 1 1
+element 2 -spring1 1
+element_group 2 2
+group_type 1 -materi
+group_materi_elasti_young 1 1.
+group_type 2 -spring
+group_spring_stiffness 2 1.0
+group_spring_direction 2 1.0
+bounda_dof 0 1 -velx
+bounda_time 0 1.
+control_timestep 20 1.e-2 1.e-2
+control_timestep_iterations 20 1
+target_item 0 -node_dof 1 -eptxx
+target_value 0 0. 1.e-12
+target_item 1 -node_dof 2 -eptxx
+target_value 1 0. 1.e-12
+target_item 2 -node_dof 1 -sigxx
+target_value 2 0. 1.e-12
+target_item 3 -node_dof 2 -sigxx
+target_value 3 0. 1.e-12
+target_item 4 -node_dof 2 -velx
+target_value 4 1. 1.e-12
+target_item 5 -node_dof 2 -velix
+target_value 5 0.01 1.e-12
+end_data

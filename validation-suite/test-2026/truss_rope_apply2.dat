@@ -1,0 +1,26 @@
+(F5 W1: truss_rope_apply -no with control_truss_rope_apply 10 -yes: the
+ control record of the current index overrules the global one, the rope
+ acts. Professional 02-08-2026 and GNU: 0.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+end_initia
+node 1 0 0
+node 2 1 0
+element 1 -truss 1 2
+group_type 0 -truss
+group_truss_area 0 1.
+group_truss_elasti_young 0 100.
+bounda_dof 1 1 -velx -vely
+bounda_dof 2 2 -velx
+bounda_time 2 0. 0. 1. -0.1
+bounda_dof 3 2 -vely
+bounda_time 3 0. 0. 1. 0.
+control_timestep 10 0.1 1.
+group_truss_rope 0 -yes
+truss_rope_apply -no
+control_truss_rope_apply 10 -yes
+target_item 0 -node_rhside 2 -velx
+target_value 0 0. 1.e-10
+end_data

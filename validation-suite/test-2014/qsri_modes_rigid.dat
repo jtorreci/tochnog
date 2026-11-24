@@ -1,0 +1,66 @@
+( qsri_modes_rigid - SRI conserva los 3 modos rigidos EXACTOS:
+  UN quad4 [0,1]x[0,1] con SRI y ROTACION RIGIDA prescrita
+  u_x = -omega*y, u_y = omega*x con omega*dt = 1e-3 (velx =
+  -1e-2*y, vely = 1e-2*x): nodo 2 (1,0): velx=0, vely=1e-2;
+  nodo 3 (0,1): velx=-1e-2, vely=0; nodo 4 (1,1): velx=-1e-2,
+  vely=1e-2; nodo 1 (0,0) fijo. La cizalla del movimiento rigido es
+  IDENTICAMENTE nula en todo el elemento (gamma = -omega + omega = 0)
+  -> con el SRI las tensiones son 0 EXACTO: she = nor = mom = 0
+  (los 3 modos rigidos - 2 traslaciones + 1 rotacion - son modos
+  cero exactos de la matriz SRI; el analisis de eigenvalues
+  documentado da exactamente 3 valores nulos y NINGUN modo
+  hourglass). Archivo materi_stress_force.449. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  0. 1.
+node 4  1. 1.
+
+element 1  -quad4 1 2 3 4
+element_group 1 0
+
+group_type 0  -materi
+group_materi_density 0  1.0
+group_materi_elasti_young 0  1000.0
+group_materi_elasti_poisson 0  0.3
+group_materi_membrane 0  -yes
+group_materi_memory 0  -updated_without_rotation
+group_element_selective_reduced_integration 0  -yes
+
+bounda_unknown 0  1 -velx -vely
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  2 -vely
+bounda_time    1  0. 1.e-2 100. 1.e-2
+bounda_unknown 2  2 -velx
+bounda_time    2  0. 0. 100. 0.
+bounda_unknown 3  3 -vely
+bounda_time    3  0. 0. 100. 0.
+bounda_unknown 4  3 -velx
+bounda_time    4  0. -1.e-2 100. -1.e-2
+bounda_unknown 5  4 -vely
+bounda_time    5  0. 1.e-2 100. 1.e-2
+bounda_unknown 6  4 -velx
+bounda_time    6  0. -1.e-2 100. -1.e-2
+
+post_calcul_materi_stress_force_element_group 0
+post_calcul_materi_stress_force_reference_point 0.5 1000.0
+post_calcul -materi_stress -force
+
+control_timestep 1  0.1 0.1
+control_print_materi_stress_force 449 -all
+
+target_item 0  -node_dof 4 -velx
+target_value 0  -1.e-2 1.e-8
+end_data

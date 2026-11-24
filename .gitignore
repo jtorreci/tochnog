@@ -1,0 +1,43 @@
+# Build artifacts
+*.o
+build/
+tochnog
+
+# Editor/OS
+.DS_Store
+__MACOSX/
+
+# Downloads y suites de terceros (no se versionan)
+external-downloads/
+validation-suite/*
+# own 2026 regression inputs ARE versioned (outputs are not)
+!validation-suite/test-2026/
+validation-suite/test-2026/*
+!validation-suite/test-2026/*.dat
+!validation-suite/test-2026/*.smc
+!validation-suite/test-2026/*.bch
+# test-2014 regression inputs (build_safe.sh suite) ARE versioned too
+!validation-suite/test-2014/
+validation-suite/test-2014/*
+!validation-suite/test-2014/*.dat
+# ...except the dump written by the meshdoff run (an output, not an input)
+validation-suite/test-2014/print_mesh_dof.dat
+
+# Estado local de herramientas (opencode)
+.atl/
+.codegraph/
+
+# Temporal
+*.tmp
+tn.tmp
+tn.log
+tn.dvd
+
+# Auditoria de sesion (WSL/opencode)
+session-audit.log
+
+# LaTeX build artifacts
+ProjectDocs/report/*.aux
+ProjectDocs/report/*.log
+ProjectDocs/report/*.out
+ProjectDocs/report/*.toc

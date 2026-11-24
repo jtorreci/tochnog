@@ -18,23 +18,83 @@
 */
 
 #include "tochnog.h"
+#include <cerrno>
+#include <fcntl.h>
+#include <sched.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-#define ITERATION_WISHED 4
+extern char **environ;
+
 #define EPS_DTIME 1.e-4
 
-void top( void )
+// Set when the control loop enters a control index (also on a
+// control_repeat re-entry); step_start() consumes it, so the one-shot mesh
+// operations of that index run on its FIRST step only (F4 T7). A
+// control_timestep on the same index calls step_start() on every step:
+// re-running control_mesh_macro / _copy / _mirror there added a copy of
+// the mesh per step (mesh_activate1: 202 -> 4040 nodes in 20 steps, then
+// out of memory) and _switch swapped the axes back and forth. Measured on
+// the Professional (probes F4 T7): it applies each of them once per
+// control index.
+static long int step_start_control_entry = 0;
+// first step of the current control index, for material routines that
+// act once per index (control_materi_plasti_hypo_niemunis_visco_ocr_apply)
+long int step_first_of_control = 0;
 
+// C62 (F4 T6f LOW queue Q3): the node_rhside written by bounda() in an
+// equilibrium iteration (the bounda_force loads, assigned right after
+// iteration_start() and before the element loop). The post-solve
+// material state pass zeroes NODE_RHSIDE in iteration_start() but does
+// not re-run bounda() (it would re-prescribe dofs), so it restores this
+// snapshot of the last iteration instead; the reported node_rhside then
+// keeps the external boundary forces, as in the Professional.
+static std::vector<double> bounda_rhside_snapshot;
+static long int bounda_rhside_snapshot_max_node = -1;
+
+static void bounda_rhside_snapshot_take( void )
 {
+  long int max_node_s = -1, inod_s = 0;
+  db_max_index( NODE, max_node_s, VERSION_NORMAL, GET );
+  bounda_rhside_snapshot_max_node = max_node_s;
+  bounda_rhside_snapshot.assign( (size_t) ( 1+max_node_s ) * npuknwn, 0. );
+  for ( inod_s=0; inod_s<=max_node_s; inod_s++ ) {
+    if ( !db_active_index( NODE_RHSIDE, inod_s, VERSION_NORMAL ) ) continue;
+    double *rh_s = db_dbl( NODE_RHSIDE, inod_s, VERSION_NORMAL );
+    for ( long int ip_s=0; ip_s<npuknwn; ip_s++ )
+      bounda_rhside_snapshot[inod_s*npuknwn+ip_s] = rh_s[ip_s];
+  }
+}
+
+static void bounda_rhside_snapshot_restore( void )
+{
+  long int max_node_s = -1, inod_s = 0;
+  db_max_index( NODE, max_node_s, VERSION_NORMAL, GET );
+  if ( max_node_s!=bounda_rhside_snapshot_max_node ) return;
+  for ( inod_s=0; inod_s<=max_node_s; inod_s++ ) {
+    if ( !db_active_index( NODE_RHSIDE, inod_s, VERSION_NORMAL ) ) continue;
+    double *rh_s = db_dbl( NODE_RHSIDE, inod_s, VERSION_NORMAL );
+    for ( long int ip_s=0; ip_s<npuknwn; ip_s++ )
+      rh_s[ip_s] = bounda_rhside_snapshot[inod_s*npuknwn+ip_s];
+  }
+}
+
+void top( void )
+{
+
+  long int incdrv_max=-1, gp_initial_max=-1;
   long int inod=0, ielem=0, max=0, max_node=0, max_control=0, 
     start_control=0, length=0, iinc=0, ninc=0, 
     timestep_iterations=1, swit=0, swit_timestep=0, idat=0, 
     inverse_iterations=0, inverse_iter=0, ipar=0, npar=0, 
     ipar_i=0, ipar_n=0, max_ipar=0, max_ipar_i=0, icontrol=0, iteration=0, 
     number_processors=1, number_iterations=0,
-    iteration_min=0, iteration_max=0,
+    iteration_min=0, iteration_max=0, iteration_wished=4,
     use_control_timestep_iterations_automatic=0, 
     use_control_timestep_size_automatic_decrease=0, 
     control_timestep_iterations_automatic_stop=-YES, 
+    timestep_iterations_automatic_apply=-YES, 
     converged_once=0, time_at_start=0,
     options_stabilization=-STATIC, options_elementloop=-YES,
     print_control=-NO, options_solver=-MATRIX_ITERATIVE_BICG, print_where=-NO,
@@ -45,7 +105,7 @@ void top( void )
     dtime=0., time_old=0., time_new=0., ratio_criterium=0., 
     ratio_max=0., decrease_factor=0., min_timestep=0.,
     maximum_timestep=0., post_node_rhside_ratio=0.,
-    multiplier=1., ddum[1], control_timestep_iterations_automatic[2], 
+    multiplier=1., ddum[1], dzero=0., control_timestep_iterations_automatic[3], 
     control_timestep_size_automatic_decrease[3], 
     dwork[MUKNWN], *timestep=NULL, dworkmnol[MPOINT*MUKNWN], *dworknei=NULL;
 
@@ -63,8 +123,109 @@ void top( void )
   time_at_start = (long int) time(NULL);
   length=1; db( TIME_AT_START, 0, &time_at_start, ddum, length, VERSION_NORMAL, PUT );
 
+  // tochnog_version (manual Professional 6.1091): the build date as a
+  // queryable record (day, month, year) - parsed from the compiler's
+  // __DATE__ string so the record always matches the binary
+  {
+    long int version[3] = { 0, 0, 0 };
+    char month_str[16] = "";
+    long int day = 0, year = 0, imonth = 0;
+    char *months[12] = { (char*)"Jan", (char*)"Feb", (char*)"Mar",
+      (char*)"Apr", (char*)"May", (char*)"Jun", (char*)"Jul",
+      (char*)"Aug", (char*)"Sep", (char*)"Oct", (char*)"Nov",
+      (char*)"Dec" };
+    if ( sscanf( __DATE__, "%15s %ld %ld", month_str, &day, &year )==3 ) {
+      for ( imonth=0; imonth<12; imonth++ )
+        if ( !strcmp( month_str, months[imonth] ) ) break;
+      if ( imonth<12 ) {
+        version[0] = day;
+        version[1] = imonth + 1;
+        version[2] = year;
+      }
+    }
+    length = 3;
+    db( TOCHNOG_VERSION, 0, version, ddum, length, VERSION_NORMAL, PUT );
+  }
+
+  // message (manual Professional 6.856, default -yes): the introduction
+  // message (executable, build date, warranty). Suppressed by message -no
+  // or the environment symbol MESSAGE (or message) set to -no, as in the
+  // Professional 02-08-2026.
+  {
+    long int message = -YES;
+    const char *env = getenv( "MESSAGE" );
+    if ( env==NULL ) env = getenv( "message" );
+    db( MESSAGE, 0, &message, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( env!=NULL && ( !strcmp( env, "-no" ) || !strcmp( env, "-NO" ) ) )
+      message = -NO;
+    if ( message==-YES ) {
+      char exe[4096] = "tochnog";
+      ssize_t nexe = readlink( "/proc/self/exe", exe, sizeof(exe)-1 );
+      if ( nexe>0 ) exe[nexe] = '\0';
+      long int build_date[3] = { 0, 0, 0 };
+      length = 3;
+      db( TOCHNOG_VERSION, 0, build_date, ddum, length, VERSION_NORMAL, GET );
+      cout << "You can suppress messages by 'message -no' in the input file "
+        "or as environment symbol (MESSAGE=-no).\n";
+      cout << "Tochnog GNU executable: " << exe << ". Build date "
+        "(day-month-year): " << build_date[0] << "-" << build_date[1] << "-"
+        << build_date[2] << ".\n";
+      cout << "This program is free software under the GNU General Public "
+        "License; it is distributed WITHOUT ANY WARRANTY, without even the "
+        "implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR "
+        "PURPOSE.\n";
+    }
+  }
+
+  // print_precision (manual Professional 6.997): the number of digits of
+  // every printed value (TN_PRECISION); default 12.
+  // processors_partition (6.1006) is accepted: the GNU element loop gives
+  // each thread one static block.
+  {
+    long int print_precision = 12;
+    db( PRINT_PRECISION, 0, &print_precision, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( print_precision<1 ) db_error( PRINT_PRECISION, 0 );
+    tn_print_precision = print_precision;
+  }
+
+  // print_data_name (manual Professional 6.971): every data name, in the
+  // database order, to tochnog_data_name.txt (Professional layout: an
+  // empty line, "Names:", one name per line).
+  {
+    long int print_data_name = -NO;
+    db( PRINT_DATA_NAME, 0, &print_data_name, ddum, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
+    if ( print_data_name==-YES ) {
+      ofstream out_names( "tochnog_data_name.txt" );
+      out_names << "\nNames:\n";
+      for ( long int idat_name=0; idat_name<MDAT; idat_name++ ) {
+        const char *data_name = db_name(idat_name);
+        if ( data_name[0]!='\0' && data_name[0]!=' ' )
+          out_names << data_name << "\n";
+      }
+      out_names.close();
+    }
+  }
+
+  // incremental_driver (manual Professional 6.784): a constitutive driver
+  // that replaces the FEM analysis entirely. Measured in the Professional
+  // 25-10-2023 binary: top() calls incremental_driver() right after
+  // easy(); the driver writes incremental_driver_result.txt and the
+  // program exits (exit_tn inside). Mirror: run it and return; tn()
+  // proceeds to the normal exit_tn() cleanup (.dbs dump, target check).
+  // Ground truth: ProjectDocs/manual-developer/incremental_driver.md.
+  db_max_index( INCREMENTAL_DRIVER, incdrv_max, VERSION_NORMAL, GET );
+  if ( incdrv_max >= 0 ) {
+    incremental_driver_run();
+    return;
+  }
+
+    // Default mesh is -fixed_in_space (manual Professional 6.806); an
+    // explicit options_mesh overrides it, except that materi_displacement
+    // always forces -fixed_in_space.
   if ( materi_velocity ) {
-    array_set( options_mesh, -FOLLOW_MATERIAL, ndim );
+    array_set( options_mesh, -FIXED_IN_SPACE, ndim );
     db( OPTIONS_MESH, 0, options_mesh, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     if ( materi_displacement ) array_set( options_mesh, -FIXED_IN_SPACE, ndim );
     db( OPTIONS_MESH, 0, options_mesh, ddum, ndim, VERSION_NORMAL, PUT );
@@ -79,6 +240,19 @@ void top( void )
   db( OPTIONS_ELEMENTLOOP, 0, &options_elementloop, ddum, 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
+  // processors_maximum (manual Professional 6.1005): -yes without a
+  // processors / options_processors record (or the
+  // TOCHNOG_OPTIONS_PROCESSORS environment variable, stored as the record
+  // by miscel.cc) runs on every CPU available to the process. The
+  // Professional default is -yes; the GNU default stays -no until F6 (the
+  // threads are created and joined in every parallel region: 80 elements x
+  // 300 steps run 5.5x slower on 16 threads; DIVERGENCES PROC-MAX).
+  if ( !db_active_index( OPTIONS_PROCESSORS, 0, VERSION_NORMAL ) ) {
+    long int processors_maximum = -NO;
+    db( PROCESSORS_MAXIMUM, 0, &processors_maximum, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( processors_maximum==-YES ) number_processors = available_processors();
+  }
   db( OPTIONS_PROCESSORS, 0, &number_processors, ddum, 
     length, VERSION_NORMAL, GET_IF_EXISTS );
   if ( number_processors<1 ) db_error( OPTIONS_PROCESSORS, 0 );
@@ -120,6 +294,30 @@ void top( void )
     // initialize element_dof, if not specified
   db( OPTIONS_ELEMENT_DOF, 0, &options_element_dof, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
+  // global_element_dof_apply -only (manual Professional 6.553): the
+  // elements keep their integration-point dofs as with -yes, but the
+  // non-principal dofs (strains, stresses, history variables) are not
+  // added to the global nodes. (The Professional 02-08-2026 stops with
+  // "Program error detected for data item: element_intpnt_dof".)
+  if ( options_element_dof==-ONLY ) {
+    element_dof_only = 1;
+    options_element_dof = -YES;
+  }
+
+  db( CHECK_USED, 0, &check_used, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_TARGET, 0, &check_target, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_ERROR, 0, &check_error, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_WARNING, 0, &check_warning, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_NAN, 0, &check_nan, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_DATA, 0, &check_data, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_SOLVER, 0, idum, &check_solver_eps, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_ELEMENT_SHAPE, 0, idum, &check_element_shape_factor, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_MEMORY, 0, &check_memory, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( CHECK_MEMORY_USAGE, 0, &check_memory_usage, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+
+  // check_data -yes: verify data base integrity (required items present)
+  if ( check_data==-YES ) check_data_integrity();
+
   if ( nuknwn>0 ) {
     array_set( dworkmnol, 0., mnolnuknwn );
     db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
@@ -127,16 +325,98 @@ void top( void )
     array_set( dworknei, 0, length_nei );
     dworknei[length_nei-1]=1;
 
+    // control_materi_plasti_hardsoil_gammap_initial may be given for any
+    // control index (the switch is read at the current index in
+    // set_stress): pre-allocate when it is specified for ANY index
+    // (a check on index 0 only crashed for a non-zero index with "Data
+    // is allocated in a parallel loop").
+    db_highest_index( CONTROL_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
+      gp_initial_max, VERSION_NORMAL );
+    // global_element_dof_from_node_dof (manual Professional 6.554): an
+    // element without element_intpnt_dof record in the input starts its
+    // integration-point states from the node_dof records (-yes: the GNU
+    // element_dof_initialised 0 path of elem.cc) or from zero (-no: the
+    // record is marked initialised with the zero values below; a
+    // control_reset_dof then writes the integration points itself, see
+    // data.cc). The default is -no, as in the manual and the Professional
+    // 02-08-2026 (probes f5/v5b d_*; owner decision C100, 2026-11-03);
+    // the GNU behaved as -yes before.
+    long int element_dof_from_node_dof = -NO, intpnt_absent = 0;
+    db( GLOBAL_ELEMENT_DOF_FROM_NODE_DOF, 0, &element_dof_from_node_dof,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     for ( ielem=0; ielem<=max_elem; ielem++ ) {
+      intpnt_absent = 0;
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
-           !db_active_index( ELEMENT_DOF, ielem, VERSION_NORMAL ) ) 
-        db( ELEMENT_DOF, ielem, idum, dworkmnol, mnolnuknwn, VERSION_NORMAL, PUT );
+           !db_active_index( ELEMENT_INTPNT_DOF, ielem, VERSION_NORMAL ) ) {
+        db( ELEMENT_INTPNT_DOF, ielem, idum, dworkmnol, mnolnuknwn, VERSION_NORMAL, PUT );
+        intpnt_absent = 1;
+      }
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
-           !db_active_index( ELEMENT_DOF_INITIALISED, ielem, VERSION_NORMAL ) ) 
-        db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one, VERSION_NORMAL, PUT );
+           !db_active_index( ELEMENT_DOF_INITIALISED, ielem, VERSION_NORMAL ) ) {
+        if ( intpnt_absent && options_element_dof==-YES &&
+             element_dof_from_node_dof==-NO )
+          db( ELEMENT_DOF_INITIALISED, ielem, &one, ddum, one, VERSION_NORMAL, PUT );
+        else
+          db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one, VERSION_NORMAL, PUT );
+      }
       if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
            !db_active_index( NONLOCAL_ELEMENT_INFO, ielem, VERSION_NORMAL ) ) 
-        db( NONLOCAL_ELEMENT_INFO, ielem, idum, dworknei, length_nei, VERSION_NORMAL, PUT );		
+        db( NONLOCAL_ELEMENT_INFO, ielem, idum, dworknei, length_nei, VERSION_NORMAL, PUT );
+      // element_intpnt_materi_plasti_hardsoil_gammap_initial (manual
+      // Professional 6.440): pre-allocate the per-element record before
+      // the time loop (the first-timestep PUT in set_stress runs inside
+      // the parallel element loop, where allocation is not allowed).
+      // Sentinel -1: the first-timestep initialization in set_stress
+      // overwrites it with gamma_p_extra >= 0.
+      if ( gp_initial_max>=0 && db_active_index( ELEMENT, ielem, VERSION_NORMAL ) && 
+           !db_active_index( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL,
+             ielem, VERSION_NORMAL ) ) {
+        dzero = -1.;
+        db( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL, ielem, idum,
+          &dzero, one, VERSION_NORMAL, PUT );
+        dzero = 0.;
+      }
+      // element_intpnt_materi_undrained_pressure (manual Professional
+      // 6.441, undrained-capacity family 2.2.7): pre-allocate the
+      // record (zeros) for the elements of the groups that carry
+      // group_materi_undrained_capacity. materi() writes the per-step
+      // undrained pressure into it inside the parallel element loop
+      // (allocation not allowed there), and the step-end version copy
+      // promotes the converged value to VERSION_NORMAL (the record is
+      // version_all like ELEMENT_INTPNT_DOF).
+      if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) &&
+           db_max_index( GROUP_MATERI_UNDRAINED_CAPACITY, max,
+             VERSION_NORMAL, GET )>=0 ) {
+        long int gr_undr = 0;
+        double ddum_undr[1];
+        db( ELEMENT_GROUP, ielem, &gr_undr, ddum_undr, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( db_active_index( GROUP_MATERI_UNDRAINED_CAPACITY, gr_undr,
+             VERSION_NORMAL ) &&
+             !db_active_index( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE,
+               ielem, VERSION_NORMAL ) ) {
+          double undr_zero[MPOINT];
+          for ( long int kz=0; kz<MPOINT; kz++ ) undr_zero[kz] = 0.;
+          long int undr_zero_len = MPOINT;
+          db( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE, ielem, idum,
+            undr_zero, undr_zero_len, VERSION_NORMAL, PUT );
+        }
+      }
+      // element_intpnt_materi_stress_effective (internal, damage
+      // effective stress, see materi()): pre-allocate the record (flags
+      // 0 = not yet stored) before the parallel element loop, where
+      // allocation is not allowed; the step-end version copy promotes
+      // the converged value to VERSION_NORMAL.
+      if ( materi_damage && materi_stress &&
+           db_active_index( ELEMENT, ielem, VERSION_NORMAL ) &&
+           !db_active_index( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE,
+             ielem, VERSION_NORMAL ) ) {
+        double eff_zero[MPOINT*MSTRESS_EFF_SLOTS];
+        long int eff_zero_len = MPOINT*MSTRESS_EFF_SLOTS;
+        array_set( eff_zero, 0., eff_zero_len );
+        db( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE, ielem, idum,
+          eff_zero, eff_zero_len, VERSION_NORMAL, PUT );
+      }
     }
   }
 
@@ -145,6 +425,12 @@ void top( void )
     length = 1;
     db( TIME_CURRENT, 0, idum, &time_current, length, VERSION_NORMAL, PUT );
   }
+
+    // groundflow_apply -no (manual Professional 6.555) and
+    // linear_calculation_apply -yes (6.797): database rewrites for all
+    // timesteps (general.cc), before the start version is stored
+  groundflow_apply_transform();
+  linear_calculation_apply_transform();
 
     // determine the highest index of timestep, print, etc..
   for ( idat=0; idat<MDAT; idat++ ) {
@@ -207,24 +493,82 @@ void top( void )
                 swit_timestep = swit; swit = swit && set_swit(-1,-1,"");
                 length=1; db( ICONTROL, 0, &icontrol, ddum, length, 
                   VERSION_NORMAL, PUT );
+                step_start_control_entry = 1;
+                // control_mesh_gid_batch (manual Professional 6.200): write
+                // the mesh_gid_* records as GidMeshBatch.bch and, with gid
+                // on the PATH, mesh them into <icontrol>.dat; before
+                // control_input so that the same index reads that mesh
+                mesh_gid_batch( icontrol );
+                // control_input (manual Professional 6.139): read the
+                // records of <icontrol>.dat at the start of the index
+                input_control_input( icontrol );
+                // control_check_data (manual Professional 6.111): check the
+                // database at the start of this control index
+                {
+                  long int control_check_data = -NO;
+                  db( CONTROL_CHECK_DATA, icontrol, &control_check_data, ddum,
+                    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                  if ( control_check_data==-YES ) check_data_integrity();
+                }
+                // control_element_group_apply / control_element_group
+                control_element_group_apply( icontrol );
 		  
                 if ( db_active_index( CONTROL_TIMESTEP, icontrol, VERSION_NORMAL ) ) {
                   maximum_timestep = DBL_MAX;
                   ratio_criterium = DBL_MAX;
                   use_control_timestep_iterations_automatic = 0;
-                  if ( db_active_index(  CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC, 
+                  // timestep_iterations_automatic_apply -no (manual
+                  // Professional 6.1090): neglect every
+                  // control_timestep_iterations_automatic record
+                  timestep_iterations_automatic_apply = -YES;
+                  db( TIMESTEP_ITERATIONS_AUTOMATIC_APPLY, 0,
+                    &timestep_iterations_automatic_apply, ddum, ldum,
+                    VERSION_NORMAL, GET_IF_EXISTS );
+                  if ( timestep_iterations_automatic_apply!=-NO &&
+                       db_active_index(  CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC, 
                       icontrol, VERSION_NORMAL ) ) {
                     db( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC, icontrol, 
                       idum, control_timestep_iterations_automatic, ldum, 
                       VERSION_NORMAL, GET );
+                    // manual Professional 6.386: [1]=minimal_timestep,
+                    // [2]=maximum_timestep. The record is variable-length
+                    // (the Professional parser accepts 2 values); the
+                    // legacy GNU 2-value form is [1]=maximum_timestep.
+                    // Capture the mapping before ldum is reused by the
+                    // next GET_IF_EXISTS call.
+                    ratio_criterium = control_timestep_iterations_automatic[0];
+                    if ( ldum>=3 )
+                      maximum_timestep = control_timestep_iterations_automatic[2];
+                    else
+                      maximum_timestep = control_timestep_iterations_automatic[1];
                     db( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_STOP, icontrol, 
                       &control_timestep_iterations_automatic_stop, ddum, ldum, 
                       VERSION_NORMAL, GET_IF_EXISTS );
+                    // control_timestep_iterations_automatic_minimum_
+                    // maximum_wished (manual Professional 6.387): default
+                    // 2 8 4 (= Professional 02-08-2026, which stops a step
+                    // after 8 iterations; the GNU had 2 20 4 hardcoded);
+                    // the maximum must be 2 or larger.
+                    // control_timestep_adjust_minimum_iterations (6.384) is
+                    // accepted; the GNU keeps the minimum (as with -no).
                     iteration_min = 2;
-                    iteration_max = 20;
+                    iteration_max = 8;
+                    iteration_wished = 4;
+                    if ( db_active_index(
+                         CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED,
+                         icontrol, VERSION_NORMAL ) ) {
+                      long int min_max_wished[3];
+                      db( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED,
+                        icontrol, min_max_wished, ddum, ldum, VERSION_NORMAL, GET );
+                      if ( min_max_wished[1]<2 || min_max_wished[0]<1 ||
+                           min_max_wished[0]>min_max_wished[1] )
+                        db_error( CONTROL_TIMESTEP_ITERATIONS_AUTOMATIC_MINIMUM_MAXIMUM_WISHED,
+                          icontrol );
+                      iteration_min = min_max_wished[0];
+                      iteration_max = min_max_wished[1];
+                      iteration_wished = min_max_wished[2];
+                    }
                     use_control_timestep_iterations_automatic = 1;
-                    ratio_criterium = control_timestep_iterations_automatic[0];
-                    maximum_timestep = control_timestep_iterations_automatic[1];
                   }
                   else if ( db_active_index( CONTROL_TIMESTEP_ITERATIONS, 
                       icontrol, VERSION_NORMAL ) ) {
@@ -267,6 +611,26 @@ void top( void )
                     length = 1;
                     db( TIME_OLD, 0, idum, &time_old, length, VERSION_NORMAL, PUT );
                     db( TIME_NEW, 0, idum, &time_new, length, VERSION_NORMAL, PUT );
+                    // materi_displacement_relative: the reference point is
+                    // re-synchronized (dis_rel reset to 0) when the timestep
+                    // changes (manual 4.13).
+                    if ( materi_displacement_relative ) {
+                      double dtime_ref = -1.;
+                      db( MATERI_DISPLACEMENT_RELATIVE_REF, 0, idum, &dtime_ref,
+                        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                      if ( dtime_ref<0. || dtime_ref!=dtime_initial ) {
+                        db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+                        for ( inod=0; inod<=max_node; inod++ ) {
+                          if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+                            double *ndof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                            for ( long int idim=0; idim<ndim; idim++ )
+                              ndof[dis_rel_indx+idim*nder] = 0.;
+                          }
+                        }
+                        db( MATERI_DISPLACEMENT_RELATIVE_REF, 0, idum,
+                          &dtime_initial, length, VERSION_NORMAL, PUT );
+                      }
+                    }
                     if ( swit ) {
                       pri( "dtime", dtime );
                       pri( "time_old", time_old );
@@ -296,6 +660,12 @@ void top( void )
                         VERSION_NORMAL, GET_IF_EXISTS );
                       db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum, length,
                         VERSION_NORMAL, GET_IF_EXISTS );
+                      // solver (manual Professional 6.1047): the GLOBAL
+                      // solver type - overwrites every control_solver
+                      // (the opposite precedence of options_solver,
+                      // which the per-control record overwrites)
+                      db( SOLVER, 0, &options_solver, ddum, length,
+                        VERSION_NORMAL, GET_IF_EXISTS );
 						
                       step_start( YES, &options_solver, dtime, time_current );
                       db_delete( CONTROL_EIGEN_VALUES, VERSION_NORMAL );
@@ -305,12 +675,68 @@ void top( void )
                       db( DTIME, 0, idum, &dtime, length, VERSION_NEW, PUT );
                       db( TIME_CURRENT, 0, idum, &time_current, length,
                         VERSION_NEW, PUT );
+                      // node_dof_previous_step: snapshot of the node dofs
+                      // at the START of this step (the converged state the
+                      // element loop of the step will advance from, after
+                      // the control data of this step - resets, data_put -
+                      // have been applied). Consumed at step_close by the
+                      // post_calcul -materi_stress -young_apparent /
+                      // -poisson_apparent operators (6.903), which need the
+                      // INCREMENT of the last time step. Only captured when
+                      // one of those operators is active (the copy costs a
+                      // full dof sweep per step).
+                      {
+                        long int capture_apparent = 0;
+                        if ( db_active_index( POST_CALCUL, 0,
+                            VERSION_NORMAL ) ) {
+                          long int pc_len = 0, pc_i = 0;
+                          double pc_ddum[1];
+                          long int pc_ival[DATA_ITEM_SIZE];
+                          db( POST_CALCUL, 0, pc_ival, pc_ddum, pc_len,
+                            VERSION_NORMAL, GET );
+                          for ( pc_i=1; pc_i<pc_len; pc_i += 2 ) {
+                            if ( labs(pc_ival[pc_i])==YOUNG_APPARENT ||
+                                 labs(pc_ival[pc_i])==POISSON_APPARENT )
+                              capture_apparent = 1;
+                          }
+                        }
+                        if ( capture_apparent ) {
+                          long int prev_max = 0;
+                          db_max_index( NODE, prev_max, VERSION_NORMAL, GET );
+                          for ( long int prev_inod=0; prev_inod<=prev_max;
+                              prev_inod++ ) {
+                            if ( db_active_index( NODE_DOF, prev_inod,
+                                VERSION_NORMAL ) ) {
+                              double *prev_dof = db_dbl( NODE_DOF, prev_inod,
+                                VERSION_NORMAL );
+                              db( NODE_DOF_PREVIOUS_STEP, prev_inod, idum,
+                                prev_dof, nuknwn, VERSION_NORMAL, PUT );
+                            }
+                          }
+                        }
+                      }
                         // equilibrium loop
 
-                      for ( iteration=1; ( iteration<=iteration_min || 
-                          post_node_rhside_ratio>=ratio_criterium ) && 
-                          iteration<=iteration_max; iteration++ ) {
-                        if ( swit ) pri( "iteration", iteration );
+                      {
+                        // control_print_number_iterations (manual
+                        // Professional 6.336): console monitor - when the
+                        // switch is -yes the iteration counter is printed
+                        // on stdout during the equilibrium iterations of
+                        // the time step. NOT the data item
+                        // -inverse_iteration_number (iterations of the
+                        // finished step).
+                        long int print_number_iterations=-NO;
+                        db( CONTROL_PRINT_NUMBER_ITERATIONS, icontrol,
+                          &print_number_iterations, ddum, ldum,
+                          VERSION_NORMAL, GET_IF_EXISTS );
+                        for ( iteration=1; ( iteration<=iteration_min ||
+                            post_node_rhside_ratio>=ratio_criterium ) &&
+                            iteration<=iteration_max; iteration++ ) {
+                          if ( print_number_iterations==-YES )
+                            cout << "control_print_number_iterations: time "
+                                 << time_current << " iteration " << iteration
+                                 << "\n";
+                          if ( swit ) pri( "iteration", iteration );
                         number_iterations = iteration;
                         db( NUMBER_ITERATIONS, 0, &number_iterations, 
                           ddum, length, VERSION_NEW, PUT );
@@ -318,9 +744,19 @@ void top( void )
                           iteration_start( );
                           if ( print_where==-YES ) pri( "Where: before boundary conditions." ); 
                           bounda(); 
+                          bounda_rhside_snapshot_take();
                           if ( print_where==-YES ) pri( "Where: after boundary conditions." ); 
                           unknown_freeze(); 
                           if ( options_elementloop==-YES ) {
+			    // classic nonlocal (materi_plasti_f_nonlocal,
+			    // radius in `nonlocal`): the NODE_NONLOCAL lists
+			    // are rebuilt once after every mesh change (flag
+			    // cleared by mesh_changed). The softvar branch
+			    // below guards its own (integration-point) set.
+			    if ( materi_plasti_f_nonlocal && !nonlocal_first_set ) {
+			      nonlocal_set();
+			      nonlocal_first_set = 1;
+			    }
 			    if (scalar_dabs(options_nonlocal_softvar)>TINY) {
 				  if(!nonlocal_first_set) nonlocal_set();
 				  nonlocal_first_set=1;
@@ -334,18 +770,204 @@ void top( void )
                             if ( print_where==-YES ) pri( "Where: after element_loop." ); 
                           }
                           parallel_sys_routine( &parallel_contact );
+                          if ( materi_velocity ) force_point_calculate();
                           parallel_sys_routine( &parallel_new_dof_before );
                           slide(); 
                           if ( print_where==-YES ) pri( "Where: before solver." ); 
                           solve( options_solver );
                           if ( print_where==-YES ) pri( "Where: after solver." ); 
+                          // The post-solve constitutive re-evaluation is
+                          // HOISTED after the equilibrium loop (2026-09-16):
+                          // only the LAST iteration's report is observed, so
+                          // the stress-only pass and the nodal stress update
+                          // run once after the loop instead of once per
+                          // iteration, roughly halving the added
+                          // element-assembly cost. See
+                          // manual-developer/nodal_stress_post_solve_sync.md.
                           parallel_sys_routine( &parallel_new_dof_diagonal );
+                          // multi point constraints: re-sync the slave
+                          // dofs with the freshly solved master values
+                          // (the pre-solve bounda() pass lags one solve
+                          // behind when the masters are free unknowns)
+                          mpc_node_apply();
                           locate();
                           nonlocal_apply();
                           post_node_rhside_fixed_free();
                           db( POST_NODE_RHSIDE_RATIO, 0, idum, &post_node_rhside_ratio, 
                             ldum, VERSION_NORMAL, GET );
                         }
+                      }
+                      // Post-solve material state pass (F4 T5, BACKLOG C35,
+                      // audit K02; the default since 2026-10-10). The
+                      // element loop of an iteration evaluates the material
+                      // on the PRE-solve iterate, so the stored
+                      // integration-point state (ELEMENT_INTPNT_DOF VERSION_NEW)
+                      // and the non-principal nodal dofs lag the solved
+                      // velocity by one iteration. The Professional
+                      // evaluates the material once more on the final
+                      // iterate, and that state is the output and the
+                      // history of the next step. This pass does the same
+                      // once per step, after the equilibrium loop: a full
+                      // element loop on the final iterate (material state,
+                      // element force records, NODE_RHSIDE/NODE_LHSIDE),
+                      // the non-principal nodal update and the mpc re-sync.
+                      // No matrix is stored (material_state_post_pass makes
+                      // elem() skip the store) and no solve follows.
+                      // Not for the -diagonal solver (explicit update of
+                      // the principal dofs), options_elementloop -no and
+                      // the nonlocal softening variable; those keep the
+                      // hoisted stress-only sync below. Every physics
+                      // takes the pass (inertia since F4 T6d C52, slide
+                      // and contact since F4 T6e C53, 2026-10-11): the
+                      // contact and slide forces are applied outside the
+                      // element loop, so the pass re-applies them on the
+                      // final iterate exactly as an equilibrium
+                      // iteration does (parallel_contact, slide()). See
+                      // manual-developer/post_solve_material_state_pass.md.
+                      long int state_pass_done = 0;
+                      if ( nuknwn>0 && options_solver!=-DIAGONAL &&
+                           options_elementloop==-YES && !find_local_softvar &&
+                           !( scalar_dabs(options_nonlocal_softvar)>TINY ) ) {
+                        iteration_start();
+                        bounda_rhside_snapshot_restore();
+                        material_state_post_pass = 1;
+                        element_loop();
+                        material_state_post_pass = 0;
+                        parallel_sys_routine( &parallel_contact );
+                        // C62 (F4 T6f LOW queue Q3): the nodal terms of an
+                        // equilibrium iteration (bounda_force through the
+                        // snapshot restored above, node_force, force_point,
+                        // node_mass/damping/stiffness, nodal gravity) so
+                        // the reported node_rhside is the full residual.
+                        // It writes only the velocity slots of
+                        // NODE_RHSIDE/NODE_LHSIDE (and NODE_INERTIA, now on
+                        // the final iterate); parallel_new_dof_diagonal
+                        // below updates only the non-principal dofs for a
+                        // non-diagonal solver, so nothing is applied twice.
+                        if ( materi_velocity ) force_point_calculate();
+                        parallel_sys_routine( &parallel_new_dof_before );
+                        slide();
+                        parallel_sys_routine( &parallel_new_dof_diagonal );
+                        mpc_node_apply();
+                        // C110: the reported post_node_rhside_fixed / _free
+                        // / _ratio of the final residual, as the
+                        // Professional; the iteration control above used
+                        // the per-iteration ratio.
+                        post_node_rhside_fixed_free();
+                        state_pass_done = 1;
+                      }
+                      // Hoisted post-solve stress sync (2026-09-16): the
+                      // stress-only re-evaluation used to run inside the
+                      // equilibrium loop; only the LAST iteration's report is
+                      // observed, so it now runs once here, after the loop.
+                      // It refreshes the stress slots of the nodal RHS/LHS
+                      // from the solved velocity (a stress-only element pass)
+                      // and then assigns the stress dofs exactly as
+                      // dof.cc parallel_new_dof_diagonal does for the stress
+                      // block. Only the stress slots are assigned: re-running
+                      // the whole function would double the += accumulation
+                      // of the other non-principal dofs.
+                      if ( !state_pass_done && !element_dof_only && nuknwn>0 && stress_recovery_absolute && materi_stress &&
+                           stres_indx>=0 && !find_local_softvar ) {
+                        long int max_node_ps=0;
+                        db_max_index( NODE, max_node_ps, VERSION_NORMAL, GET );
+                        long int ip0_ps = stres_indx/nder;
+                        long int len_ps = (1+max_node_ps)*npuknwn;
+                        double *save_lh_ps = get_new_dbl( len_ps );
+                        double *save_rh_ps = get_new_dbl( len_ps );
+                        array_set( save_lh_ps, 0., len_ps );
+                        array_set( save_rh_ps, 0., len_ps );
+                        for ( inod=0; inod<=max_node_ps; inod++ ) {
+                          if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+                            continue;
+                          double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+                          double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+                          for ( long int iu_ps=0; iu_ps<npuknwn; iu_ps++ ) {
+                            long int ix_ps = inod*npuknwn+iu_ps;
+                            save_lh_ps[ix_ps] = lh_ps[iu_ps];
+                            save_rh_ps[ix_ps] = rh_ps[iu_ps];
+                            if ( iu_ps>=ip0_ps && iu_ps<ip0_ps+6 ) {
+                              lh_ps[iu_ps] = 0.;
+                              rh_ps[iu_ps] = 0.;
+                            }
+                          }
+                        }
+                        stress_recovery_post_pass = 1;
+                        element_loop();
+                        stress_recovery_post_pass = 0;
+                        // Restore every NON-stress entry: structural
+                        // elements (truss/beam/spring/contactspring/
+                        // interface) bypass the materi() gate, so their
+                        // first-pass contributions would be doubled.
+                        for ( inod=0; inod<=max_node_ps; inod++ ) {
+                          if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+                            continue;
+                          double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+                          double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+                          for ( long int iu_ps=0; iu_ps<npuknwn; iu_ps++ ) {
+                            if ( iu_ps>=ip0_ps && iu_ps<ip0_ps+6 ) continue;
+                            long int ix_ps = inod*npuknwn+iu_ps;
+                            lh_ps[iu_ps] = save_lh_ps[ix_ps];
+                            rh_ps[iu_ps] = save_rh_ps[ix_ps];
+                          }
+                        }
+                        // Update the stress dofs from the refreshed recovery
+                        // (the stress-only variant of dof.cc
+                        // parallel_new_dof_diagonal lines 155-179 plus the
+                        // materi_stress_pressure_history and derivatives
+                        // blocks).
+                        double dtime_ps = 0.;
+                        db( DTIME, 0, idum, &dtime_ps, ldum, VERSION_NEW, GET );
+                        for ( inod=0; inod<=max_node_ps; inod++ ) {
+                          if ( !db_active_index( NODE, inod, VERSION_NORMAL ) )
+                            continue;
+                          double *node_dof_ps = db_dbl( NODE_DOF, inod, VERSION_NEW );
+                          double *node_dof_old_ps =
+                            db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                          long int *node_bounded_ps =
+                            db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
+                          double *lh_ps = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
+                          double *rh_ps = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+                          for ( long int k_ps=0; k_ps<6; k_ps++ ) {
+                            long int ipu_ps = ip0_ps + k_ps;
+                            if ( !node_bounded_ps[ipu_ps] && lh_ps[ipu_ps]!=0. )
+                              node_dof_ps[stres_indx + k_ps*nder] =
+                                rh_ps[ipu_ps]/lh_ps[ipu_ps];
+                          }
+                          if ( ( materi_stress_pressure_history ||
+                                 materi_plasti_hardsoil_history ) &&
+                               materi_stress ) {
+                            double p_ps = scalar_dabs( -( node_dof_ps[stres_indx] +
+                              node_dof_ps[stres_indx+3*nder] +
+                              node_dof_ps[stres_indx+5*nder] ) / 3. );
+                            if ( node_dof_ps[sph_indx] < p_ps )
+                              node_dof_ps[sph_indx] = p_ps;
+                          }
+                          // derivatives (dof.cc): refresh the stress-rate
+                          // slots from the NEW stress; otherwise they keep the
+                          // lagged value the last iteration produced.
+                          if ( derivatives ) {
+                            for ( long int k_ps=0; k_ps<6; k_ps++ ) {
+                              long int ipu_ps = ip0_ps + k_ps;
+                              long int iu_ps = stres_indx + k_ps*nder;
+                              if ( !node_bounded_ps[ipu_ps] )
+                                node_dof_ps[iu_ps+nder-1] =
+                                  ( node_dof_ps[iu_ps] -
+                                    node_dof_old_ps[iu_ps] ) / dtime_ps;
+                            }
+                          }
+                        }
+                        delete[] save_lh_ps;
+                        delete[] save_rh_ps;
+                      }
+                      // global_node_dof_empty (bounda.cc) and dof_limit
+                      // (dof.cc) on the final nodal values of the step
+                      // (after the hoisted stress sync, which assigns
+                      // stresses outside parallel_new_dof_diagonal)
+                      if ( nuknwn>0 ) {
+                        node_dof_empty_apply();
+                        dof_limit_apply();
+                      }
                       }
 
                       if ( use_control_timestep_iterations_automatic ) {
@@ -357,7 +979,7 @@ void top( void )
                         }
                         else {
                           converged_once = 1;
-                          dtime *= 1. + (ITERATION_WISHED-number_iterations)/20.;
+                          dtime *= 1. + (iteration_wished-number_iterations)/20.;
                           if ( dtime>maximum_timestep ) dtime = maximum_timestep;
                         }
                       }
@@ -396,8 +1018,35 @@ void top( void )
 
                         db_version_copy( VERSION_NEW, VERSION_NORMAL );
                         db_version_delete( VERSION_NEW );
+                        // element_dof (manual Professional 6.421,
+                        // F5 T2 V5): per-element nodal values of the
+                        // converged state from element_intpnt_dof;
+                        // output only, serial (allocates records)
+                        element_dof_nodal_set();
+                        // post_element_force (manual Professional
+                        // 6.927): the cross-section forces/moments
+                        // from the element internal nodal forces of
+                        // the converged state; skipped by
+                        // post_apply / control_post_apply -no and by
+                        // control_post_element_force -no (6.260)
+                        if ( !materi_apply_gate_off( POST_APPLY,
+                               CONTROL_POST_APPLY ) &&
+                             !control_materi_gate_off(
+                               CONTROL_POST_ELEMENT_FORCE ) ) {
+                          post_element_force_calculate();
+                          post_element_force_stale = 0;
+                        }
+                        else
+                          post_element_force_stale = 1;
+                        // control_system_call: end of the converged
+                        // timestep, before its prints (Professional)
+                        control_system_call( icontrol );
                         step_close( YES, ipar, npar, ipar_i, ipar_n );
                         if ( repeat(start_control) ) goto repeat_point;
+                        // control_timestep_until_data (manual Professional
+                        // 6.390): stop the timesteps of this index once a
+                        // value leaves its [minimum, maximum] range
+                        if ( control_timestep_until_reached( icontrol ) ) break;
                       }
                       else if ( time_current<time_new ) {
                         if ( control_timestep_iterations_automatic_stop==-YES ) {
@@ -412,8 +1061,32 @@ void top( void )
                 }
                 else {
                   step_start( NO, &options_solver, dtime, time_current );
+                  // a control index without timesteps evaluates the post
+                  // records (Professional 02-08-2026); post_element_force
+                  // is recomputed here only when an earlier gated step
+                  // left it stale
+                  if ( post_element_force_stale &&
+                       !materi_apply_gate_off( POST_APPLY,
+                         CONTROL_POST_APPLY ) &&
+                       !control_materi_gate_off(
+                         CONTROL_POST_ELEMENT_FORCE ) ) {
+                    post_element_force_calculate();
+                    post_element_force_stale = 0;
+                  }
                   step_close( NO, ipar, npar, ipar_i, ipar_n );
                   if ( repeat(start_control) ) goto repeat_point;
+                }
+                // control_system_call: end of the control index
+                control_system_call( icontrol );
+                // control_zip (manual Professional 6.394): gzip the output
+                // files at the end of this control index
+                {
+                  long int control_zip = -NO;
+                  db( CONTROL_ZIP, icontrol, &control_zip, ddum, ldum,
+                    VERSION_NORMAL, GET_IF_EXISTS );
+                  if ( control_zip==-YES && zip_output_files()!=0 )
+                    pri( "Warning: control_zip -yes but gzipping the output "
+                      "files failed (is the gzip program installed?)" );
                 }
                 inverse_calculation( ipar, npar, ipar_i, ipar_n,
                   max_control, INVERSE_DETERMINE_SENSITIVITY );
@@ -450,12 +1123,32 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   long int icontrol=0, control_mesh_remesh=0, control_materi_diffusion=0,
     element=0, max_element=0, length=0, nnol=0, mnol=0,
     name=0, any_beam=0, any_truss=0, any_spring=0, any_contactspring=0,
+    any_interface=0,
     ldum=0, options_matrix_group=-NO, options_matrix_length=0, 
-    element_group=0, max_group=0, exit_tochnog=0,
+    element_group=0, max_group=0, exit_tochnog=0, max=0, idum[1],
     el[1+MNOL], control_adjust_geometry[4];
   double ddum[1];
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+
+  // first step of this control index (see step_start_control_entry)
+  long int first_of_control = step_start_control_entry;
+  step_start_control_entry = 0;
+  step_first_of_control = first_of_control;
+
+  // node_geometry_present (manual Professional 6.886): fill the
+  // per-node list of present geometries at the START of every step,
+  // when the node coordinates still hold the converged state of the
+  // previous step (measured on the Professional: the last step wins).
+  // The mesh boundary first, for geometry_boundary (6.509) in the step
+  // start scans (idempotent; iteration_start calls it again).
+  mesh_boundary_set();
+  node_geometry_present_calculate();
+    // element_geometry_present (6.427): same moment, an element is
+    // present when all its nodes are
+  element_geometry_present_calculate();
+    // element_print_group_data_values (6.446), same moment
+  element_print_group_data_values_calculate( time_current );
 
   input_runtime();
 
@@ -468,13 +1161,130 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     }
   }
 
-  macro();
+  if ( first_of_control ) macro();
 
   if ( db_active_index( CONTROL_MESH_ADJUST_GEOMETRY, icontrol, VERSION_NORMAL )  ) {
     db( CONTROL_MESH_ADJUST_GEOMETRY, icontrol, control_adjust_geometry, 
       ddum, ldum, VERSION_NORMAL, GET );
     adjust_geom( &control_adjust_geometry[0], &control_adjust_geometry[2] ); 
   }
+
+  // One-shot mesh operations of a control index, in the order of the
+  // Professional 02-08-2026 (F4 T8 probes, every pair on one index, record
+  // order in the input irrelevant): macro, copy, move, switch, mirror. All
+  // of them run on the first step of the control index only
+  // (step_start_control_entry). control_mesh_move: the Professional moved
+  // only node_start_refined (once per index); the GNU follows the manual
+  // and moves the mesh (node and node_start_refined), once per index.
+  if ( first_of_control &&
+       db_active_index( CONTROL_MESH_COPY, icontrol, VERSION_NORMAL ) ) {
+    long int copy_length=0, idum_c=0;
+    double control_copy[DATA_ITEM_SIZE]; // variable-length record
+    db( CONTROL_MESH_COPY, icontrol, &idum_c, control_copy, copy_length,
+      VERSION_NORMAL, GET );
+    mesh_copy( control_copy );
+  }
+
+  if ( first_of_control &&
+       db_active_index( CONTROL_MESH_MOVE, icontrol, VERSION_NORMAL ) ) {
+    long int move_length=0, idum_m=0;
+    double control_move[DATA_ITEM_SIZE];
+    db( CONTROL_MESH_MOVE, icontrol, &idum_m, control_move, move_length,
+      VERSION_NORMAL, GET );
+    mesh_move( control_move, move_length );
+  }
+
+  if ( first_of_control &&
+       db_active_index( CONTROL_MESH_SWITCH, icontrol, VERSION_NORMAL ) ) {
+    long int control_switch[DATA_ITEM_SIZE], switch_length=0;
+    db( CONTROL_MESH_SWITCH, icontrol, control_switch, ddum, 
+      switch_length, VERSION_NORMAL, GET );
+    mesh_switch( control_switch, switch_length );
+  }
+
+  if ( first_of_control &&
+       db_active_index( CONTROL_MESH_MIRROR, icontrol, VERSION_NORMAL ) ) {
+    long int mirror_axis=0;
+    db( CONTROL_MESH_MIRROR, icontrol, &mirror_axis, ddum, ldum,
+      VERSION_NORMAL, GET );
+    mesh_mirror( mirror_axis );
+  }
+
+  // control_mesh_rotate_angle: rotate the 2D mesh around z-axis
+  if ( db_active_index( CONTROL_MESH_ROTATE_ANGLE, icontrol, VERSION_NORMAL ) ) {
+    long int rot_length=0, idum_r=0;
+    double rot_angle=0.;
+    db( CONTROL_MESH_ROTATE_ANGLE, icontrol, &idum_r, &rot_angle, rot_length,
+      VERSION_NORMAL, GET );
+    mesh_rotate_2d( rot_angle );
+  }
+
+  // control_mesh_rotate: rotate 2D mesh to 3D (tria3->prism6, quad4->hex8)
+  if ( db_active_index( CONTROL_MESH_ROTATE, icontrol, VERSION_NORMAL ) ) {
+    long int nrot=1;
+    db( CONTROL_MESH_ROTATE, icontrol, &nrot, ddum, ldum,
+      VERSION_NORMAL, GET );
+    mesh_rotate_3d( nrot );
+  }
+
+  // delete/keep elements, keep nodes, change element group
+  if ( db_active_index( CONTROL_MESH_DELETE_ELEMENT, icontrol, VERSION_NORMAL ) ||
+       db_active_index( CONTROL_MESH_KEEP_ELEMENT, icontrol, VERSION_NORMAL ) ||
+       db_active_index( CONTROL_MESH_KEEP_ELEMENT_GROUP, icontrol, VERSION_NORMAL ) ||
+       db_active_index( CONTROL_MESH_KEEP_NODE, icontrol, VERSION_NORMAL ) ||
+       db_active_index( CONTROL_MESH_CHANGE_ELEMENT_GROUP, icontrol, VERSION_NORMAL ) ) {
+    mesh_delete_keep( icontrol );
+  }
+
+  // control_mesh_duplicate_element_group (6.177)
+  if ( db_active_index( CONTROL_MESH_DUPLICATE_ELEMENT_GROUP, icontrol,
+       VERSION_NORMAL ) )
+    mesh_duplicate_element_group( icontrol );
+
+  // control_mesh_remove: remove elements by method
+  if ( db_active_index( CONTROL_MESH_REMOVE, icontrol, VERSION_NORMAL ) ) {
+    mesh_remove( icontrol );
+  }
+
+  // control_mesh_convert: convert interface elements (bar2->quad4 in 2D,
+  // tria3->prism6 / quad4->hex8 in 3D). Must run BEFORE the first
+  // element_loop of the step so the converted elements are assembled.
+  // EXTRUDE FIRST, CONVERT SECOND (2026-08-31, interface_bar2_hex8):
+  // the bar2 interface is extruded along z to a quad4 in the XZ plane,
+  // and only then the convert lifts it to a hex8 interface whose sides
+  // connect in Y (the extrusion direction of the solids). The opposite
+  // order (convert then extrude) produced a hex8 interface connecting in
+  // Z - the push in Y was never transmitted (sigyy=0).
+  // Both run once (re-running them duplicates the mesh): the extrude at
+  // its own control index, also one without control_timestep (F5 T4 U5a,
+  // Professional other/extrude1), the convert on the first step
+  // (task==YES). They must run BEFORE data()/merge() so those phases see
+  // the final 3D elements.
+  // mesh_convert_quad8 runs on EVERY step_start (not only task==YES):
+  // a -quad8 is not a native element, so any evaluation in between
+  // control steps (e.g. a post_point at an intermediate control index
+  // below the timestep) would hit the raw quad8. Idempotent (converted
+  // elements are -quad9 and skipped). It runs BEFORE extrude (a quad8
+  // mesh must become quad9 first so the quadratic extrusion can lift it
+  // to hex27) and before interface_convert (the interface split must
+  // see the quad9 bulk).
+  // mesh_convert_hex20 (3D serendipity hex20 -> Lagrange hex27, 7 new
+  // nodes: 6 face centres + body centre, deduplicated by coordinates):
+  // same every-step rationale and ordering - the 3D interface split of
+  // the quad8 face (interface_quad8_hex20 family) must see the hex27
+  // bulk with the shared face centre node already in place.
+  mesh_convert_quad8();
+  mesh_convert_hex20();
+  mesh_convert_tria6_tria3(); // at its own control index (6.161)
+  extrude(); // once, at its own control index (extrude.cc)
+  // control_mesh_map (6.210): once, at its own control index, on the final
+  // mesh (after the hex20 conversion and the extrude, mesh_map.cc)
+  mesh_map( first_of_control );
+  // control_mesh_truss_distribute_mpc (6.245): once, at its own control
+  // index, after the mesh generators and before the first element loop
+  mesh_truss_distribute_mpc();
+  if ( task==YES ) interface_convert( icontrol );
+  mesh_correct_interfaces(); // mesh_correct -yes (6.816), idempotent
 
   change_geometry( task, dtime, time_current );
 
@@ -494,14 +1304,25 @@ void step_start( long int task, long int options_solver[], double dtime, double 
 
   db_delete( NODE_REMESH_VELOCITY, VERSION_NORMAL );
 
+  // geometry_moving (manual Professional 6.533-6.538): the element
+  // excavation times are determined once at the control index of
+  // control_geometry_moving -initialise (6.135); every step then sets the
+  // delete factor of the excavated elements for the current time
+  geometry_moving_initialise( first_of_control );
+  geometry_moving_apply( time_current );
+
   delete_geom( time_current ); 
 
-  extrude();
+  mesh_cut( time_current );
 
   failure( time_current ); 
 
   distribute();
 
+  // area_element_group_time -yes: re-evaluate the area_element_group
+  // records at all times, not only when the mesh changes (manual 6.6)
+  if ( task==YES && area_element_group_time_active() )
+    area_element_group( VERSION_NORMAL );
   if ( task==YES ) area_element_group_sequence( );
 
   crack();
@@ -509,6 +1330,17 @@ void step_start( long int task, long int options_solver[], double dtime, double 
   db( CONTROL_MATERI_DIFFUSION, icontrol, &control_materi_diffusion, ddum, 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   if ( control_materi_diffusion==-INITIALIZE ) materi_diffusion_calculate( INITIALIZE );
+
+  // generate interface elements BEFORE scanning any_interface so the
+  // interface histories are allocated for the generated elements too.
+  // mesh_interface_triangle family (manual Professional 6.856/6.857/
+  // 6.201): cut the tet4 mesh with the triangulated plane at the control
+  // index (control_mesh_interface_triangle index -yes). Dispatched the
+  // same way: the family only fires when its control record is active at
+  // this icontrol, and the elements must exist before the any_interface
+  // scan of the first task==YES step.
+  generate_interface_triangle( icontrol );
+  generate_interface( icontrol );
 
   if ( task==YES ) {
 
@@ -526,6 +1358,8 @@ void step_start( long int task, long int options_solver[], double dtime, double 
         db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
           VERSION_NORMAL, GET_IF_EXISTS );
         if ( element_group>max_group ) max_group = element_group;
+        if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) )
+          any_interface = 1;
       }
     }               
 
@@ -574,6 +1408,12 @@ void step_start( long int task, long int options_solver[], double dtime, double 
       db_allocate( ELEMENT_MASS, max_element, VERSION_NORMAL, MINIMAL );
     }
 
+    // strain_volume_* (F5 T5 U8): element volume increase, filled in the
+    // parallel element loop
+    if ( db_partialname_any("strain_volume_") ) {
+      db_allocate( ELEMENT_STRAIN_VOLUME, max_element, VERSION_NORMAL, MINIMAL );
+    }
+
     if ( db_partialname_any("group_materi_failure") || 
          db_partialname_any("control_mesh_delete") ) {
       db_allocate( ELEMENT_MATRIX_DELETE, max_element, VERSION_NORMAL, MINIMAL );
@@ -592,6 +1432,7 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     if ( any_beam ) {
       db_allocate( ELEMENT_BEAM_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_BEAM_MOMENT, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_BEAM_FORCE_MOMENT, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_contactspring ) {
       db_allocate( ELEMENT_CONTACTSPRING_DIRECTION, max_element, VERSION_NEW, MINIMAL );
@@ -600,15 +1441,160 @@ void step_start( long int task, long int options_solver[], double dtime, double 
     if ( any_spring ) {
       db_allocate( ELEMENT_SPRING_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_SPRING_FORCE, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_SPRING_STRAIN, max_element, VERSION_NEW, MINIMAL );
+    }
+    if ( any_interface ) {
+      // interface history/output records are sized by the number of
+      // integration points of the interface (ns1 = nnol/2 nodes per
+      // side). The database defaults fit ns1<=4 (bar2=1, quad4/quad6=
+      // 2/3, hex8=4); the db() PUT rejects a larger length ("Length too
+      // small of element_interface_*"), so the quadratic 3D interface
+      // (-hex18, ns1=9, intpnt records 9*3=27 values) must raise the
+      // record lengths to the largest interface element OF THIS MODEL
+      // before the records are allocated/assembled. Only raised when
+      // the model actually exceeds the database defaults: shrinking the
+      // default-sized records (e.g. 2D quad6 models, whose intpnt
+      // record default is 12 and needs only 6) would change the flat
+      // record stride and corrupt every read/write of the item.
+      long int iface_nnol_max = 0;
+      db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+      for ( element=0; element<=max_element; element++ ) {
+        if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+        db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+        element_group = 0;
+        db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( db_active_index( GROUP_INTERFACE, element_group,
+            VERSION_NORMAL ) && length-1>iface_nnol_max )
+          iface_nnol_max = length - 1;
+      }
+      if ( iface_nnol_max>0 ) {
+        long int ns1_max = iface_nnol_max/2;
+        if ( ns1_max<1 ) ns1_max = 1;
+        long int nval_iface = ( ndim==3 ) ? 3 : 2;
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_STRAIN_NORMAL ) )
+          db_data_length_put( ELEMENT_INTERFACE_STRAIN_NORMAL, ns1_max );
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_FORCE_NORM ) )
+          db_data_length_put( ELEMENT_INTERFACE_FORCE_NORM, ns1_max );
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_FORCE_TANG ) )
+          db_data_length_put( ELEMENT_INTERFACE_FORCE_TANG, ns1_max );
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_FORCE_TANG2 ) )
+          db_data_length_put( ELEMENT_INTERFACE_FORCE_TANG2, ns1_max );
+        if ( ns1_max>db_data_length(
+            ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS,
+            ns1_max );
+        if ( ns1_max>db_data_length( ELEMENT_INTERFACE_INTPNT_GAP_STATUS ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_GAP_STATUS, ns1_max );
+        if ( ns1_max*9>db_data_length( ELEMENT_INTERFACE_INTPNT_DIRECTION ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_DIRECTION, ns1_max*9 );
+        if ( ns1_max*nval_iface>db_data_length(
+            ELEMENT_INTERFACE_INTPNT_STRESS ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_STRESS,
+            ns1_max*nval_iface );
+        if ( ns1_max*nval_iface>db_data_length(
+            ELEMENT_INTERFACE_INTPNT_STRAIN ) )
+          db_data_length_put( ELEMENT_INTERFACE_INTPNT_STRAIN,
+            ns1_max*nval_iface );
+        if ( nval_iface>db_data_length( ELEMENT_INTERFACE_STRESS_AVERAGE ) )
+          db_data_length_put( ELEMENT_INTERFACE_STRESS_AVERAGE,
+            nval_iface );
+        if ( nval_iface>db_data_length( ELEMENT_INTERFACE_STRAIN_AVERAGE ) )
+          db_data_length_put( ELEMENT_INTERFACE_STRAIN_AVERAGE,
+            nval_iface );
+      }
+      db_allocate( ELEMENT_INTERFACE_STRAIN_NORMAL, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_FORCE_TANG, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_FORCE_TANG2, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_FORCE_NORM, max_element, VERSION_NEW, MINIMAL );
+      // output records (Professional compatibility): allocated BEFORE the
+      // parallel element loop (db_allocate cannot run inside it), both
+      // versions so print_database / target checker (VERSION_NORMAL) and
+      // the next step's loop (VERSION_NEW) can read them.
+      db_allocate( ELEMENT_INTERFACE_INTPNT_STRESS, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_STRESS, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_STRAIN, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_STRAIN, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_STRESS_AVERAGE, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_STRESS_AVERAGE, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_STRAIN_AVERAGE, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_STRAIN_AVERAGE, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_MATERI_TENSION_STATUS, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_GAP_STATUS, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_GAP_STATUS, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_DIRECTION, max_element, VERSION_NORMAL, MINIMAL );
+      db_allocate( ELEMENT_INTERFACE_INTPNT_DIRECTION, max_element, VERSION_NEW, MINIMAL );
     }
     if ( any_truss ) {
       db_allocate( ELEMENT_TRUSS_DIRECTION, max_element, VERSION_NEW, MINIMAL );
       db_allocate( ELEMENT_TRUSS_FORCE, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_TRUSS_STRAIN, max_element, VERSION_NEW, MINIMAL );
+      db_allocate( ELEMENT_TRUSS_STRAIN_TEMPERATURE, max_element, VERSION_NEW,
+        MINIMAL );
+    }
+
+    // element_intpnt_materi_undrained_pressure (manual Professional
+    // 6.441, undrained-capacity family 2.2.7): ensure the record exists
+    // (zeros) for every element of a group that carries
+    // group_materi_undrained_capacity BEFORE the parallel element loop
+    // of this step (materi() writes it inside the loop, where
+    // allocation is not allowed; the step-end version copy promotes the
+    // converged value to VERSION_NORMAL). Re-checked every step because
+    // macro-created meshes (control_mesh_macro) appear after the top()
+    // initialization.
+    if ( db_max_index( GROUP_MATERI_UNDRAINED_CAPACITY, max,
+        VERSION_NORMAL, GET )>=0 ) {
+      db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+      for ( element=0; element<=max_element; element++ ) {
+        if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+        element_group = 0;
+        db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( db_active_index( GROUP_MATERI_UNDRAINED_CAPACITY,
+            element_group, VERSION_NORMAL ) &&
+             !db_active_index( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE,
+               element, VERSION_NORMAL ) ) {
+          double undr_zero[MPOINT];
+          for ( long int kz=0; kz<MPOINT; kz++ ) undr_zero[kz] = 0.;
+          long int undr_zero_len = MPOINT;
+          db( ELEMENT_INTPNT_MATERI_UNDRAINED_PRESSURE, element, idum,
+            undr_zero, undr_zero_len, VERSION_NORMAL, PUT );
+        }
+      }
+    }
+
+    // element_intpnt_materi_stress_effective (internal, damage effective
+    // stress, see materi()): ensure the record exists (flags 0 = not yet
+    // stored) for every element BEFORE the parallel element loop of this
+    // step. Re-checked every step for the elements created after the
+    // top() initialization (control_mesh_macro, refinement).
+    if ( materi_damage && materi_stress ) {
+      db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+      for ( element=0; element<=max_element; element++ ) {
+        if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+        if ( db_active_index( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE,
+            element, VERSION_NORMAL ) ) continue;
+        double eff_zero[MPOINT*MSTRESS_EFF_SLOTS];
+        long int eff_zero_len = MPOINT*MSTRESS_EFF_SLOTS;
+        array_set( eff_zero, 0., eff_zero_len );
+        db( ELEMENT_INTPNT_MATERI_STRESS_EFFECTIVE, element, idum,
+          eff_zero, eff_zero_len, VERSION_NORMAL, PUT );
+      }
     }
 
   }
 
+    // element_intpnt_h / _iso_coord / _method / _npoint (6.438-6.443):
+    // the rule of every element, after the mesh operations of the step
+    // and outside the parallel element loop (Professional: every run)
+  element_intpnt_set();
+
 }
+
+// Post-solve material state pass (F4 T5, BACKLOG C35): flag read by
+// elem() to skip the element matrix store during the pass.
+long int material_state_post_pass = 0;
 
 void iteration_start( void )
 
@@ -617,6 +1603,115 @@ void iteration_start( void )
   db_set_dbl( NODE_LHSIDE, VERSION_NORMAL );
   db_set_dbl( NODE_RHSIDE, VERSION_NORMAL );
   db_set_dbl( ELEMENT_VOLUME, VERSION_NORMAL );
+    // element_normal (6.445): generated here, outside the parallel
+    // element loop, when a group needs it and the record is absent
+  element_normal_set();
+    // node_boundary / element_boundary (mesh_boundary 6.816, and
+    // node_boundary for the element-target contact 6.105): generated
+    // here, outside the parallel loops
+  mesh_boundary_set();
+}
+
+// control_print_frequency gate (manual Professional 6.291/6.292).
+// Returns 1 when the control_print_* records of this icontrol may print
+// in the current step_close, 0 when the print is gated by a
+// control_print_frequency_timeinterval / control_print_frequency_timestep
+// record. The 3 exceptions (control_print, control_print_history and
+// control_print_data_versus_data) are NOT gated by the caller.
+//
+// Semantics (manual): the gated prints run each time after a time
+// interval has passed (timeinterval) or after N time steps (timestep),
+// and ALWAYS also at the end of the time increment. The end of the
+// increment is detected with the SAME condition the timestep loop in
+// top() uses: TIME_NEW is set at the start of each control_timestep
+// increment and the last step is clamped exactly to it, so
+// time_current>=time_new means the increment of the control_timestep
+// record finished (step_close is called once per step).
+//
+// State (last print time / steps since last print) lives in dedicated
+// VERSION_NORMAL records per icontrol (pattern of control_print_gid_time)
+// so it survives restarts; on restart the cadence is re-anchored at the
+// start of the current increment. If both frequency records exist for the
+// same icontrol the timeinterval record wins (documented decision).
+long int control_print_frequency_allowed( long int icontrol )
+
+{
+  long int ldum=0, idum[1], frequency_timestep=0, frequency_count=0,
+    zero=0, one=1;
+  double ddum[1], frequency_interval=0., last_print_time=0.,
+    time_current=0., time_new=0., time_old=0.;
+  long int end_of_increment=0;
+
+  // no frequency record for this icontrol -> normal behaviour (allowed)
+  if ( !db_active_index( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL, icontrol,
+       VERSION_NORMAL ) &&
+       !db_active_index( CONTROL_PRINT_FREQUENCY_TIMESTEP, icontrol,
+       VERSION_NORMAL ) )
+    return 1;
+
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET );
+
+  if ( db_active_index( CONTROL_TIMESTEP, icontrol, VERSION_NORMAL ) &&
+       db( TIME_NEW, 0, idum, &time_new, ldum, VERSION_NORMAL,
+       GET_IF_EXISTS ) && time_current>=time_new-1.e-9*scalar_dabs(time_new) )
+    end_of_increment = 1;
+
+  if ( db_active_index( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL, icontrol,
+       VERSION_NORMAL ) ) {
+    db( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL, icontrol, idum,
+      &frequency_interval, ldum, VERSION_NORMAL, GET );
+    if ( frequency_interval<=0. )
+      db_error( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL, icontrol );
+    if ( db( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL_TIME, icontrol, idum,
+         &last_print_time, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+      // restart: the calculation was rewound, re-anchor the interval at
+      // the start of the current increment
+      if ( last_print_time>time_current ) {
+        if ( db( TIME_OLD, 0, idum, &time_old, ldum, VERSION_NORMAL,
+             GET_IF_EXISTS ) && time_old<=time_current )
+          last_print_time = time_old;
+        else
+          last_print_time = time_current;
+      }
+    }
+    else {
+      // first use: anchor the interval at the START of the current
+      // increment (TIME_OLD). The manual example (interval 0.15, dt 0.04,
+      // increment 0.41) prints at 0.16, 0.32, 0.41 - anchoring at the
+      // first step (0.04) would print at 0.20 instead of 0.16.
+      if ( db( TIME_OLD, 0, idum, &time_old, ldum, VERSION_NORMAL,
+           GET_IF_EXISTS ) && time_old<=time_current )
+        last_print_time = time_old;
+      else
+        last_print_time = time_current;
+    }
+    if ( end_of_increment || time_current>=last_print_time+frequency_interval ) {
+      // the print is done in this step_close: re-anchor the cadence
+      db( CONTROL_PRINT_FREQUENCY_TIMEINTERVAL_TIME, icontrol, idum,
+        &time_current, one, VERSION_NORMAL, PUT );
+      return 1;
+    }
+    return 0;
+  }
+  else {
+    // control_print_frequency_timestep: print after N time steps
+    // (and always at the end of the time increment)
+    db( CONTROL_PRINT_FREQUENCY_TIMESTEP, icontrol, &frequency_timestep,
+      ddum, ldum, VERSION_NORMAL, GET );
+    if ( frequency_timestep<=0 )
+      db_error( CONTROL_PRINT_FREQUENCY_TIMESTEP, icontrol );
+    db( CONTROL_PRINT_FREQUENCY_TIMESTEP_COUNT, icontrol, &frequency_count,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    frequency_count++;
+    if ( end_of_increment || frequency_count>=frequency_timestep ) {
+      db( CONTROL_PRINT_FREQUENCY_TIMESTEP_COUNT, icontrol, &zero,
+        ddum, one, VERSION_NORMAL, PUT );
+      return 1;
+    }
+    db( CONTROL_PRINT_FREQUENCY_TIMESTEP_COUNT, icontrol, &frequency_count,
+      ddum, one, VERSION_NORMAL, PUT );
+    return 0;
+  }
 }
 
 void step_close( long int task, long int ipar, long int npar, long int ipar_i, long int ipar_n )
@@ -624,19 +1719,107 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
 {
   long int i=0, nval=0, data_item=0, icontrol=0, ldum=0, control_split=0,
     use_control_refine_globally_geometry=0, length_control_refine_globally=0,
-    length=0, time_of_calculation=0, time_at_start=0, time_at_end=0,
+    length=0,     time_of_calculation=0, time_at_start=0, time_at_end=0,
     print_lastdatabase=-NO, control_refine_globally[4], control_refine_globally_geometry[2], 
-    idum[1], renumber[2], *ival=NULL;
+    idum[1], renumber[2], *ival=NULL, frequency_allowed=1, post_off=0;
   double ddum[MDIM];
 
   ival = get_new_int(DATA_ITEM_SIZE);
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
 
+  // control_reset_interface / _interface_strain (manual Professional
+  // 6.355) fire at step CLOSE, after the element loop promoted
+  // VERSION_NEW to VERSION_NORMAL: the reset defines the new strain zero
+  // "at this moment of resetting" and the NEXT steps accumulate from it,
+  // so the reset step's own deformation must not be re-added. See
+  // control_reset_interface() in data.cc.
+  control_reset_interface( icontrol );
+
+  // element_dof_initial (manual Professional 6.422): an element that
+  // carries an initial past-dof field applies it during its birth step
+  // (general.cc); once that step has converged the marker is set so the
+  // following steps integrate from the regular step-old dofs.
+  if ( task==YES ) {
+    long int ielem=0, max_elem_edi=0, len_one=1, one=1;
+    db_max_index( ELEMENT_DOF_INITIAL, max_elem_edi, VERSION_NORMAL, GET );
+    for ( ielem=0; ielem<=max_elem_edi; ielem++ ) {
+      if ( db_active_index( ELEMENT_DOF_INITIAL, ielem, VERSION_NORMAL ) &&
+           !db_active_index( ELEMENT_DOF_INITIAL_APPLIED, ielem,
+             VERSION_NORMAL ) )
+        db( ELEMENT_DOF_INITIAL_APPLIED, ielem, &one, ddum, len_one,
+          VERSION_NORMAL, PUT );
+    }
+    // group_dof_initial / _specific_number (6.609 / 6.610, F5 T5 U4): the
+    // same marker for the active elements of a group with the record
+    {
+      long int max_el_g=0, gr_g=0;
+      db_max_index( ELEMENT, max_el_g, VERSION_NORMAL, GET );
+      for ( ielem=0; ielem<=max_el_g; ielem++ ) {
+        if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ||
+             db_active_index( ELEMENT_DOF_INITIAL_APPLIED, ielem,
+               VERSION_NORMAL ) ) continue;
+        gr_g = 0;
+        db( ELEMENT_GROUP, ielem, &gr_g, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        if ( db_active_index( GROUP_DOF_INITIAL, gr_g, VERSION_NORMAL ) ||
+             db_active_index( GROUP_DOF_INITIAL_SPECIFIC_NUMBER, gr_g,
+               VERSION_NORMAL ) )
+          db( ELEMENT_DOF_INITIAL_APPLIED, ielem, &one, ddum, len_one,
+            VERSION_NORMAL, PUT );
+      }
+    }
+    // element_dof_initial_specific_number (6.423): same birth-step marker
+    db_max_index( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, max_elem_edi,
+      VERSION_NORMAL, GET );
+    for ( ielem=0; ielem<=max_elem_edi; ielem++ ) {
+      if ( db_active_index( ELEMENT_DOF_INITIAL_SPECIFIC_NUMBER, ielem,
+             VERSION_NORMAL ) &&
+           !db_active_index( ELEMENT_DOF_INITIAL_APPLIED, ielem,
+             VERSION_NORMAL ) )
+        db( ELEMENT_DOF_INITIAL_APPLIED, ielem, &one, ddum, len_one,
+          VERSION_NORMAL, PUT );
+    }
+  }
+
   if ( db_active_index( CONTROL_MESH_RENUMBER, icontrol, VERSION_NORMAL ) ) {
     db( CONTROL_MESH_RENUMBER, icontrol, renumber, ddum, ldum, VERSION_NORMAL, GET );
     if ( renumber[0]<0 || renumber[1]<0 ) db_error( CONTROL_MESH_RENUMBER, icontrol );
     renumbering( VERSION_NORMAL, NO, renumber[0], renumber[1], idum, idum );
+    // control_mesh_renumber_element_group_offset / _element_geometry_offset
+    // (6.237 / 6.236): every element gets its group / element_geometry
+    // plus the offset (a missing record counts as 0, as in the
+    // Professional 02-08-2026: groups 0 1 2 -> 100 101 102)
+    long int offset_group = 0, offset_geometry = 0, max_el = 0, one = 1;
+    if ( db_active_index( CONTROL_MESH_RENUMBER_ELEMENT_GROUP_OFFSET,
+         icontrol, VERSION_NORMAL ) )
+      db( CONTROL_MESH_RENUMBER_ELEMENT_GROUP_OFFSET, icontrol,
+        &offset_group, ddum, ldum, VERSION_NORMAL, GET );
+    if ( db_active_index( CONTROL_MESH_RENUMBER_ELEMENT_GEOMETRY_OFFSET,
+         icontrol, VERSION_NORMAL ) )
+      db( CONTROL_MESH_RENUMBER_ELEMENT_GEOMETRY_OFFSET, icontrol,
+        &offset_geometry, ddum, ldum, VERSION_NORMAL, GET );
+    db_highest_index( ELEMENT, max_el, VERSION_NORMAL );
+    for ( long int iel=0; iel<=max_el; iel++ ) {
+      if ( !db_active_index( ELEMENT, iel, VERSION_NORMAL ) ) continue;
+      long int value = 0;
+      if ( db_active_index( CONTROL_MESH_RENUMBER_ELEMENT_GROUP_OFFSET,
+           icontrol, VERSION_NORMAL ) ) {
+        value = 0;
+        db( ELEMENT_GROUP, iel, &value, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        value += offset_group;
+        db( ELEMENT_GROUP, iel, &value, ddum, one, VERSION_NORMAL, PUT );
+      }
+      if ( db_active_index( CONTROL_MESH_RENUMBER_ELEMENT_GEOMETRY_OFFSET,
+           icontrol, VERSION_NORMAL ) ) {
+        value = 0;
+        db( ELEMENT_GEOMETRY, iel, &value, ddum, ldum, VERSION_NORMAL,
+          GET_IF_EXISTS );
+        value += offset_geometry;
+        db( ELEMENT_GEOMETRY, iel, &value, ddum, one, VERSION_NORMAL, PUT );
+      }
+    }
   }
 
   if ( db_active_index( CONTROL_EIGEN, icontrol, VERSION_NORMAL ) ) solve( -CONTROL_EIGEN );
@@ -686,7 +1869,16 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     materi_diffusion_temperature();
   }
 
-  post( task ); 
+  // post_apply / control_post_apply -no (manual Professional 6.900 /
+  // 6.259): no post_* record is evaluated (they keep their last values;
+  // with a global -no they are never created). post_node_rhside_ratio is
+  // computed in the iteration loop and stays.
+  post_off = materi_apply_gate_off( POST_APPLY, CONTROL_POST_APPLY );
+  if ( !post_off ) post( task ); 
+  // control_safety_slip (manual Professional 6.369, F5 T6): slip-surface
+  // safety factors of the converged step, before control_print and GiD
+  if ( task==YES ) safety_slip();
+  post_stale = post_off;
 
   if ( task==YES ) error( GET );
 
@@ -698,7 +1890,7 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     }
   }
 
-  calculate();
+  if ( !post_off ) calculate();
 
   db( TIME_AT_START, 0, &time_at_start, ddum, ldum, VERSION_NORMAL, GET );
   time_at_end = (long int) time(NULL);
@@ -707,6 +1899,20 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
     ddum, length, VERSION_NORMAL, PUT );
 
   if ( npar==0 || ( ipar==npar-1 && ipar_i==ipar_n-1 ) ) {
+    // control_print_frequency_timeinterval / control_print_frequency_timestep
+    // (manual Professional 6.291/6.292): gate every control_print_* of this
+    // icontrol EXCEPT control_print, control_print_history and
+    // control_print_data_versus_data. The gate is per icontrol: when it
+    // returns 0 none of the gated prints runs in this step_close.
+    frequency_allowed = control_print_frequency_allowed( icontrol );
+    // print_apply -no (manual Professional 6.968): ALL control_print_*
+    // records are neglected (a global gate for the whole run)
+    {
+      long int print_apply = -YES;
+      db( PRINT_APPLY, 0, &print_apply, ddum, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( print_apply==-NO ) frequency_allowed = 0;
+    }
     if ( db_active_index( CONTROL_PRINT, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT, icontrol, ival, ddum, nval, VERSION_NORMAL, GET );
       for ( i=0; i<nval; i++ ) {
@@ -716,64 +1922,248 @@ void step_close( long int task, long int ipar, long int npar, long int ipar_i, l
       }
       cout << "\n\n";
     }
-    if ( db_active_index( CONTROL_PRINT_DATABASE, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DATABASE, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_DATABASE, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-RESTART ) print_restart( icontrol );
       else print_database( icontrol, VERSION_NORMAL, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DATABASE_METHOD, icontrol, VERSION_NORMAL ) ) {
+      // control_print_database_method (manual Professional 6.266): method
+      // -all (default) prints all base records, -size_tot prints the size
+      // of all base records (plus the system matrix), -size_tot_large only
+      // the records larger than 1 Mb (plus the system matrix).
+      db( CONTROL_PRINT_DATABASE_METHOD, icontrol, ival, ddum, ldum,
+        VERSION_NORMAL, GET );
+      if      ( ival[0]==-ALL ) print_database( icontrol, VERSION_NORMAL, -EVERYTHING );
+      else if ( ival[0]==-SIZETOT ) print_database( icontrol, VERSION_NORMAL, -SIZETOT );
+      else if ( ival[0]==-SIZE_TOT_LARGE ) print_database( icontrol, VERSION_NORMAL, -SIZE_TOT_LARGE );
+      else db_error( CONTROL_PRINT_DATABASE_METHOD, icontrol );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_PARTIALNAME, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_PARTIALNAME, icontrol, ival, ddum, nval, VERSION_NORMAL, GET );
+      print_partialname( icontrol, VERSION_NORMAL, ival, nval );
     }
     if ( db_active_index( CONTROL_PRINT_DATA_VERSUS_DATA, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_DATA_VERSUS_DATA, icontrol, ival, ddum, length, VERSION_NORMAL, GET );
       print_data_versus_data( ival, length );
     }
-    if ( db_active_index( CONTROL_PRINT_DX, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DX, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_DX, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_dx( -NO );
       else if ( ival[0]!=-NO ) db_error( CONTROL_PRINT_DX, icontrol );
     }
-    if ( db_active_index( CONTROL_PRINT_ELEMENT, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_ELEMENT, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_ELEMENT, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       print_element( ival[0] );
     }
     if ( db_active_index( CONTROL_PRINT_HISTORY, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_HISTORY, icontrol, ival, ddum, nval, VERSION_NORMAL, GET );
       print_history( ival, nval );
+      if ( db_active_index( CONTROL_PRINT_HISTORY_SMOOTH, icontrol, VERSION_NORMAL ) )
+        print_history_smooth( ival, nval );
     }
-    if ( db_active_index( CONTROL_PRINT_PLOTMTV, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_PLOTMTV, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_PLOTMTV, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES || ival[0]>=0 ) print_plotmtv( icontrol, ival );
     }
-    if ( db_active_index( CONTROL_PRINT_GID, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_GID, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_GID, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
-      if ( ival[0]!=-NO ) print_gid( ival[0] );
+      if ( ival[0]!=-NO ) print_gid( ival[0], icontrol );
     }
-    if ( db_active_index( CONTROL_PRINT_GMV, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_GMV, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_GMV, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES || ival[0]>=0 ) print_gmv( icontrol, ival );
     }
-    if ( db_active_index( CONTROL_PRINT_MATLAB, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_MATLAB, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_MATLAB, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES || ival[0]>=0 ) print_matlab( );
     }
-    if ( db_active_index( CONTROL_PRINT_TECPLOT, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_TECPLOT, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_TECPLOT, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]!=-NO  ) print_tecplot( ival );
     }
-    if ( db_active_index( CONTROL_PRINT_UNKNOWNS, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_UNKNOWNS, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_UNKNOWNS, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_unknowns( );
     }
-    if ( db_active_index( CONTROL_PRINT_UNKNOWNSRHSIDE, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_UNKNOWNSRHSIDE, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_UNKNOWNSRHSIDE, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
       if ( ival[0]==-YES ) print_unknownsrhside( );
     }
-    if ( db_active_index( CONTROL_PRINT_VTK, icontrol, VERSION_NORMAL ) ) {
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_VTK, icontrol, VERSION_NORMAL ) ) {
       db( CONTROL_PRINT_VTK, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
-      if ( ival[0]==-YES ) print_vtk( icontrol );
+      if ( ival[0]!=-NO ) print_vtk( icontrol, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_TABULAR, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_TABULAR, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
+      if ( ival[0]==-YES ) print_tabular( icontrol );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_GMSH, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_GMSH, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
+      if ( ival[0]!=-NO ) print_gmsh( icontrol, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_FRD, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_FRD, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
+      if ( ival[0]!=-NO ) print_frd( icontrol, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_INTERFACE_STRESS, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_INTERFACE_STRESS, icontrol, ival, ddum, ldum,
+        VERSION_NORMAL, GET );
+      if ( ival[0]!=-NO ) print_interface_stress( icontrol, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DOF, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_DOF, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
+      if ( ival[0]!=-NO ) print_dof( icontrol, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DOF_LINE, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_DOF_LINE, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
+      if ( ival[0]!=-NO ) print_dof_line( icontrol, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_DOF_POINT, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_DOF_POINT, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
+      if ( ival[0]!=-NO ) print_dof_point( icontrol, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_NODE, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_NODE, icontrol, ival, ddum, ldum, VERSION_NORMAL, GET );
+      print_node( icontrol, ival, ldum );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_BEAM_FORCE_MOMENT, icontrol, VERSION_NORMAL ) ) {
+      db( CONTROL_PRINT_BEAM_FORCE_MOMENT, icontrol, ival, ddum, ldum,
+        VERSION_NORMAL, GET );
+      print_beam_force_moment( icontrol, ival[0] );
+    }
+    if ( frequency_allowed && db_active_index( CONTROL_PRINT_MATERI_STRESS_FORCE, icontrol, VERSION_NORMAL ) ) {
+      // control_print_materi_stress_force (manual Professional 6.328):
+      // prints the post_calcul -materi_stress -force results to
+      // materi_stress_force.<icontrol> (the manual "index" is the
+      // record index, like control_print_beam_force_moment); the record
+      // value is the method (-all / -primary).
+      db( CONTROL_PRINT_MATERI_STRESS_FORCE, icontrol, ival, ddum, ldum,
+        VERSION_NORMAL, GET );
+      print_materi_stress_force( icontrol, ival[0] );
     }
   }
   cout << flush;
 
+  // remember the reaction forces of this step for bounda_time_until_force
+  if ( db_active_index( NODE_RHSIDE, 0, VERSION_NORMAL ) ||
+       db_max_index( NODE_RHSIDE, ldum, VERSION_NORMAL, GET )>=0 ) {
+    long int max_node_prev=0, inod_prev=0, idum_p[1];
+    double *rhs_p=NULL;
+    db_max_index( NODE, max_node_prev, VERSION_NORMAL, GET );
+    for ( inod_prev=0; inod_prev<=max_node_prev; inod_prev++ ) {
+      if ( db_active_index( NODE_RHSIDE, inod_prev, VERSION_NORMAL ) ) {
+        rhs_p = db_dbl( NODE_RHSIDE, inod_prev, VERSION_NORMAL );
+        db( NODE_RHSIDE_PREVIOUS, inod_prev, idum_p, rhs_p, npuknwn,
+          VERSION_NORMAL, PUT );
+      }
+    }
+  }
+
+  // check node_dof for NAN values (check_nan)
+  if ( check_nan==-YES ) check_nan_results( check_nan );
+
   delete[] ival;
 
+}
+
+// control_system_call (manual Professional 6.382): runs the user's
+// ./tochnog_system_call.sh with integer_value as its first argument at the
+// end of each converged timestep and at the end of each control index that
+// has the record. The run waits for it; the script's stdout goes to the
+// run output, its stderr is discarded and its exit status is ignored
+// (Professional 02-08-2026). The Professional searches the script on the
+// PATH; GNU runs the file of the working directory, as the manual says. A
+// missing or non-executable script gives one warning per run. A script
+// without a #! line is run by /bin/sh, as system() would.
+void control_system_call( long int icontrol )
+{
+  static long int warned = 0;
+  long int value=0, length=1;
+  double ddum[1];
+  char arg[32];
+  const char *script = "./tochnog_system_call.sh";
+
+  if ( !db_active_index( CONTROL_SYSTEM_CALL, icontrol, VERSION_NORMAL ) ) return;
+  db( CONTROL_SYSTEM_CALL, icontrol, &value, ddum, length, VERSION_NORMAL, GET );
+  if ( access( script, X_OK )!=0 ) {
+    if ( !warned ) {
+      pri( "\nWarning: control_system_call: tochnog_system_call.sh is missing "
+        "or not executable in the working directory; the call is skipped." );
+      warned = 1;
+    }
+    return;
+  }
+  snprintf( arg, sizeof(arg), "%ld", value );
+  cout.flush();
+  fflush( stdout );
+
+  posix_spawn_file_actions_t actions;
+  posix_spawn_file_actions_init( &actions );
+  posix_spawn_file_actions_addopen( &actions, 2, "/dev/null", O_WRONLY, 0 );
+  pid_t pid = 0;
+  char *argv_script[] = { (char*) script, arg, NULL };
+  int err = posix_spawn( &pid, script, &actions, NULL, argv_script, environ );
+  if ( err==ENOEXEC ) {
+    char *argv_sh[] = { (char*) "sh", (char*) script, arg, NULL };
+    err = posix_spawn( &pid, "/bin/sh", &actions, NULL, argv_sh, environ );
+  }
+  posix_spawn_file_actions_destroy( &actions );
+  if ( err==0 ) {
+    int status = 0;
+    while ( waitpid( pid, &status, 0 )<0 && errno==EINTR ) ;
+  }
+}
+
+// Number of CPUs the process may run on (its affinity mask, so taskset /
+// cgroup cpusets are honoured), at least 1; used by processors_maximum.
+long int available_processors( void )
+{
+  long int n = 0;
+  cpu_set_t set;
+  CPU_ZERO( &set );
+  if ( sched_getaffinity( 0, sizeof(set), &set )==0 ) n = CPU_COUNT( &set );
+  if ( n<1 ) n = sysconf( _SC_NPROCESSORS_ONLN );
+  if ( n<1 ) n = 1;
+  return n;
+}
+
+// control_timestep_until_data / _minimum / _maximum (manual Professional
+// 6.390-6.392): after a converged timestep, returns 1 when one of the
+// data item values is below its minimum or above its maximum, so the
+// timesteps of this control index stop and the calculation continues with
+// the next index (Professional 02-08-2026: the step in which the value
+// leaves the range is the last one of the index). Both the minimum and
+// the maximum record are required, one value per (name index number).
+long int control_timestep_until_reached( long int icontrol )
+{
+  long int until_data[30], length_data=0, length_min=0, length_max=0,
+    ntriple=0, itriple=0, idum[1];
+  double until_minimum[10], until_maximum[10], value=0.;
+
+  if ( !db_active_index( CONTROL_TIMESTEP_UNTIL_DATA, icontrol, VERSION_NORMAL ) )
+    return 0;
+  db( CONTROL_TIMESTEP_UNTIL_DATA, icontrol, until_data, until_minimum,
+    length_data, VERSION_NORMAL, GET );
+  ntriple = length_data/3;
+  if ( length_data%3!=0 ||
+       !db_active_index( CONTROL_TIMESTEP_UNTIL_MINIMUM, icontrol, VERSION_NORMAL ) )
+    db_error( CONTROL_TIMESTEP_UNTIL_MINIMUM, icontrol );
+  if ( !db_active_index( CONTROL_TIMESTEP_UNTIL_MAXIMUM, icontrol, VERSION_NORMAL ) )
+    db_error( CONTROL_TIMESTEP_UNTIL_MAXIMUM, icontrol );
+  db( CONTROL_TIMESTEP_UNTIL_MINIMUM, icontrol, idum, until_minimum,
+    length_min, VERSION_NORMAL, GET );
+  db( CONTROL_TIMESTEP_UNTIL_MAXIMUM, icontrol, idum, until_maximum,
+    length_max, VERSION_NORMAL, GET );
+  if ( length_min!=ntriple ) db_error( CONTROL_TIMESTEP_UNTIL_MINIMUM, icontrol );
+  if ( length_max!=ntriple ) db_error( CONTROL_TIMESTEP_UNTIL_MAXIMUM, icontrol );
+  for ( itriple=0; itriple<ntriple; itriple++ ) {
+    if ( !data_item_value( until_data[3*itriple], until_data[3*itriple+1],
+           until_data[3*itriple+2], value ) )
+      continue;
+    if ( value<until_minimum[itriple] || value>until_maximum[itriple] )
+      return 1;
+  }
+  return 0;
 }
 

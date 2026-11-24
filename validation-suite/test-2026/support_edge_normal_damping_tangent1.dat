@@ -1,0 +1,48 @@
+(
+K17 support_edge_normal_3 (2026-10-06): the damping (manual Professional
+6.1068) and density (6.1071) of support_edge_normal enter the iteration
+matrix, d(force)/d(velocity) = k*dt + c + d/dt. Professional test
+other/support_edge_normal_3 without control_support_edge_normal_stiffness_freeze
+(parsed only in the GNU): a unit quad4 (E = 1e6) on a Winkler bottom
+(k = 1e6, c = 1e6), top pushed down 1e-3 in one step without damping,
+then one more step of 1e-3 with damping: the damper (c = 1e6 >> k*dt =
+1e3) holds the bottom, node 1 disy 5.00998004e-4 (= Professional
+02-08-2026). GNU before K17: the matrix carried only k*dt, the update
+overshot by c/(k*dt) and diverged (disy 124.75, rc 1).
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+start_define
+  bottom geometry_line 10
+end_define
+bottom 0. 0. 1. 0. 1.e-4
+start_define
+  top geometry_line 20
+end_define
+top 0. 1. 1. 1. 1.e-4
+node 1  0  0
+node 2  1. 0
+node 3  0  1.
+node 4  1. 1.
+element 1  -quad4 1 2 3 4
+group_type 0  -materi
+group_materi_memory 0  -total_linear
+group_materi_density 0  1.0
+group_materi_elasti_young 0  1.0e6
+support_edge_normal  10  1.e6 1.e6
+support_edge_normal_damping  10  1.e6 1.e6
+support_edge_normal_geometry  10  -bottom
+bounda_dof 10 -all -velx
+bounda_dof 20 -top -disy
+bounda_time 20 0. 0. 1. 1.
+control_timestep 20  1.e-3 1.e-3
+control_support_edge_normal_damping_apply 20  -no
+control_timestep 40  1.e-3 1.e-3
+control_support_edge_normal_damping_apply 40  -yes
+target_item    10  -node_dof 1 -disy
+target_value   10  5.00998e-4 1.e-9
+end_data

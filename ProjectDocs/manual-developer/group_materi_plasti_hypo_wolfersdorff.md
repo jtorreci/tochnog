@@ -1,0 +1,136 @@
+# group_materi_plasti_hypo_wolfersdorff (and variants)
+
+## Files and functions
+
+- `hypo.c` — the hypoplasticity kernel (pure-C port of the original Fortran
+  `hypo.f`, then f2c, then manually ported to C in P4-F). Contains:
+  - `hypo_()` — entry point: parameter setup, pressure-dependent void-ratio
+    initialisation, intergranular-strain substepping, calls `sigma_`.
+  - `sigma_()` — the constitutive evaluation. `ihypotype` selects the law:
+    0 = wolfersdorff, 1 = lowangles (uses `rval`=data[9], `powxi`=data[10]).
+    `cohesion` is subtracted from the normal stresses (tcohesion), and the
+    linear contribution is used when the pressure falls below `-3*c`.
+  - Helpers: `inpro_`, `normvec_`, `power_`, `tra_`, `extract_`, `mul_`,
+    `copy_`, `dev_`, `abdyadic_`, `unity4_`, `zero_`, `add_`, `minus_`.
+- `hypoplas.cc` — dispatch:
+  - `hypo_type[0]=0` for wolfersdorff, `=1` for lowangles.
+  - `cohesion[0]` from `GROUP_MATERI_PLASTI_HYPO_COHESION`.
+  - `use_epi[0]=1` + `epi_R/mr/mt/betar/chi` from
+    `GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN` (requires
+    `materi_strain_intergranular`).
+  - `use_pres[0]=1` from `GROUP_MATERI_PLASTI_HYPO_PRESSUREDEPENDENTVOIDRATIO
+    -yes`.
+- `database.cc` — registrations:
+  - `GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF`: DOUBLE, length 8.
+  - `GROUP_MATERI_PLASTI_HYPO_LOWANGLES`: DOUBLE, length 10.
+  - `GROUP_MATERI_PLASTI_HYPO_COHESION`: DOUBLE, length 1.
+  - `GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN`: DOUBLE, length 5.
+  - `GROUP_MATERI_PLASTI_HYPO_PRESSUREDEPENDENTVOIDRATIO`: INTEGER, length 1.
+- `tochnog.h` / `tochnog-mod.h` — enums (kept in sync).
+
+## Implementation details
+
+- `hypo_` requires `materi_history_variables >= 4` (void ratio in `his[0]`,
+  intergranular strain in the remaining slots).
+- The kernel uses the soil-mechanics convention (compression positive) — the
+  caller (hypoplas.cc) converts the tochnog tensors accordingly.
+- `lowangles` is the same law as wolfersdorff but with the exponent `xi` and
+  `c1/c2` computed from `rval`/`powxi` (the "low angles" variant of Herle).
+- `cohesion` is subtracted from the normal stresses BEFORE the law evaluation
+  (tcohesion), and the linear part is used if the resulting pressure is below
+  `-3*c` — this stabilises zones of small stress (free surfaces).
+- `pressuredependentvoidratio -yes` activates the initialisation of the void
+  ratio from the current mean stress at `time[1]==0` (hypo_ lines 120-139):
+  `e = e_0 * exp(-(-trace/h_s)^n)` clamped to `[e_d, e_i]`.
+
+## Validation
+
+- `hypo1.dat` — wolfersdorff, `sigyy=-863` (validated vs the Herle program).
+- `hypo2/3/4.dat` — wolfersdorff + intergranular strain.
+- `hypo_cohesion.dat` — wolfersdorff + cohesion `c=5 kPa`, `sigyy=-3945.4`,
+  `e=0.5848`. Added 2026-08-11 (P4-A1).
+- `hypo_lowangles.dat` — lowangles with `rval=2, powxi=2`, `sigyy=-4263.7`.
+  Added 2026-08-11 (P4-A1).
+- `hypo_pdvr.dat` — pressure-dependent void ratio, `sigyy=-943.0`,
+  `e=0.5622`. Added 2026-08-11 (P4-A1).
+
+## ABI of the `hypo_` entry point (fixed 2026-09-06)
+
+`hypo.c` is an f2c-style pure-C port: every Fortran INTEGER argument is a
+`long int *` (8 bytes on LP64; `typedef long int integer` in tochnog.h).
+`hypoplas.cc` must therefore declare ALL of them as `long int` — the
+caller-side flags `find_local_sv` and `options_nonlocal` were the only
+exceptions (`int[1]`, 4 bytes), which made `hypo.c` read 8 bytes from a
+4-byte object (`options_nonlocal[0]` at hypo.c:165, and both flags at
+sigma_ hypo.c:620-621): a deterministic stack-buffer-overflow exposed by
+ASan (`make asan` aborted hypo1-4). Fixed by declaring
+`long int find_local_sv[1], options_nonlocal[1]` in hypoplas.cc (both the
+extern "C" prototype and the locals). No other Fortran-facing wrapper in
+the tree had the same mismatch (the umat_ ABI uses `integer` = long int on
+both sides; the masin/sanisand kernels are self-consistent pure C with
+`int`).
+
+## Calibration state of the wolfersdorff kernel (re-calibrated 2026-09-07)
+
+Verified AFTER the ABI fix against the Professional binary 25-10-2023
+(corpus `test/other/hypo*.dat`, target dof read from the final
+`post_point_dof` record of each .dbs). The fix changed NOTHING numerically
+(all .dbs byte-identical before/after) — the deviations below are genuine
+kernel calibration gaps, NOT memory contamination:
+
+| test | dof | GNU (pre-cal) | GNU (calibrated) | Professional | deviation | rc |
+|------|-----|---------------|------------------|--------------|-----------|----|
+| hypo1 (wolfersdorff, biaxial) | sigyy | -862.766345621 | -862.927047891 | -862.9290976 | 0.0002 % | 0 |
+| hypo1 | hyhis0 (e) | 0.598072469281 | 0.598045065508 | 0.598063331291 | 3e-5 | 0 |
+| hypo3 (wolfersdorff + intergranular, K0 state) | sigxx | -0.104030562155 | -0.103436189421 | -0.162914620443 | 36 % | 1 |
+| hypo3 | hyhis0 | 0.631891970796 | 0.631891441643 | 0.631882704225 | 1.5e-5 | |
+| hypo2 (reference, rc=0) | sigxx | -0.176 | -0.174467815382 | -0.172844870859 | in tol | 0 |
+| hypo4 (reference, rc=0) | | | | | | 0 |
+
+Calibration changes applied to hypo.c (see
+manual-developer/hypoplasticity_kernels.md for the full analysis):
+(1) rho = ||S||/R clamped to <= 1 (manual: "rho must remain between 0 and
+1"; unclamped overshoots give mR a negative stiffness weight) -> hypo2
+moves -0.176 -> -0.17447 toward the Professional -0.17284.
+(2) internal substep tolerance of the stress-increment criterion 1% -> 2%
+(the Professional's effective tolerance, measured on hypo1: -862.927 @2%
+vs Professional -862.929, target -862.92 +- 0.1 -> rc=0).
+
+hypo3 (descarga del estado K0 con intergranular strain, 36%) sigue abierto
+pero es un gap de ESQUEMA, no del kernel: la rama de carga coincide con el
+Professional al 0.4% y todo el desvío se abre en los 2 pasos de descarga
+(dt = 10*R, R = 1e-4); refinando dt ambos códigos convergen al mismo modelo
+(~-0.105) — el valor del Professional (-0.16291) es su integración gruesa
+de la reversión. Ver hypoplasticity_kernels.md (sección hypo3).
+Closed 2026-10-12 (F4 T6f) as class A divergence K14b: the converged
+reference (Python integration) is -0.10466; see "Differences with the
+Professional version".
+
+## External dependencies
+
+- Core `db()`, `db_active_index()`, `pri()`, `array_add/subtract`.
+- The kernel is self-contained C (no f2c, no libf2c) after P4-F.
+
+## Hardcoded parameters / pending refactorings
+
+- The `-3*c` linearisation threshold of cohesion is hardcoded in `sigma_`
+  (matches the professional manual).
+- `materi_history_variables >= 4` is enforced with an explicit error.
+- The `lowangles` exponents `rval`/`powxi` default to 0/1 when the base
+  wolfersdorff form is used.
+
+## Differences with the Professional version
+
+- **Strain reversal with intergranular strain (`hypo3`)** (deliberate
+  divergence, class A, project decision 2026-10-12; DIVERGENCES K14b).
+  Oedometric von Wolffersdorff + intergranular strain test with a strain
+  reversal (test-2014 `hypo3`). Converged reference (independent Python
+  integration of the same law, manual 2.2.4): sigxx -0.10466. GNU: -0.1034
+  at dt 1e-3 (1.2 % off), -0.104235 at dt 1e-5. Professional 02-08-2026:
+  -0.1629 at dt 1e-3 (56 % off), -0.10499 at dt 1e-5: a time-discretisation
+  error at the reversal that vanishes only as dt -> 0. Guard tests
+  `test-2026/hypo_wolff_igs_oedometer1/2` (wired in `scripts/build_safe.sh`;
+  tolerances 2e-3 / 5e-4 absolute). No source change: the GNU substepping
+  of the kernel `hypo.c` already converges to the reference. The printed history slots
+  (`hyhis*`) of `hypo3` still differ (AUDIT K14, open). Index:
+  [DIVERGENCES-PROFESSIONAL.md](../DIVERGENCES-PROFESSIONAL.md).

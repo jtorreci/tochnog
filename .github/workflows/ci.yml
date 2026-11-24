@@ -1,0 +1,88 @@
+# Tochnog CI — quality gates (PLAN.md item 2 / DECISIONES.md):
+#   - "Objetivos con sanitizers y warnings estrictos obligatorios en CI.
+#      Permitir desactivar via flags cuando dependencias de terceros no
+#      soportan."
+#
+# Arquitectura:
+#   - build-test: build canonico (scripts/build_safe.sh) + smoke subset
+#     (.github/ci/). La suite propia completa (validation-suite/, 16 tests
+#     recuperados) NO esta versionada (ver .gitignore), asi que en CI solo
+#     puede correr el subset commitado: parse + mesh + materi elastico +
+#     solve + dump de base de datos (el pipeline core de toda regresion).
+#   - sanitize: build con make asan (target del makefile) + smoke bajo
+#     ASan/UBSan. Omitido por defecto de la matrix; se activa con el
+#     input workflow_dispatch/parametro o schedule. La suite grande no
+#     corre en CI: demasiado lenta.
+#
+# Pin ubuntu-22.04 a proposito: el SuperLU del apt es 6.0.1 (la misma
+# version que el local de external-downloads usado en desarrollo). El
+# build local verificado usa ese mismo 6.0.1.
+name: ci
+
+on:
+  push:
+    branches: [master, documentation-improvement]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Shared by every build (matches scripts/build_safe.sh defaults).
+  DEPS_APT: libsuperlu-dev liblapack-dev libblas-dev libsqlite3-dev libgfortran5
+
+jobs:
+  build-test:
+    name: build-test (default build + smoke)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install solver/runtime dependencies (SuperLU, LAPACK/BLAS, sqlite3, gfortran)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $DEPS_APT g++ make
+
+      - name: Canonical build (compile only; the internal suite needs validation-suite/ which is not checked out in CI)
+        run: |
+          TN_SKIP_SUITE=1 ./scripts/build_safe.sh --clean
+        timeout-minutes: 30
+
+      - name: Smoke subset (parse + elastic solve + db dump)
+        run: .github/ci/run_smoke.sh build/tochnog
+        timeout-minutes: 10
+
+  sanitize:
+    name: sanitize (ASan+UBSan, smoke subset)
+    runs-on: ubuntu-22.04
+    # Gate de sanitizers: push a master, dispatch manual, o PR etiquetada
+    # "sanitize" (el build asan+suite es caro; no corre en cada push de rama).
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master' || contains(github.event.pull_request.labels.*.name, 'sanitize')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install solver/runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $DEPS_APT g++ make
+
+      - name: ASan+UBSan build (make asan flags; suite interna omitida, no versionada en CI)
+        run: |
+          TN_SKIP_SUITE=1 \
+          TN_BIN=tochnog-asan \
+          TN_MEMLIMIT_KB=unlimited \
+          TN_EXTRA_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1" \
+          ./scripts/build_safe.sh --clean
+        timeout-minutes: 40
+
+      - name: "Smoke subset under ASan/UBSan (leaks off: ejercicio aparte; UBSan halt_on_error=1: cualquier UB reportada falla el job)"
+        env:
+          ASAN_OPTIONS: "detect_leaks=0"
+          UBSAN_OPTIONS: "halt_on_error=1:print_stacktrace=1"
+        run: .github/ci/run_smoke.sh build/tochnog-asan
+        timeout-minutes: 10

@@ -1,0 +1,64 @@
+( 
+ 2D cantilever beam 100mmx10mmx10mm
+ 10x6 mesh
+ Good results with 2nd order elements
+ Runs for 11 sec on my machine Celeron 366/128MB
+ Osman Buyukisik      osman@fuse.net
+)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+materi_strain_total
+end_initia
+
+options_convection  -no
+options_inertia     -no
+options_mesh  -fixed_in_space -fixed_in_space
+
+(point at lower left edge)
+geometry_point   0  0.0 0.0               0.01
+(point at middle of right edge)
+geometry_point   1  100.0 5.0               0.01
+(left edge)
+geometry_line    1  0.0  0.0   0.0  10.   0.01
+(right edge)
+geometry_line    2  100.0  0.0   100.0  10.   0.01
+
+(left edge fixed)
+bounda_unknown   0 -geometry_point 0 -vely
+bounda_time      0 0.0 0.0 100.00  0.0
+bounda_unknown   1 -geometry_line 1 -velx
+bounda_time      1 0.0 0.0 100.00  0.0
+(force at the middle of right edge)
+bounda_force     2 -geometry_point 1 -vely
+bounda_time      2 0.0 100.  100. 100.
+
+( material props  )
+group_type 			            0  -materi
+group_materi_elasti_young   0  1e7
+group_materi_elasti_poisson 0  0.3
+group_materi_membrane       0 -yes
+group_materi_memory         0  -updated_without_rotation
+(thickness)
+volume_factor                   10.0
+(this is for checking the results at x=0)
+post_point   0    0.010 0.010
+post_point   1    0.010 9.999
+
+(create the the beam)
+control_mesh_macro              0 -rectangle 0 10 6
+control_mesh_macro_parameters   0  50. 5  100.0 10.0
+(better for bending )
+control_mesh_refine_globally    5   -p_refinement
+
+control_timestep                      10  1  1.0
+control_timestep_iterations           10  3
+
+target_item 1  -post_point_dof 0 -sigxx
+target_value 1 60.0 1.0
+target_item 2  -post_point_dof 1 -sigxx
+target_value 2 -60.0 1.0
+
+end_data

@@ -1,0 +1,25 @@
+( control_mesh_map (6.210): -tet10 -> the -tet4 of its corners 1 3 6 10 (the
+  Professional 02-08-2026 takes 1 4 6 10, DIVERGENCES MESH-MAP-TET10). )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 0 0 0.5
+node 8 0.5 0 0.5
+node 9 0 0.5 0.5
+node 10 0 0 1
+element 1 -tet10 1 2 3 4 5 6 7 8 9 10
+group_type 1 -materi
+group_materi_elasti_young 1 1000
+group_materi_elasti_poisson 1 0.2
+control_mesh_map 10 -yes
+control_print_database 15 -yes
+end_data

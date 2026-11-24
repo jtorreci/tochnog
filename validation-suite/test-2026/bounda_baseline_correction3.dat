@@ -1,0 +1,31 @@
+( bounda_baseline_correction_parameters given in the input (manual 6.20),
+  F5 T5 U9: they are used instead of the fit. p = 0.5 on [0,1], so the
+  acceleration is 1.5, v(1) = 1.5 and x(1) = 0.1*0.15*(1+...+10) = 0.825.
+  Same as the Professional 02-08-2026 for this case: every table point
+  after time_start gets +0.5, the first point is not corrected there. )
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof  10  1 -accx
+bounda_time 10  0. 1.  0.5 1.  1. 1.  2. 0.
+bounda_baseline_correction 0. 1.
+bounda_baseline_correction_parameters 10  0.5 0. 0.
+control_timestep 10  0.1 1.
+target_item  0  -node_dof 1 -velx
+target_value 0  1.5 1.e-10
+target_item  1  -node_dof 1 -disx
+target_value 1  0.825 1.e-10
+target_item  2  -bounda_baseline_correction_parameters 10 0
+target_value 2  0.5 1.e-10
+end_data

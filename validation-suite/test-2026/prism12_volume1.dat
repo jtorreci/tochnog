@@ -1,0 +1,38 @@
+( F5 T4 U9c: distorted -prism12: base triangle (0,0) (2,0) (0.5,1.5) with
+  the edge (0,0)-(2,0) curved {mid node 2 at (1, -0.3): parabolic segment
+  2/3 x 2 x 0.3 = 0.4, centroid y -0.12}, mid node 4 moved along its
+  straight edge to (0.2, 0.6); planar sloped top z = 1 + 0.2 x + 0.1 y over
+  the same tria6. Analytic volume A + 0.2 Sx + 0.1 Sy = 1.9 + 0.33 + 0.0702
+  = 2.3002 {A 1.5 + 0.4; Sx 1.25 + 0.4, Sy 0.75 - 0.048}; self-weight rho 1,
+  g 1: the summed base reaction is -V {the 14-point rule integrates this
+  geometry exactly}. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 1 -0.3 0
+node 3 2 0 0
+node 4 0.2 0.6 0
+node 5 1.25 0.75 0
+node 6 0.5 1.5 0
+node 7 0 0 1
+node 8 1 -0.3 1.17
+node 9 2 0 1.4
+node 10 0.2 0.6 1.1
+node 11 1.25 0.75 1.325
+node 12 0.5 1.5 1.25
+element 1 -prism12 1 2 3 4 5 6 7 8 9 10 11 12
+group_type 0 -materi
+group_materi_elasti_young 0 1.0e6
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+force_gravity 0. 0. -1.
+bounda_dof 10 -ra 1 2 3 4 5 6 -ra -velx -vely -velz
+bounda_time 10 0.
+control_timestep 10 0.5 1.0
+control_print_database 10 -separate_index
+end_data

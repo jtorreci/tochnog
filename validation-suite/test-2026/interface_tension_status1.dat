@@ -1,0 +1,58 @@
+( F4 T10 / C48: element_interface_intpnt_materi_tension_status. Two
+  quadratic 2D interfaces [-quad6, 3 integration points each], both with
+  the top side pushed down by vely = -1e-3 for one unit time step and the
+  bottom side fixed. Element 1 [group 0, no gap] closes: every integration
+  point -closed, normal stress kn * -1e-3 = -1. Element 2 [group 1, gap
+  -0.1] stays open: every integration point -opened, no contact stress.
+  The old GNU PUT the INTEGER record from the wrong buffer, so the statuses
+  were stack garbage that changed from run to run; build_safe.sh checks the
+  two .dbs lines and that two runs give the same .dbs. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node 1  0.0 0
+node 2  0.5 0
+node 3  1.0 0
+node 4  0.0 0
+node 5  0.5 0
+node 6  1.0 0
+node 7  2.0 0
+node 8  2.5 0
+node 9  3.0 0
+node 10 2.0 0
+node 11 2.5 0
+node 12 3.0 0
+element 1  -quad6 1 2 3 4 5 6
+element 2  -quad6 7 8 9 10 11 12
+element_group 2  1
+
+group_type 0  -materi
+group_interface 0 -yes
+group_interface_materi_memory 0  -total_linear
+group_interface_materi_elasti_stiffness 0  1.e3 0.5e3
+
+group_type 1  -materi
+group_interface 1 -yes
+group_interface_materi_memory 1  -total_linear
+group_interface_materi_elasti_stiffness 1  1.e3 0.5e3
+group_interface_gap 1  -0.1
+
+bounda_dof   10  -ra 1 2 3 7 8 9 -ra -velx -vely
+bounda_time  10  0.
+bounda_dof   20  -ra 4 5 6 10 11 12 -ra -velx
+bounda_time  20  0.
+bounda_dof   30  -ra 4 5 6 10 11 12 -ra -vely
+bounda_time  30  -1.e-3
+
+control_timestep 10  1. 1.
+
+target_item  10  -element_interface_intpnt_stress 1 0
+target_value 10  -1. 1.e-6
+target_item  11  -element_interface_intpnt_stress 2 0
+target_value 11  0. 1.e-6
+end_data

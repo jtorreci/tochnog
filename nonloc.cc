@@ -267,7 +267,8 @@ void calc_nonlocal_softvar() {
   if ( materi_plasti_softvar_nonlocal && scalar_dabs(options_nonlocal_softvar)>TINY) {
     long int length_nei=1+npointmax*ndim+npointmax+2;
     long int length_nonloc=NONLOCAL_ITEM_SIZE*npointmax;
-    long int mnolnuknwn=npointmax*nuknwn;
+    long int mnolnuknwn=npointmax*nuknwn, len_ielem_dof=mnolnuknwn,
+      len_jelem_dof=mnolnuknwn;
     swit = set_swit(-1,-1,"calc_nonlocal_softvar");
     if ( swit ) pri( "In routine CALC_NONLOCAL_SOFTVAR" );
 
@@ -301,7 +302,10 @@ void calc_nonlocal_softvar() {
             length_nonloc, VERSION_NORMAL, GET );
           db( ELEMENT_NONLOCAL_WEIGHT, ielem, idum, element_nonlocal_weight, 
             length_nonloc, VERSION_NORMAL, GET );
-          db( ELEMENT_DOF, ielem, idum, ielem_dof, mnolnuknwn, VERSION_NEW, GET );		
+          // F5 T2 V5: the record holds npoint*nuknwn values of its own
+          // element; keep the ielem and jelem lengths apart
+          len_ielem_dof = mnolnuknwn;
+          db( ELEMENT_INTPNT_DOF, ielem, idum, ielem_dof, len_ielem_dof, VERSION_NEW, GET );		
           npoint_ielem=(long int)nonlocal_ielem_info[0];	
           for ( ipoint_ielem=0; ipoint_ielem<npoint_ielem; ipoint_ielem++ ) {
             ielem_dof[nuknwn*ipoint_ielem+svnonloc_indx] = 0.;
@@ -315,7 +319,8 @@ void calc_nonlocal_softvar() {
 
 	         if(jelem_nonloc) {// not used if sv_loc not filled->elem. delete, non-nonlocal groups...
    	            jelem_ipoint = element_nonlocal_ipoint[jn];
-        	    db( ELEMENT_DOF, jelem, idum, jelem_dof, mnolnuknwn, VERSION_NEW, GET );		
+        	    len_jelem_dof = mnolnuknwn;
+        	    db( ELEMENT_INTPNT_DOF, jelem, idum, jelem_dof, len_jelem_dof, VERSION_NEW, GET );		
 	            ielem_dof[nuknwn*ipoint_ielem+svnonloc_indx] += 
 		        element_nonlocal_weight[jn] * jelem_dof[nuknwn*jelem_ipoint+svloc_indx];  
 		 }
@@ -323,7 +328,7 @@ void calc_nonlocal_softvar() {
 	    }	 
 	  }
 	}
-        db( ELEMENT_DOF, ielem, idum, ielem_dof, mnolnuknwn, VERSION_NEW, PUT );		
+        db( ELEMENT_INTPNT_DOF, ielem, idum, ielem_dof, len_ielem_dof, VERSION_NEW, PUT );		
       }
     }
     delete[] element_nonlocal;

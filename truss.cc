@@ -28,14 +28,19 @@ void truss( long int element, long int element_group,
 {
   long int idim=0, jdim=0, ipuknwn=0, iuknwn=0, jpuknwn=0, juknwn=0,
     inol=0, jnol=0, indx=0, nnol=2, swit=0, length=0,
-    options_inertia=-YES, group_truss_rope=-NO, 
-    memory=-UPDATED, options_convection=-YES,
-    icontrol=0, ldum=0, idum[1], options_mesh[MDIM];
+    // inertia_apply default -no (Professional semantics, see general.cc)
+    options_inertia=-NO, group_truss_rope=-NO, 
+    memory=-UPDATED_LINEAR, truss_reference=-NO, options_convection=-NO,
+    icontrol=0, ldum=0, idum[1], options_mesh[MDIM],
+    geometric_nonlinear=0;
   double mass=0., dtime=0., 
     group_truss_young=0., group_truss_area=0., 
     group_truss_density=0., group_truss_plasti=1.e20,
+    group_truss_expansion=0., group_truss_initial_force=0.,
+    inc_temperature=0., materi_dynamic_factor=1., truss_strain=0.,
+    truss_strain_temperature=0.,
     truss_stiffness=0., incremental_length=0., 
-    old_truss_force=0., new_truss_force=0., fac=0., tmp=0., 
+    old_truss_force=0., new_truss_force=0., new_truss_force_mix=0., fac=0., tmp=0., 
     old_length=0., new_length=0., initial_length=0., ddum[1],
     work[MDIM], truss_direction[MDIM], initial_coord[MNOL*MDIM], 
     old_coord[MNOL*MDIM], new_coord[MNOL*MDIM], diff_coord[MDIM],
@@ -48,10 +53,7 @@ void truss( long int element, long int element_group,
 
     db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     if ( materi_velocity_integrated ) {
-      db( OPTIONS_CONVECTION, 0, &options_convection, ddum,
-        ldum, VERSION_NORMAL, GET_IF_EXISTS );
-      db( CONTROL_OPTIONS_CONVECTION, icontrol, &options_convection, ddum,
-        ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      options_convection = convection_apply_switch();
       db( OPTIONS_MESH, 0, options_mesh, ddum,
         ldum, VERSION_NORMAL, GET );
       for ( idim=0; idim<ndim; idim++ ) {
@@ -75,13 +77,57 @@ void truss( long int element, long int element_group,
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
     db( GROUP_TRUSS_ROPE, element_group, &group_truss_rope, ddum,
        ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( GROUP_TRUSS_MEMORY, element_group, &memory, ddum,
-       ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( GROUP_TRUSS_EXPANSION, element_group, idum, &group_truss_expansion,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    db( GROUP_TRUSS_INITIAL_FORCE, element_group, idum,
+      &group_truss_initial_force, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    // Default memory (manual 6.777 is silent; manual 4.12: a total
+    // Lagrange formulation is used when materi_displacement is
+    // initialised). Measured on the Professional 02-08-2026: -total_linear
+    // with materi_displacement (dynamic3 60.44025), -updated_linear
+    // without it (rotating/stretching truss force -50 = -updated_linear;
+    // -updated gives 10.4587). The GNU legacy default was -updated.
+    memory = materi_displacement ? -TOTAL_LINEAR : -UPDATED_LINEAR;
+    if ( db( GROUP_TRUSS_MEMORY, element_group, &memory, ddum,
+        ldum, VERSION_NORMAL, GET_IF_EXISTS ) && check_error!=-NO ) {
+      // Input checks of the Professional 02-08-2026 (BACKLOG C59, owner
+      // decision 2026-10-11): the updated types need the velocity
+      // formulation, the total types need materi_displacement.
+      // check_error -no skips them, as in the Professional.
+      if ( materi_displacement &&
+           ( memory==-UPDATED || memory==-UPDATED_LINEAR ) ) {
+        pri( "Error: group_truss_memory -updated or -updated_linear is not allowed when materi_displacement is initialised (use -total_linear or -total)." );
+        pri( "Element group ", element_group );
+        exit_tn_on_error();
+      }
+      if ( !materi_displacement &&
+           ( memory==-TOTAL || memory==-TOTAL_LINEAR ) ) {
+        pri( "Error: group_truss_memory -total or -total_linear needs materi_displacement to be initialised (use -updated_linear or -updated)." );
+        pri( "Element group ", element_group );
+        exit_tn_on_error();
+      }
+    }
     db( OPTIONS_INERTIA, 0, &options_inertia, ddum, 
       ldum, VERSION_NORMAL, GET_IF_EXISTS );
-    db( CONTROL_OPTIONS_INERTIA, icontrol, &options_inertia, ddum, 
-      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    {
+      // multi-valued record: GNU uses the first value (see general.cc)
+      long int inertia_switches[DATA_ITEM_SIZE];
+      if ( db( CONTROL_OPTIONS_INERTIA, icontrol, inertia_switches, ddum,
+          ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+        options_inertia = inertia_switches[0];
+    }
     force_gravity_calculate( force_gravity );
+    // force_gravity_geometry (manual 6.499): trusses outside get none
+    if ( !force_gravity_element_inside( element ) )
+      array_set( force_gravity, 0., ndim );
+    // f=0 displacement-primary dynamics holds its mass and elastic force
+    // in the reference configuration. The f=1 auxiliary reassembly is
+    // marked by solve() so it preserves this same operator.
+    materi_dynamic_factor = materi_dynamic_effective( NULL );
+    if ( disp_primary_reference==-YES ||
+         ( materi_velocity && materi_displacement &&
+           materi_dynamic_factor>=0. && materi_dynamic_factor<1. ) )
+      truss_reference = -YES;
       // geometry
     for ( idim=0; idim<ndim; idim++ ) {
       if      ( materi_velocity_integrated ) {
@@ -116,7 +162,7 @@ void truss( long int element, long int element_group,
 
       // direction + deformations + stiffness
     initial_length = array_distance( &initial_coord[ndim], &initial_coord[0], work, ndim );
-    if      ( memory==-UPDATED ) {
+    if      ( memory==-UPDATED && truss_reference!=-YES ) {
       array_subtract( &new_coord[ndim], &new_coord[0], truss_direction, ndim );
       if ( !array_normalize( truss_direction, ndim ) ) {
          pri( "Error: truss length zero for element ", element );
@@ -127,6 +173,27 @@ void truss( long int element, long int element_group,
       old_length = array_distance( &old_coord[0], &old_coord[ndim], work, ndim );
       incremental_length = new_length - old_length;
       truss_stiffness = group_truss_young * group_truss_area / new_length;
+      geometric_nonlinear = 1;
+    }
+    else if ( memory==-TOTAL && truss_reference!=-YES ) {
+      // -total: geometrically nonlinear in the reference configuration
+      // (Professional 02-08-2026, test/other/truss14; the manual 6.777
+      // lists only -updated_linear/-updated/-total_linear). The axis
+      // follows the CURRENT nodes and the force is the engineering
+      // strain of the reference length, N = N0 + EA*(L - L0)/L0, so a
+      // truss loaded along x and then along y rotates to the resultant
+      // (truss14: disx 0.7071, disy 1.7071, N = sqrt(2)). Before, -total
+      // fell into the linear branch below.
+      array_subtract( &new_coord[ndim], &new_coord[0], truss_direction, ndim );
+      if ( !array_normalize( truss_direction, ndim ) ) {
+         pri( "Error: truss length zero for element ", element );
+         exit(TN_EXIT_STATUS);
+      }
+      new_length = array_distance( &new_coord[0], &new_coord[ndim], work, ndim );
+      old_length = array_distance( &old_coord[0], &old_coord[ndim], work, ndim );
+      incremental_length = new_length - old_length;
+      truss_stiffness = group_truss_young * group_truss_area / initial_length;
+      geometric_nonlinear = 1;
     }
     else {
       array_subtract( &initial_coord[ndim], &initial_coord[0], truss_direction, ndim );
@@ -136,26 +203,113 @@ void truss( long int element, long int element_group,
       }
         // deformation
       array_subtract( &new_coord[ndim], &new_coord[0], diff_coord, ndim );
-      new_length = scalar_dabs( array_inproduct( diff_coord, truss_direction, ndim ) );
+      new_length = array_inproduct( diff_coord, truss_direction, ndim );
       array_subtract( &old_coord[ndim], &old_coord[0], diff_coord, ndim );
-      old_length = scalar_dabs( array_inproduct( diff_coord, truss_direction, ndim ) );
+      old_length = array_inproduct( diff_coord, truss_direction, ndim );
       incremental_length = new_length - old_length;
         // stiffness
       truss_stiffness = group_truss_young * group_truss_area / initial_length;
+    }
+
+      // thermal expansion (manual Professional 6.775): a temperature
+      // increment dT causes a free thermal incremental length
+      // alpha*dT*initial_length; the mechanical stretch that remains
+      // after subtracting it is what builds the truss force.
+    if ( condif_temperature && group_truss_expansion!=0. ) {
+      inc_temperature = 0.;
+      for ( inol=0; inol<nnol; inol++ )
+        inc_temperature += new_dof[inol*nuknwn+temp_indx] -
+          old_dof[inol*nuknwn+temp_indx];
+      inc_temperature /= nnol;
+      incremental_length -= group_truss_expansion * inc_temperature *
+        initial_length;
     }
 
       // mass
     mass = initial_length * group_truss_area * group_truss_density;
 
       // forces
-    db( ELEMENT_TRUSS_FORCE, element, idum, &old_truss_force, 
-      length, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( db_active_index( ELEMENT_TRUSS_FORCE, element, VERSION_NORMAL ) )
+      db( ELEMENT_TRUSS_FORCE, element, idum, &old_truss_force,
+        length, VERSION_NORMAL, GET );
+    else
+      // element born now: it carries group_truss_initial_force (manual
+      // Professional 6.776) from the start of its life
+      old_truss_force = group_truss_initial_force;
     new_truss_force = old_truss_force + truss_stiffness * incremental_length;
+    // group_truss_elasti_elongation_force_diagram (manual 6.773): the
+    // force follows the diagram of the total strain (elongation divided
+    // by the initial length) and replaces the elastic force. Measured on
+    // the Professional 02-08-2026 (truss length 2, diagram -0.01 -20 0 0
+    // 0.01 10 0.02 15): strain 0.005 -> 5, 0.014 -> 12, 0.02 -> 15,
+    // -0.005 -> -10, outside the diagram 0; the same after several steps
+    // and after unloading (nonlinear elastic), with materi_displacement
+    // or materi_velocity_integrated; group_truss_elasti_young and
+    // group_truss_initial_force are ignored.
+    {
+      long int length_dg=0;
+      double table_dg[DATA_ITEM_SIZE];
+      if ( db( GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM, element_group, idum,
+          table_dg, length_dg, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+        if ( length_dg<4 || length_dg%2!=0 ) {
+          pri( "Error: group_truss_elasti_elongation_force_diagram needs pairs l_0 F_0 l_1 F_1 ..." );
+          db_error( GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM, element_group );
+        }
+        double strain_dg = ( new_length - initial_length ) / initial_length,
+          slope_dg = 0., strain_th = 0.;
+        // the diagram gives the force of the mechanical strain: the
+        // accumulated thermal strain alpha*dT is subtracted (owner
+        // 2026-11-23, deliberate divergence TRUSS-DIAGRAM-THERMAL; the
+        // Professional 02-08-2026 uses the total strain, so a free truss
+        // that is only heated gets a force)
+        if ( db_active_index( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element,
+            VERSION_NORMAL ) )
+          db( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element, idum,
+            &strain_th, ldum, VERSION_NORMAL, GET );
+        strain_th += group_truss_expansion * inc_temperature;
+        strain_dg -= strain_th;
+        new_truss_force = 0.;
+        table_xy( table_dg, "GROUP_TRUSS_ELASTI_ELONGATION_FORCE_DIAGRAM",
+          length_dg, strain_dg, new_truss_force );
+        for ( long int i=0; i+3<length_dg; i+=2 ) {
+          if ( strain_dg>=table_dg[i] && strain_dg<=table_dg[i+2] &&
+               table_dg[i+2]>table_dg[i] ) {
+            slope_dg = ( table_dg[i+3] - table_dg[i+1] ) /
+              ( table_dg[i+2] - table_dg[i] );
+            break;
+          }
+        }
+        truss_stiffness = slope_dg / initial_length;
+      }
+    }
     if      ( new_truss_force>group_truss_plasti*group_truss_area )
       new_truss_force = group_truss_plasti*group_truss_area;
     else if ( new_truss_force<-group_truss_plasti*group_truss_area )
       new_truss_force = -group_truss_plasti*group_truss_area;
-    if ( group_truss_rope==-YES && new_truss_force<0. ) new_truss_force = 0.;
+    // truss_rope_apply / control_truss_rope_apply -no (manual Professional
+    // 6.1092 / 6.393): the rope data is ignored
+    if ( group_truss_rope==-YES && new_truss_force<0. &&
+         !materi_apply_gate_off( TRUSS_ROPE_APPLY, CONTROL_TRUSS_ROPE_APPLY ) )
+      new_truss_force = 0.;
+    // materi_dynamic (manual Professional 6.800) / control_materi_dynamic
+    // (6.141): the momentum carries the blend of the force at time t
+    // (old_truss_force) and at time t+dt (new_truss_force of the
+    // current iterate): F = (1-factor)*F_t + factor*F_{t+dt}, and the
+    // momentum stiffness is scaled by factor. Default factor 1 (fully
+    // implicit); lower factors reduce numerical damping in dynamics.
+    // The force STATE (ELEMENT_TRUSS_FORCE) keeps the full update.
+    {
+      double materi_dynamic_factor = materi_dynamic_effective( NULL );
+      if ( materi_dynamic_factor<0. || materi_dynamic_factor>1. )
+        db_error( MATERI_DYNAMIC, 0 );
+      if ( materi_dynamic_factor<1. ) {
+        new_truss_force_mix = old_truss_force + materi_dynamic_factor *
+          ( new_truss_force - old_truss_force );
+        truss_stiffness *= materi_dynamic_factor;
+      }
+      else
+        new_truss_force_mix = new_truss_force;
+    }
     for ( idim=0; idim<ndim; idim++ ) {
       iuknwn = vel_indx + idim*nder;
       ipuknwn = iuknwn/nder;
@@ -165,7 +319,7 @@ void truss( long int element, long int element_group,
         else
           fac = -1.;
         indx = inol*npuknwn+ipuknwn;
-        tmp = fac*truss_direction[idim]*new_truss_force;
+        tmp = fac*truss_direction[idim]*new_truss_force_mix;
         element_rhside[indx] += tmp + (0.5*mass*force_gravity[idim]);
         if ( options_inertia==-YES ) {
           element_rhside[indx] += - (0.5*mass)*
@@ -185,6 +339,20 @@ void truss( long int element, long int element_group,
               jnol*npuknwn+jpuknwn;
             tmp = fac*truss_stiffness*dtime*
               truss_direction[idim]*truss_direction[jdim];
+            // geometric (initial-force) stiffness of the nonlinear
+            // memories: the force acts along the CURRENT axis, so a
+            // transverse velocity rotates it, d(N n)/dv = N/L (I - n n)
+            // dt. Iteration matrix only (the equilibrium lives in the
+            // RHS). Tension only: a compressive N would lower the
+            // transverse stiffness of a free node below zero and break
+            // the iterative solver. Without it a straight truss under
+            // a transverse load has a zero pivot (truss14: bicg
+            // broke down).
+            if ( geometric_nonlinear && new_truss_force_mix>0. &&
+                 new_length>0. )
+              tmp += fac*dtime*(new_truss_force_mix/new_length)*
+                ( (idim==jdim?1.:0.) -
+                  truss_direction[idim]*truss_direction[jdim] );
             if ( options_inertia==-YES ) {
               if ( jdim==idim && jnol==inol ) tmp += (mass/2) / dtime;
             }
@@ -202,6 +370,22 @@ void truss( long int element, long int element_group,
     length = 1;
     db( ELEMENT_TRUSS_FORCE, element, idum, &new_truss_force, 
       length, VERSION_NEW, PUT );
+      // element_truss_strain (manual Professional 6.451): total length
+      // increase divided by the initial length; element_truss_strain_
+      // temperature (6.452): the accumulated thermal strain alpha*dT
+      // (Professional 02-08-2026: 0.01 and 0.01 for a free truss with
+      // alpha 1e-3, dT 10 and a prescribed elongation 0.01)
+    truss_strain = ( array_distance( &new_coord[0], &new_coord[ndim], work,
+      ndim ) - initial_length ) / initial_length;
+    db( ELEMENT_TRUSS_STRAIN, element, idum, &truss_strain, length,
+      VERSION_NEW, PUT );
+    if ( db_active_index( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element,
+        VERSION_NORMAL ) )
+      db( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element, idum,
+        &truss_strain_temperature, ldum, VERSION_NORMAL, GET );
+    truss_strain_temperature += group_truss_expansion * inc_temperature;
+    db( ELEMENT_TRUSS_STRAIN_TEMPERATURE, element, idum,
+      &truss_strain_temperature, length, VERSION_NEW, PUT );
     if ( swit ) {
       pri( "coord", coord, nnol, ndim );
       pri( "initial_coord", initial_coord, nnol, ndim );

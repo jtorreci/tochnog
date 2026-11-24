@@ -1,0 +1,28 @@
+( F5 T4 U5d: control_mesh_generate_truss along a geometry_line without
+  _separate: trusses only along the element edges, 1-2 2-3 3-4 [behaviour
+  before U5d, kept]. Elements = Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 3 2. 0.
+node 4 3. 0.
+node 5 0. 1.
+node 6 1. 1.
+node 7 2. 1.
+node 8 3. 1.
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+geometry_point 1 0. 0. 0.01
+geometry_point 2 3. 0. 0.01
+geometry_point 3 2. 1. 0.01
+geometry_set 1 -geometry_point 1 -geometry_point 2
+geometry_set 2 -geometry_point 1 -geometry_point 2 -geometry_point 3
+geometry_line 1 0. 0. 3. 0. 0.01
+control_mesh_generate_truss 10 5 -geometry_line 1
+end_data

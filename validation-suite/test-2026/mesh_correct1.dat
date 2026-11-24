@@ -1,0 +1,27 @@
+( F5 T4 U5d: mesh_correct -yes [6.816]: the interface quad4 3 5 4 6 has
+  its coincident nodes 3 and 5 along xi; it is corrected to 3 4 5 6
+  [opening along eta]. Element = Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+mesh_correct -yes
+node 1 0. 0.
+node 2 1. 0.
+node 3 0. 1.
+node 4 1. 1.
+node 5 0. 1.
+node 6 1. 1.
+node 7 0. 2.
+node 8 1. 2.
+element 1 -quad4 1 2 3 4
+element 2 -quad4 5 6 7 8
+element 3 -quad4 3 5 4 6
+element_group 3 1
+group_type -ra 0 1 -ra -materi
+group_materi_elasti_young 0 1.
+group_interface 1 -yes
+group_interface_materi_elasti_stiffness 1 1. 1.
+end_data

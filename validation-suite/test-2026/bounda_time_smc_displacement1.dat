@@ -1,0 +1,26 @@
+( bounda_time_smc with a DISPLACEMENT file {first line} on -disx: units
+  2. 4. give sample k at k*0.25 with value k/4 {1/factor_length}. At
+  t = 0.5: disx 0.5, velx 1, as in the Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof 46 1 -disx
+bounda_time_smc 46 -yes
+bounda_time_smc_units 46 2. 4.
+control_timestep 10 0.125 0.5
+target_item 0 -node_dof 1 -disx
+target_value 0 0.5 1.e-8
+target_item 1 -node_dof 1 -velx
+target_value 1 1. 1.e-8
+end_data

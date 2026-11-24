@@ -1,0 +1,46 @@
+( C67 {F4 T6f, 2026-10-16} bar2 2-point Gauss {-maximal}: per element the linear fit of the two point values evaluated at the node {= the Lagrange extrapolation}, arithmetic mean over the elements {GNU before: h weight, length-weighted}. Prescribed nonlinear velocity at every node of a viscous materi, elements of unequal size, distorted interior nodes. Targets = Professional 02-08-2026 node_dof. GNU before: node 3 sigxx 7.07899 (Professional 7.41566); node 2 sigxx 5.23659 (Professional 5.00448); node 4 sigxx 9.5899 (Professional 9.80363); node 1 sigxx 4.4113 (Professional 4.4113). )
+
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0.25
+node 2 0.95
+node 3 2.55
+node 4 3.65
+node 5 4.15
+element 1 -bar2 1 2
+element 2 -bar2 2 3
+element 3 -bar2 3 4
+element 4 -bar2 4 5
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0.637350767076843 10. 0.637350767076843
+bounda_dof 1 2 -velx
+bounda_time 1 0. 1.66665491781021 10. 1.66665491781021
+bounda_dof 2 3 -velx
+bounda_time 2 0. 4.65206699447048 10. 4.65206699447048
+bounda_dof 3 4 -velx
+bounda_time 3 0. 8.03774450840366 10. 8.03774450840366
+bounda_dof 4 5 -velx
+bounda_time 4 0. 9.7666778453582 10. 9.7666778453582
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_density 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_integration_method 0 -gauss
+group_integration_points 0 -maximal
+control_timestep 10 1. 1.
+target_item 0 -node_dof 3 -sigxx
+target_value 0 7.415656795414e+00 4.0e-06
+target_item 1 -node_dof 2 -sigxx
+target_value 1 5.004475573441e+00 4.0e-06
+target_item 2 -node_dof 4 -sigxx
+target_value 2 9.803632984409e+00 4.0e-06
+target_item 3 -node_dof 1 -sigxx
+target_value 3 4.411303503143e+00 4.0e-06
+end_data

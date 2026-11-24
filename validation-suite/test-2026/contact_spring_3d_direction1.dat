@@ -1,0 +1,61 @@
+( Contact spring direction in 3D (manual 6.601, 6.608): the user direction
+  1 1 1 is normalised, the first tangent is e_z x n and the second n x t1.
+  Professional 02-08-2026 conspr6 with group_contact_spring_direction 1 1 1:
+  element_contact_spring_direction 2 -0.57735 -0.57735 -0.57735 0.707107
+  -0.707107 0 -0.408248 -0.408248 0.816497 {the normal points from the side
+  of the first node to the side of the second one}, force -0.000144338 0
+  0.000204124, node_dof 1 velz -0.5. Checked in scripts/build_safe.sh. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node  1  0. 0. 0. 
+node  2  1. 0. 0. 
+node  3  0. 1. 0. 
+node  4  1. 1. 0. 
+node  5  0. 0. 1. 
+node  6  1. 0. 1. 
+node  7  0. 1. 1. 
+node  8  1. 1. 1. 
+node 11  0. 0. 0.
+node 12  1. 0. 0.
+node 13  0. 1. 0.
+node 14  1. 1. 0.
+element 1  -hex8 1 2 3 4 5 6 7 8
+element 2  -contact_spring2 1 11
+element 3  -contact_spring2 2 12
+element 4  -contact_spring2 3 13
+element 5  -contact_spring2 4 14
+element_group 1  0
+element_group -ra 2 3 4 5 -ra   1
+group_type 0  -materi
+group_materi_elasti_young 0  1.0
+group_materi_memory 0  -total_linear
+group_type 1  -contact_spring
+group_contact_spring_memory 1  -total_linear
+group_contact_spring_stiffness 1  0.25 0.25
+group_contact_spring_plasti_friction 1 1.e6
+group_contact_spring_direction 1 1. 1. 1.
+bounda_dof 0  -ra 11 12 13 14 -ra -velx -vely -velz
+bounda_time    0  0.
+bounda_dof 1  -ra 5 6 7 8 -ra -velx -vely
+bounda_time    1  0.
+bounda_dof 2  -ra 5 6 7 8 -ra -velz
+bounda_time    2  -1.
+print_filter 1  -node_dof -all -velx -vely -velz 
+control_timestep 10 1.e-3 2.e-3
+control_timestep_iterations  10  2
+(
+control_print                10  -time_current -node_dof
+)
+target_item  1  -node_dof 1 -velz
+target_value 1  -0.5 1.e-4
+target_item  2  -node_dof 2 -velz
+target_value 2  -0.5 1.e-4
+target_item  3  -node_dof 3 -velz
+target_value 3  -0.5 1.e-4
+target_item  4  -node_dof 4 -velz
+target_value 4  -0.5 1.e-4
+end_data

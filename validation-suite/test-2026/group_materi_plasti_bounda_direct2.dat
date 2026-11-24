@@ -1,0 +1,37 @@
+( F5 T3 C114: as group_materi_plasti_bounda_direct1 with the plane normal
+  0 1 of group_materi_plasti_mohr_coul_direct_normal: default factor 2/3
+  on phi, c and phi_flow {before C114: factor 1, 0.120335}. sigxy 0.0800989 =
+  Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+materi_plasti_f
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+group_type 0  -materi
+group_materi_elasti_young 0  1.e3
+group_materi_plasti_tension_direct 0  0.0
+group_materi_plasti_mohr_coul_direct 0  0.1 0.02 0.0
+bounda_dof 0  -ra 1 2 -ra -velx -vely
+bounda_dof 1  3 -velx
+bounda_time 1  1.0
+bounda_force 10  3 -vely
+bounda_time  10  -1.0
+mpc_node_number 10  4 -velx 3 -velx
+mpc_node_number 20  4 -vely 3 -vely
+post_calcul -materi_stress -prival
+print_filter 10 -node_dof -all -sigxx -sigxy -sigyy
+group_materi_plasti_bounda 0 0
+group_materi_plasti_mohr_coul_direct_normal 0 0 1
+control_timestep 0  1.e-3 1.
+control_print 0  -node_dof -node_dof_calcul
+target_item 0 -node_dof 1 -sigxy
+target_value 0 0.0800989 1.e-6
+end_data

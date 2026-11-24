@@ -1,0 +1,42 @@
+( F5 T4 U9b: distorted -prism18: base triangle (0,0) (2,0) (0.5,1.5),
+  planar sloped top z = 1 + 0.2 x + 0.1 y, base mid node 2 at x 0.8 and
+  the middle node 9 at 0.45 of the height (both moved along their straight
+  edges). Analytic volume A {1 + 0.2 xc + 0.1 yc} = 1.825 {A 1.5, centroid
+  0.833333 0.5}; self-weight rho 1, g 1: the summed base reaction is
+  -V. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.8 0 0
+node 3 2 0 0
+node 4 0.25 0.75 0
+node 5 1.25 0.75 0
+node 6 0.5 1.5 0
+node 7 0 0 0.5
+node 8 0.8 0 0.58
+node 9 2 0 0.63
+node 10 0.25 0.75 0.5625
+node 11 1.25 0.75 0.6625
+node 12 0.5 1.5 0.625
+node 13 0 0 1
+node 14 0.8 0 1.16
+node 15 2 0 1.4
+node 16 0.25 0.75 1.125
+node 17 1.25 0.75 1.325
+node 18 0.5 1.5 1.25
+element 1 -prism18 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18
+group_type 0 -materi
+group_materi_elasti_young 0 1.0e6
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+force_gravity 0. 0. -1.
+bounda_dof 10 -ra 1 2 3 4 5 6 -ra -velx -vely -velz
+bounda_time 10 0.
+control_timestep 10 0.5 1.0
+control_print_database 10 -separate_index
+end_data

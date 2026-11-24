@@ -1,0 +1,50 @@
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_strain_total
+materi_strain_plasti
+materi_stress
+materi_history_variables 2
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_time  1  0 0 100 0
+bounda_time  2  0 -0.002 100 -0.002
+bounda_time  3  0 0 100 0
+bounda_unknown  0  -geometry_line 0 -velx
+bounda_unknown  1  -geometry_line 1 -vely
+bounda_unknown  2  -geometry_line 2 -vely
+bounda_unknown  3  -geometry_line 3 -velx
+control_timestep  0  0.05 0.05
+control_timestep_iterations  0  8
+element  1  -quad4 1 2 3 4
+geometry_line  0  0 0 0 1 1e-05
+geometry_line  1  0 0 1 0 1e-05
+geometry_line  2  0 1 1 1 1e-05
+geometry_line  3  1 0 1 1 1e-05
+group_integration_points  0  -minimal
+group_materi_density  0  1
+group_materi_elasti_camclay_g  0  1000
+group_materi_elasti_camclay_pressure_min  0  10
+group_materi_memory  0  -updated_without_rotation
+group_materi_plasti_camclay  0  0.8 0.02 0.2
+group_type  0  -materi
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_point  1  0.5 0.5
+target_item  1  -post_point_dof 1 -sigxx
+target_item  2  -post_point_dof 1 -sigyy
+target_value  1  -0.0093333 0.002
+target_value  2  -0.2093333 0.02
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.001 0 0 -0.001 0 -0.001 0.5 100
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.001 0 0 -0.001 0 -0.001 0.5 100
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.001 0 0 -0.001 0 -0.001 0.5 100
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 -0.001 0 0 -0.001 0 -0.001 0.5 100
+(C100: the initial state comes from node_dof; the default is -no)
+global_element_dof_from_node_dof -yes
+end_data

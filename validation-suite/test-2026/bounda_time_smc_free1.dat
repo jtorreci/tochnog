@@ -1,0 +1,32 @@
+( bounda_time_smc: before the first sample {t < offset 1.} and after the
+  last one {t > 5.5} the dof is free, as in the Professional 02-08-2026: a
+  force on node 1 accelerates it then. At t = 6: accx -6.921550949081,
+  velx 18.18912955707, disx 48.46007495016 {Professional}. )
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof 44 1 -accx
+bounda_time_smc 44 -yes
+bounda_time_smc_units 44 1. 1.
+bounda_time_smc_offset 44 1.
+bounda_force 20 1 -velx
+bounda_time 20 1.
+control_timestep 10 0.25 6.
+target_item 0 -node_dof 1 -accx
+target_value 0 -6.921550949081 1.e-6
+target_item 1 -node_dof 1 -velx
+target_value 1 18.18912955707 1.e-6
+target_item 2 -node_dof 1 -disx
+target_value 2 48.46007495016 1.e-6
+end_data

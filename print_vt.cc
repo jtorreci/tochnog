@@ -19,7 +19,39 @@
 
 #include "tochnog.h"
 
-void print_vtk( long int icontrol )
+// an element is "empty" when its ELEMENT_EMPTY record is -YES (computed by
+// the solver for materi_diffusion / materi_density); the print_g5 pattern
+// counts an element as present when the record is -NO or -FRONT.
+static long int vtk_element_is_empty( long int element )
+
+{
+  long int element_empty = -NO, ldum=0;
+  double ddum[1];
+
+  db( ELEMENT_EMPTY, element, &element_empty, ddum, ldum,
+    VERSION_PRINT, GET_IF_EXISTS );
+  return ( element_empty==-YES );
+}
+
+// A continuum quad6, prism15, prism18 or prism12: VTK has them as native
+// cells, type 30 VTK_QUADRATIC_LINEAR_QUAD, type 26 VTK_QUADRATIC_WEDGE,
+// type 32 VTK_BIQUADRATIC_QUADRATIC_WEDGE and type 31
+// VTK_QUADRATIC_LINEAR_WEDGE. An element of an interface group is not one
+// of them and stays an illegal type.
+static long int vtk_quadratic_cell( long int element, long int name )
+
+{
+  long int element_group=0, ldum=0;
+  double ddum[1];
+
+  if ( name!=-QUAD6 && name!=-PRISM15 && name!=-PRISM18 &&
+       name!=-PRISM12 ) return 0;
+  db( ELEMENT_GROUP, element, &element_group, ddum, ldum, VERSION_PRINT,
+    GET_IF_EXISTS );
+  return !db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL );
+}
+
+void print_vtk( long int icontrol, long int task )
 
 {
   long int inod=0, element=0, max_node=0, max_element=0, nnol=0, 
@@ -27,14 +59,57 @@ void print_vtk( long int icontrol )
     icalcul=0, ready=0, indx=0, nval=0, length_cells=0,
     length_post_calcul_scal_vec_mat=0,
     calcul_unknown=0, calcul_operat=0, swit=0, ldum=0, 
+    nvtk_dof=0, nvtk_dof_calcul=0, ifilter=0, print_field=1,
+    vtk_coord=-YES, vtk_empty=-YES, vtk_node_method=-NODE_START_REFINED,
+    vtk_other=-YES, vtk_group=-YES, ncell=0, element_group=0,
     idum[1], *dof_label=NULL, *dof_type=NULL, *dof_scal_vec_mat=NULL, 
     *post_calcul_scal_vec_mat=NULL, *post_calcul_unknown_operat=NULL, 
-    *nodes=NULL, *el=NULL;
+    *nodes=NULL, *el=NULL, *vtk_dof=NULL, *vtk_dof_calcul=NULL,
+    *node_bounded=NULL, *print_post_field=NULL;
   double ddum[1], coord[MDIM], *node_dof=NULL, *node_dof_calcul=NULL;
   char str[MCHAR], outputname[MCHAR], filename[MCHAR];
 
   swit = set_swit(-1,-1,"print_vtk");
   if ( swit ) pri( "In routine PRINT_VTK" );
+
+  // control_print_vtk_dof: only the listed solution fields are written
+  // (e.g. -condif_temperature, -materi_velocity, ...); -none -> nothing.
+  vtk_dof = get_new_int(DATA_ITEM_SIZE);
+  db( CONTROL_PRINT_VTK_DOF, icontrol, vtk_dof, ddum, nvtk_dof,
+    VERSION_NORMAL, GET_IF_EXISTS );
+
+  // control_print_vtk_coord (6.340): -yes (default) adds the point field
+  // VECTORS coord (the stored node coordinates); -no drops only that field,
+  // POINTS is always written (= Professional 02-08-2026, C98). The global
+  // print_vtk_coord (6.1000) is the default of the control record.
+  vtk_coord = print_option( PRINT_VTK_COORD, CONTROL_PRINT_VTK_COORD,
+    icontrol, -YES );
+  // control_print_vtk_empty (6.343): -yes (default) includes empty
+  // elements; -no skips the elements whose ELEMENT_EMPTY record is -YES
+  // (pattern print_g5.cc: element_empty==-NO || -FRONT -> not empty).
+  db( CONTROL_PRINT_VTK_EMPTY, icontrol, &vtk_empty, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  // control_print_vtk_node_method (6.345): which node coordinates are
+  // written - -node (stored coordinates), -node_start_refined (default:
+  // NODE_START_REFINED when available, stored coordinates otherwise) or
+  // -node_deformed_mesh (stored coordinates + nodal displacement).
+  // The global print_vtk_node_type (6.1002) is the default of the
+  // control record (2026 name control_print_vtk_node_type).
+  vtk_node_method = print_option( PRINT_VTK_NODE_TYPE,
+    CONTROL_PRINT_VTK_NODE_METHOD, icontrol, -NODE_START_REFINED );
+  // print_vtk_group (6.1001, default -yes): element group of every cell
+  // as the CELL_DATA field element_group (= Professional 02-08-2026).
+  vtk_group = print_option( PRINT_VTK_GROUP, -1, -1, -YES );
+  // control_print_vtk_other (6.346): -yes (default) also writes the
+  // "other" fields (boundary conditions, mesh deformation - see the
+  // partial subset documented in manual-developer); -no omits them.
+  db( CONTROL_PRINT_VTK_OTHER, icontrol, &vtk_other, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  // control_print_vtk_dof_calcul (6.342): only the listed post fields are
+  // written; -none -> no post field; without the record all post fields.
+  vtk_dof_calcul = get_new_int(DATA_ITEM_SIZE);
+  db( CONTROL_PRINT_VTK_DOF_CALCUL, icontrol, vtk_dof_calcul, ddum,
+    nvtk_dof_calcul, VERSION_NORMAL, GET_IF_EXISTS );
 
   dof_label = get_new_int(MUKNWN);
   dof_type = get_new_int(MUKNWN);
@@ -50,12 +125,21 @@ void print_vtk( long int icontrol )
   db_highest_index( ELEMENT, max_element, VERSION_PRINT );
   if ( max_element<0 ) return;
 
-  strcpy( filename, "tn" );
-  if ( icontrol>=0 ) {
-    long_to_a( icontrol, str );
-    strcat( filename, str );
+  // file name (= Professional 02-08-2026, C99): -yes and the end of the
+  // run (print_vtk_calculation, icontrol -1) overwrite <base>.vtk;
+  // -separate_index writes <base>_<icontrol, 3 digits>.vtk and
+  // -separate_sequential <base>_<print counter, 4 digits>.vtk. The manual
+  // (6.339) names them <base><index>.vtk / <base><counter>.vtk: class A
+  // row VTK-TECPLOT-NAMES.
+  if      ( task==-SEPARATE_INDEX && icontrol>=0 )
+    snprintf( filename, MCHAR, "%s_%03ld.vtk", data_file_base, icontrol );
+  else if ( task==-SEPARATE_SEQUENTIAL && icontrol>=0 ) {
+    static long int vtk_sequential=0;
+    snprintf( filename, MCHAR, "%s_%04ld.vtk", data_file_base,
+      vtk_sequential++ );
   }
-  strcat( filename, ".vtk" );
+  else
+    snprintf( filename, MCHAR, "%s.vtk", data_file_base );
   ofstream outvtk( filename );
   outvtk.precision(TN_PRECISION);
 
@@ -65,32 +149,57 @@ void print_vtk( long int icontrol )
 
   outvtk << "DATASET UNSTRUCTURED_GRID\n\n";
 
-  outvtk << "POINTS " << max_node+1 << " double\n";
-  for ( inod=0; inod<=max_node; inod++ ) {
-    db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
-    for ( idim=0; idim<MDIM; idim++ ) {
-      if      ( idim>ndim-1 )
-        outvtk << "0.0" << " ";
-      else if ( materi_displacement ) {
+  {
+    outvtk << "POINTS " << max_node+1 << " double\n";
+    for ( inod=0; inod<=max_node; inod++ ) {
+      db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+      if ( vtk_node_method==-NODE_DEFORMED_MESH && materi_displacement ) {
         node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
-        if ( coord[idim]+node_dof[dis_indx+idim*nder]==0.0 )
-          outvtk << "0.0" << " ";
-        else
-          outvtk << coord[idim]+node_dof[dis_indx+idim*nder] << " ";
+        for ( idim=0; idim<MDIM; idim++ ) {
+          if      ( idim>ndim-1 )
+            outvtk << "0.0" << " ";
+          else {
+            ddum[0] = coord[idim]+node_dof[dis_indx+idim*nder];
+            if ( ddum[0]==0.0 )
+              outvtk << "0.0" << " ";
+            else
+              outvtk << ddum[0] << " ";
+          }
+        }
+      }
+      else if ( vtk_node_method==-NODE_START_REFINED &&
+                db_active_index( NODE_START_REFINED, inod, VERSION_PRINT ) ) {
+        db( NODE_START_REFINED, inod, idum, coord, ldum, VERSION_PRINT, GET );
+        for ( idim=0; idim<MDIM; idim++ ) {
+          // only ndim values are stored: the others are not read (they
+          // printed stack garbage as z in 2D before F5 W2 V2)
+          if ( idim>ndim-1 || coord[idim]==0.0 )
+            outvtk << "0.0" << " ";
+          else
+            outvtk << coord[idim] << " ";
+        }
       }
       else {
-        if ( coord[idim]==0.0 )
-          outvtk << "0.0" << " ";
-        else
-          outvtk << coord[idim] << " ";
+        for ( idim=0; idim<MDIM; idim++ ) {
+          // only ndim values are stored: the others are not read (they
+          // printed stack garbage as z in 2D before F5 W2 V2)
+          if ( idim>ndim-1 || coord[idim]==0.0 )
+            outvtk << "0.0" << " ";
+          else
+            outvtk << coord[idim] << " ";
+        }
       }
-    }
+      outvtk << "\n";
+    } 
     outvtk << "\n";
-  } 
-  outvtk << "\n";
+  }
 
-  length_cells = 0;
+  // control_print_vtk_empty: -no excludes the empty elements
+  // (ELEMENT_EMPTY == -YES) from CELLS and CELL_TYPES.
+  length_cells = 0; ncell = 0;
   for ( element=0; element<=max_element; element++ ) {
+    if ( vtk_empty==-NO && vtk_element_is_empty( element ) ) continue;
+    ncell++;
     db( ELEMENT, element, el, ddum, length, VERSION_PRINT, GET );
     name = el[0];
     if      ( name==-BAR2 )  length_cells += 3;
@@ -101,14 +210,23 @@ void print_vtk( long int icontrol )
     else if ( name==-TET10)  length_cells += 5;
     else if ( name==-HEX8 )  length_cells += 9;
     else if ( name==-HEX27 ) length_cells += 9;
+    else if ( name==-QUAD6 && vtk_quadratic_cell( element, name ) )
+      length_cells += 7;
+    else if ( name==-PRISM15 && vtk_quadratic_cell( element, name ) )
+      length_cells += 16;
+    else if ( name==-PRISM18 && vtk_quadratic_cell( element, name ) )
+      length_cells += 19;
+    else if ( name==-PRISM12 && vtk_quadratic_cell( element, name ) )
+      length_cells += 13;
     else {
       pri( "Error: illegal element type detected for CONTROL_PRINT_VTK.\n");
       exit(TN_EXIT_STATUS);
     }
   }
 
-  outvtk << "CELLS " << max_element+1 << " " << length_cells << " \n";
+  outvtk << "CELLS " << ncell << " " << length_cells << " \n";
   for ( element=0; element<=max_element; element++ ) {
+    if ( vtk_empty==-NO && vtk_element_is_empty( element ) ) continue;
     db( ELEMENT, element, el, ddum, length, VERSION_PRINT, GET );
     name = el[0];
     nnol = length - 1; array_move( &el[1], nodes, nnol );
@@ -149,6 +267,51 @@ void print_vtk( long int icontrol )
       outvtk << nodes[0] << " " << nodes[1] << " " << nodes[3] << " " << nodes[2] << " " <<
              nodes[4] << " " << nodes[5] << " " << nodes[7] << " " << nodes[6];
     }
+    else if ( name==-QUAD6 ) {
+      // VTK corners 0-3 counter-clockwise, then the mid-edge nodes of
+      // the edges (0,1) and (2,3); GNU tensor order 3 x 2, xi fastest
+      outvtk << "6 ";
+      outvtk << nodes[0] << " " << nodes[2] << " " << nodes[5] << " " << nodes[3] << " " <<
+             nodes[1] << " " << nodes[4];
+    }
+    else if ( name==-PRISM15 ) {
+      // VTK: corners 0-5, then the mid-edge nodes of the base (0,1) (1,2)
+      // (2,0), of the top (3,4) (4,5) (5,3) and the vertical ones (0,3)
+      // (1,4) (2,5). GNU (pol()): corners 0-5, vertical 6-8, base 9-11,
+      // top 12-14.
+      outvtk << "15 ";
+      outvtk << nodes[0] << " " << nodes[1] << " " << nodes[2] << " " <<
+             nodes[3] << " " << nodes[4] << " " << nodes[5] << " " <<
+             nodes[9] << " " << nodes[10] << " " << nodes[11] << " " <<
+             nodes[12] << " " << nodes[13] << " " << nodes[14] << " " <<
+             nodes[6] << " " << nodes[7] << " " << nodes[8];
+    }
+    else if ( name==-PRISM18 ) {
+      // VTK type 32: corners 0-5 (base 0 1 2, top 3 4 5), the mid-edge
+      // nodes of the base (0,1) (1,2) (2,0), of the top (3,4) (4,5) (5,3),
+      // the vertical ones (0,3) (1,4) (2,5), then the centres of the side
+      // faces (0,1,4,3) (1,2,5,4) (2,0,3,5). GNU (prism18_shape): three
+      // tria6 layers 0-5, 6-11, 12-17; tria6 corners 0 2 5, mids 1 (0-2),
+      // 3 (0-5), 4 (2-5).
+      outvtk << "18 ";
+      outvtk << nodes[0] << " " << nodes[2] << " " << nodes[5] << " " <<
+             nodes[12] << " " << nodes[14] << " " << nodes[17] << " " <<
+             nodes[1] << " " << nodes[4] << " " << nodes[3] << " " <<
+             nodes[13] << " " << nodes[16] << " " << nodes[15] << " " <<
+             nodes[6] << " " << nodes[8] << " " << nodes[11] << " " <<
+             nodes[7] << " " << nodes[10] << " " << nodes[9];
+    }
+    else if ( name==-PRISM12 ) {
+      // VTK type 31: corners 0-5 (base 0 1 2, top 3 4 5), the mid-edge
+      // nodes of the base (0,1) (1,2) (2,0), then of the top (3,4) (4,5)
+      // (5,3). GNU (prism12_shape): two tria6 layers 0-5, 6-11; tria6
+      // corners 0 2 5, mids 1 (0-2), 3 (0-5), 4 (2-5).
+      outvtk << "12 ";
+      outvtk << nodes[0] << " " << nodes[2] << " " << nodes[5] << " " <<
+             nodes[6] << " " << nodes[8] << " " << nodes[11] << " " <<
+             nodes[1] << " " << nodes[4] << " " << nodes[3] << " " <<
+             nodes[7] << " " << nodes[10] << " " << nodes[9];
+    }
     else {
       assert( name==-HEX27 );
       outvtk << "8 ";
@@ -159,8 +322,9 @@ void print_vtk( long int icontrol )
   }
   outvtk << "\n";
 
-  outvtk << "CELL_TYPES " << max_element+1 << "\n";
+  outvtk << "CELL_TYPES " << ncell << "\n";
   for ( element=0; element<=max_element; element++ ) {
+    if ( vtk_empty==-NO && vtk_element_is_empty( element ) ) continue;
     db( ELEMENT, element, el, ddum, length, VERSION_PRINT, GET );
     name = el[0];
     if      ( name==-BAR2 )  outvtk << "3 ";
@@ -173,6 +337,14 @@ void print_vtk( long int icontrol )
     else if ( name==-TET10 ) outvtk << "10 ";
     else if ( name==-HEX8 )  outvtk << "12 ";
     else if ( name==-HEX27 ) outvtk << "12 ";
+    else if ( name==-QUAD6 && vtk_quadratic_cell( element, name ) )
+      outvtk << "30 ";
+    else if ( name==-PRISM15 && vtk_quadratic_cell( element, name ) )
+      outvtk << "26 ";
+    else if ( name==-PRISM18 && vtk_quadratic_cell( element, name ) )
+      outvtk << "32 ";
+    else if ( name==-PRISM12 && vtk_quadratic_cell( element, name ) )
+      outvtk << "31 ";
     else {
       pri( "Error: illegal element type detected for CONTROL_PRINT_VTK.\n");
       exit(TN_EXIT_STATUS);
@@ -181,67 +353,100 @@ void print_vtk( long int icontrol )
   }
   outvtk << "\n";
 
+  if ( npuknwn>0 || vtk_coord!=-NO )
+    outvtk << "POINT_DATA " << max_node+1 << "\n\n";
+  if ( vtk_coord!=-NO ) {
+    // the stored coordinates, also when POINTS holds the deformed mesh
+    outvtk << "VECTORS coord double\n";
+    for ( inod=0; inod<=max_node; inod++ ) {
+      db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+      for ( idim=0; idim<MDIM; idim++ ) {
+        if ( idim>ndim-1 || coord[idim]==0.0 )
+          outvtk << "0.0" << " ";
+        else
+          outvtk << coord[idim] << " ";
+      }
+      outvtk << "\n";
+    }
+    outvtk << "\n";
+  }
+
   if ( npuknwn>0 ) {
     db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
     db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET );
     db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, ldum, VERSION_NORMAL, GET );
-    outvtk << "POINT_DATA " << max_node+1 << "\n\n";
 
       // write scalars, vectors and tensors for primary unknowns
     ipuknwn = 0; ready = 0;
     while ( !ready ) {
       iuknwn = ipuknwn*nder;
-      if      ( dof_scal_vec_mat[iuknwn]==-SCALAR ) {
+      // filter by control_print_vtk_dof (dof_type names, or -none)
+      print_field = 1;
+      if ( nvtk_dof>0 && vtk_dof ) {
+        if ( vtk_dof[0]==-NONE ) print_field = 0;
+        else {
+          print_field = 0;
+          for ( ifilter=0; ifilter<nvtk_dof; ifilter++ )
+            if ( dof_type[iuknwn]==vtk_dof[ifilter] ) { print_field = 1; break; }
+        }
+      }
+      if      ( dof_scal_vec_mat[iuknwn]==-SCALAR )
         nval = 1;
-        outvtk << "SCALARS " << db_name(dof_label[iuknwn]) << " double\n";
-        outvtk << "LOOKUP_TABLE default\n";
-      }
-      else if ( dof_scal_vec_mat[iuknwn]==-VECTOR ) {
+      else if ( dof_scal_vec_mat[iuknwn]==-VECTOR )
         nval = ndim;
-        outvtk << "VECTORS " << db_name(dof_type[iuknwn]) << " double\n";
-      }
       else {
         assert( dof_scal_vec_mat[iuknwn]==-MATRIX );
         nval = 6;
-        outvtk << "TENSORS " << db_name(dof_type[iuknwn]) << " double\n";
       }
-      for ( inod=0; inod<=max_node; inod++ ) {
-        node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+      if ( print_field ) {
         if      ( dof_scal_vec_mat[iuknwn]==-SCALAR ) {
-          if ( node_dof[iuknwn]==0.0 )
-            outvtk << "0.0";
-          else
-            outvtk << node_dof[iuknwn];
+          outvtk << "SCALARS " << db_name(dof_label[iuknwn]) << " double\n";
+          outvtk << "LOOKUP_TABLE default\n";
         }
         else if ( dof_scal_vec_mat[iuknwn]==-VECTOR ) {
-          for ( idim=0; idim<MDIM; idim++ ) {
-            if      ( idim>ndim-1 )
-              outvtk << "0.0" << " ";
-            else {
-              indx = iuknwn+idim*nder;
-              if ( node_dof[indx]==0.0 )
-                outvtk << "0.0" << " ";
-              else
-                outvtk << node_dof[indx] << " ";
-            }
-          }
+          outvtk << "VECTORS " << db_name(dof_type[iuknwn]) << " double\n";
         }
         else {
-          assert( dof_scal_vec_mat[iuknwn]==-MATRIX );
-          for ( idim=0; idim<MDIM; idim++ ) {
-            for ( jdim=0; jdim<MDIM; jdim++ ) {
-              indx = iuknwn + stress_indx(idim,jdim)*nder;
-              if ( node_dof[indx]==0.0 )
-                outvtk << "0.0" << " ";
-              else
-                outvtk << node_dof[indx] << " ";
-            }
-            if ( idim!=MDIM-1 ) outvtk << "\n";
+          outvtk << "TENSORS " << db_name(dof_type[iuknwn]) << " double\n";
+        }
+        for ( inod=0; inod<=max_node; inod++ ) {
+          node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+          if      ( dof_scal_vec_mat[iuknwn]==-SCALAR ) {
+            if ( node_dof[iuknwn]==0.0 )
+              outvtk << "0.0";
+            else
+              outvtk << node_dof[iuknwn];
           }
+          else if ( dof_scal_vec_mat[iuknwn]==-VECTOR ) {
+            for ( idim=0; idim<MDIM; idim++ ) {
+              if      ( idim>ndim-1 )
+                outvtk << "0.0" << " ";
+              else {
+                indx = iuknwn+idim*nder;
+                if ( node_dof[indx]==0.0 )
+                  outvtk << "0.0" << " ";
+                else
+                  outvtk << node_dof[indx] << " ";
+              }
+            }
+          }
+          else {
+            assert( dof_scal_vec_mat[iuknwn]==-MATRIX );
+            for ( idim=0; idim<MDIM; idim++ ) {
+              for ( jdim=0; jdim<MDIM; jdim++ ) {
+                indx = iuknwn + stress_indx(idim,jdim)*nder;
+                if ( node_dof[indx]==0.0 )
+                  outvtk << "0.0" << " ";
+                else
+                  outvtk << node_dof[indx] << " ";
+              }
+              if ( idim!=MDIM-1 ) outvtk << "\n";
+            }
+          }
+          outvtk << "\n";
         }
         outvtk << "\n";
       }
-      outvtk << "\n";
       ipuknwn += nval;
       ready = (ipuknwn>=npuknwn);
     }
@@ -250,7 +455,16 @@ void print_vtk( long int icontrol )
     ipuknwn = 0; ready = 0;
     while ( !ready ) {
       iuknwn = ipuknwn*nder;
-      if ( dof_scal_vec_mat[iuknwn]!=-SCALAR ) {
+      print_field = 1;
+      if ( nvtk_dof>0 && vtk_dof ) {
+        if ( vtk_dof[0]==-NONE ) print_field = 0;
+        else {
+          print_field = 0;
+          for ( ifilter=0; ifilter<nvtk_dof; ifilter++ )
+            if ( dof_type[iuknwn]==vtk_dof[ifilter] ) { print_field = 1; break; }
+        }
+      }
+      if ( print_field && dof_scal_vec_mat[iuknwn]!=-SCALAR ) {
         outvtk << "SCALARS " << db_name(dof_label[iuknwn]) << " double\n";
         outvtk << "LOOKUP_TABLE default\n";
         for ( inod=0; inod<=max_node; inod++ ) {
@@ -267,11 +481,82 @@ void print_vtk( long int icontrol )
       ready = (ipuknwn>=npuknwn);
     }
 
+    // derived magnitudes from the first stress tensor dof (von Mises,
+    // Tresca, principal stresses), reusing calc_derived() from derived.cc
+    {
+      long int sig_indx = -1;
+      for ( i=0; i<nuknwn; i++ )
+        if ( dof_scal_vec_mat[i]==-MATRIX ) { sig_indx = i; break; }
+      // respect control_print_vtk_dof: only write derived magnitudes when
+      // the filter (if any) includes a stress field
+      long int print_derived = ( nvtk_dof<=0 || !vtk_dof );
+      if ( !print_derived && vtk_dof ) {
+        for ( ifilter=0; ifilter<nvtk_dof; ifilter++ )
+          if ( vtk_dof[ifilter]==-MATERI_STRESS ) { print_derived = 1; break; }
+      }
+      if ( sig_indx>=0 && print_derived ) {
+        const char* derived_names[5] =
+          { "vmises", "tresca", "sig1", "sig2", "sig3" };
+        for ( idim=0; idim<5; idim++ ) {
+          outvtk << "SCALARS " << derived_names[idim] << " double\n";
+          outvtk << "LOOKUP_TABLE default\n";
+          for ( inod=0; inod<=max_node; inod++ ) {
+            node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+            double sig[6], dout[5];
+            sig[0]=node_dof[sig_indx+stress_indx(0,0)*nder];
+            sig[1]=node_dof[sig_indx+stress_indx(1,1)*nder];
+            sig[2]=node_dof[sig_indx+stress_indx(2,2)*nder];
+            sig[3]=node_dof[sig_indx+stress_indx(0,1)*nder];
+            sig[4]=node_dof[sig_indx+stress_indx(0,2)*nder];
+            sig[5]=node_dof[sig_indx+stress_indx(1,2)*nder];
+            calc_derived( sig, dout );
+            outvtk << dout[idim] << "\n";
+          }
+          outvtk << "\n";
+        }
+      }
+    }
+
     if ( db_active_index( POST_CALCUL, 0,  VERSION_NORMAL ) ) {
       db( POST_CALCUL_UNKNOWN_OPERAT, 0, post_calcul_unknown_operat, 
         ddum, ldum, VERSION_NORMAL, GET );
       db( POST_CALCUL_SCAL_VEC_MAT, 0, post_calcul_scal_vec_mat, 
         ddum, length_post_calcul_scal_vec_mat, VERSION_NORMAL, GET );
+
+      // control_print_vtk_dof_calcul: one flag per post field. Without the
+      // record every field is written (default). -none -> no post field.
+      // Otherwise a field is written when any listed name matches its
+      // underlying unknown exactly (db_name of the initia name, e.g.
+      // -materi_stress matches every operator of the stress tensor) or is
+      // a substring of its label (post_calcul_names[icalcul], e.g. -sigyy
+      // matches sigyy and tosigyy). GNU adaptation: post_calcul_label does
+      // not exist in the GNU, the labels are post_calcul_names.
+      print_post_field = get_new_int( length_post_calcul_scal_vec_mat );
+      for ( icalcul=0; icalcul<length_post_calcul_scal_vec_mat; icalcul++ )
+        print_post_field[icalcul] = 1;
+      if ( nvtk_dof_calcul>0 && vtk_dof_calcul ) {
+        if ( vtk_dof_calcul[0]==-NONE ) {
+          for ( icalcul=0; icalcul<length_post_calcul_scal_vec_mat; icalcul++ )
+            print_post_field[icalcul] = 0;
+        }
+        else {
+          for ( icalcul=0; icalcul<length_post_calcul_scal_vec_mat; icalcul++ ) {
+            print_post_field[icalcul] = 0;
+            for ( ifilter=0; ifilter<nvtk_dof_calcul; ifilter++ ) {
+              if ( post_calcul_unknown_operat[icalcul*2+0]==
+                   vtk_dof_calcul[ifilter] ) {
+                print_post_field[icalcul] = 1;
+                break;
+              }
+              if ( strstr( post_calcul_names[icalcul],
+                           db_name(vtk_dof_calcul[ifilter]) ) ) {
+                print_post_field[icalcul] = 1;
+                break;
+              }
+            }
+          }
+        }
+      }
 
         // write scalars, vectors and tensors for calculated data
       icalcul = idim = ready = 0;
@@ -283,8 +568,10 @@ void print_vtk( long int icontrol )
         strcat( outputname, db_name(calcul_operat) );
         if      ( post_calcul_scal_vec_mat[icalcul]==-SCALAR ) {
           nval = 1;
-          outvtk << "SCALARS " << outputname << " double\n";
-          outvtk << "LOOKUP_TABLE default\n";
+          if ( print_post_field[icalcul] ) {
+            outvtk << "SCALARS " << outputname << " double\n";
+            outvtk << "LOOKUP_TABLE default\n";
+          }
         }
         else {
           assert( post_calcul_scal_vec_mat[icalcul]==-VECTOR );
@@ -296,29 +583,33 @@ void print_vtk( long int icontrol )
           if ( idim==MDIM ) {
             idim = 0;
           }
-          outvtk << "VECTORS " << outputname << " double\n";
-        }
-        for ( inod=0; inod<=max_node; inod++ ) {
-          node_dof_calcul = db_dbl( NODE_DOF_CALCUL, inod, VERSION_PRINT );
-          if      ( post_calcul_scal_vec_mat[icalcul]==-SCALAR ) {
-            if ( node_dof_calcul[icalcul]==0.0 )
-              outvtk << "0.0";
-            else
-              outvtk << node_dof_calcul[icalcul];
+          if ( print_post_field[icalcul] ) {
+            outvtk << "VECTORS " << outputname << " double\n";
           }
-          else {
-            assert( post_calcul_scal_vec_mat[icalcul]==-VECTOR );
-            for ( i=0; i<MDIM; i++ ) {
-              indx = icalcul+i;
-              if ( node_dof_calcul[indx]==0.0 )
-                outvtk << "0.0" << " ";
+        }
+        if ( print_post_field[icalcul] ) {
+          for ( inod=0; inod<=max_node; inod++ ) {
+            node_dof_calcul = db_dbl( NODE_DOF_CALCUL, inod, VERSION_PRINT );
+            if      ( post_calcul_scal_vec_mat[icalcul]==-SCALAR ) {
+              if ( node_dof_calcul[icalcul]==0.0 )
+                outvtk << "0.0";
               else
-                outvtk << node_dof_calcul[indx] << " ";
+                outvtk << node_dof_calcul[icalcul];
             }
+            else {
+              assert( post_calcul_scal_vec_mat[icalcul]==-VECTOR );
+              for ( i=0; i<MDIM; i++ ) {
+                indx = icalcul+i;
+                if ( node_dof_calcul[indx]==0.0 )
+                  outvtk << "0.0" << " ";
+                else
+                  outvtk << node_dof_calcul[indx] << " ";
+              }
+            }
+            outvtk  << "\n";
           }
-          outvtk  << "\n";
+          outvtk << "\n";
         }
-        outvtk << "\n";
         icalcul += nval;
         ready = (icalcul>=length_post_calcul_scal_vec_mat);
       }
@@ -326,7 +617,8 @@ void print_vtk( long int icontrol )
         // write vector components and tensor components for calculated data
       icalcul = 0; ready=0;
       while ( !ready ) {
-        if ( post_calcul_scal_vec_mat[icalcul]!=-SCALAR ) {
+        if ( post_calcul_scal_vec_mat[icalcul]!=-SCALAR &&
+             print_post_field[icalcul] ) {
           outvtk << "SCALARS " << post_calcul_names[icalcul] << " double\n";
           outvtk << "LOOKUP_TABLE default\n";
           for ( inod=0; inod<=max_node; inod++ ) {
@@ -344,8 +636,75 @@ void print_vtk( long int icontrol )
       }
 
     }
+
+    // control_print_vtk_other (6.346, default -yes): "other things" like
+    // boundary conditions and mesh deformation. Partial subset (the
+    // Professional manual does not detail the list): 1) boundary_condition
+    // scalar = 1 when any primary dof of the node is bounded
+    // (node_bounded), 0 otherwise; 2) mesh_deformation vector = the nodal
+    // displacement, written only when materi_displacement is active.
+    // node_bounded has no version_all -> read from VERSION_NORMAL, where
+    // node indices are 1-based: the print index inod (0-based VERSION_PRINT
+    // after renumbering with lowest_node=0) maps to inod+1 as long as no
+    // node is deleted (limitation documented in manual-developer).
+    if ( vtk_other!=-NO ) {
+      long int node_bounded_max = -1;
+      db_max_index( NODE_BOUNDED, node_bounded_max, VERSION_NORMAL, GET );
+      if ( node_bounded_max>=0 ) {
+        outvtk << "SCALARS boundary_condition double\n";
+        outvtk << "LOOKUP_TABLE default\n";
+        for ( inod=0; inod<=max_node; inod++ ) {
+          long int bounded = 0;
+          if ( db_active_index( NODE_BOUNDED, inod+1, VERSION_NORMAL ) ) {
+            node_bounded = db_int( NODE_BOUNDED, inod+1, VERSION_NORMAL );
+            for ( i=0; i<npuknwn && !bounded; i++ )
+              if ( node_bounded[i] ) bounded = 1;
+          }
+          if ( bounded )
+            outvtk << "1.0" << "\n";
+          else
+            outvtk << "0.0" << "\n";
+        }
+        outvtk << "\n";
+      }
+      if ( materi_displacement ) {
+        outvtk << "VECTORS mesh_deformation double\n";
+        for ( inod=0; inod<=max_node; inod++ ) {
+          node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+          for ( idim=0; idim<MDIM; idim++ ) {
+            if      ( idim>ndim-1 )
+              outvtk << "0.0" << " ";
+            else {
+              ddum[0] = node_dof[dis_indx+idim*nder];
+              if ( ddum[0]==0.0 )
+                outvtk << "0.0" << " ";
+              else
+                outvtk << ddum[0] << " ";
+            }
+          }
+          outvtk << "\n";
+        }
+        outvtk << "\n";
+      }
+    }
     outvtk << "\n";
 
+  }
+
+  // print_vtk_group (6.1001): element group per cell (ELEMENT_GROUP,
+  // 0 when absent), same cells as CELLS (control_print_vtk_empty).
+  if ( vtk_group!=-NO ) {
+    outvtk << "CELL_DATA " << ncell << "\n\n";
+    outvtk << "SCALARS element_group int\n";
+    outvtk << "LOOKUP_TABLE default\n";
+    for ( element=0; element<=max_element; element++ ) {
+      if ( vtk_empty==-NO && vtk_element_is_empty( element ) ) continue;
+      element_group = 0;
+      db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+        VERSION_PRINT, GET_IF_EXISTS );
+      outvtk << element_group << "\n";
+    }
+    outvtk << "\n";
   }
 
   outvtk.close();
@@ -359,6 +718,9 @@ void print_vtk( long int icontrol )
   delete[] post_calcul_unknown_operat;
   delete[] nodes;
   delete[] el;
+  delete[] vtk_dof;
+  delete[] vtk_dof_calcul;
+  if ( print_post_field ) delete[] print_post_field;
 
   if ( swit ) pri( "Out routine PRINT_VTK" );
 }

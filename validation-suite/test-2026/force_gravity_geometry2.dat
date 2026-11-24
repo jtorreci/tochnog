@@ -1,0 +1,42 @@
+(
+force_gravity_geometry (manual 6.499): the quadrilateral reaches x = 0.9,
+so no element has all its nodes inside and none gets the gravity
+(Professional 02-08-2026: all displacements 0). Mesh of
+force_gravity_geometry1.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+group_type 0 -materi
+group_materi_elasti_young 0 10
+group_materi_elasti_poisson 0 0
+group_materi_memory 0 -total_linear
+group_materi_density 0 1
+bounda_dof 0 1 -velx -vely
+bounda_dof 1 2 -velx -vely
+bounda_dof 2 3 -velx -vely
+bounda_dof 3 4 -velx
+bounda_dof 4 5 -velx
+bounda_dof 5 6 -velx
+force_gravity 0 -10
+geometry_quadrilateral 1 -0.5 -0.5 0.9 -0.5 -0.5 1.5 0.9 1.5 1.e-3
+force_gravity_geometry -geometry_quadrilateral 1
+control_timestep 0 1 1
+target_item    1  -node_dof 4 -disy
+target_value   1  0. 1.e-10
+target_item    2  -node_dof 5 -disy
+target_value   2  0. 1.e-10
+target_item    3  -node_dof 6 -disy
+target_value   3  0. 1.e-10
+end_data

@@ -22,18 +22,183 @@
 
 #define EPS_TIME 1.e-12
 
+// helper for control_data_copy / control_data_copy_index (manual
+// Professional 6.117/6.119): copy one record index from idat_from to
+// idat_to with an optional multiplication factor. Integer copies require
+// factor 1; the manual's special node_inertia -> node_force case is a
+// double copy with factor -1 (d'alembert), which this covers naturally.
+static void data_copy_apply( long int idat_from, long int index_from,
+  long int idat_to, long int index_to, double factor,
+  long int idat_control, long int icontrol )
+{
+  long int idum[1], length_from=0, i=0;
+  double ddum[1], *dval_copy=NULL;
+  long int *ival_copy=NULL;
+
+  ival_copy = get_new_int(DATA_ITEM_SIZE);
+  dval_copy = get_new_dbl(DATA_ITEM_SIZE);
+
+  length_from = db_len( idat_from, index_from, VERSION_NORMAL );
+  if ( db_type(idat_from)==INTEGER && db_type(idat_to)==INTEGER ) {
+    if ( scalar_dabs(factor-1.)>TINY ) db_error( idat_control, icontrol );
+    db( idat_from, index_from, ival_copy, ddum, length_from,
+      VERSION_NORMAL, GET );
+    db( idat_to, index_to, ival_copy, ddum, length_from,
+      VERSION_NORMAL, PUT );
+  }
+  else if ( db_type(idat_from)==DOUBLE_PRECISION &&
+            db_type(idat_to)==DOUBLE_PRECISION ) {
+    db( idat_from, index_from, idum, dval_copy, length_from,
+      VERSION_NORMAL, GET );
+    if ( scalar_dabs(factor-1.)>TINY )
+      for ( i=0; i<length_from; i++ ) dval_copy[i] *= factor;
+    db( idat_to, index_to, idum, dval_copy, length_from,
+      VERSION_NORMAL, PUT );
+  }
+  else
+    db_error( idat_control, icontrol );
+}
+
+// control_reset_interface / control_reset_interface_strain: reset the
+// accumulated histories of the interface elements located in the
+// geometry. _interface resets ALL interface data (strains + tangential
+// forces); _interface_strain resets only the normal strain, keeping
+// the tangential force history (the stresses are "remembered": new
+// strains start at 0 and new stresses grow from the remembered ones
+// through the stiffness). Control records fire in the control step of
+// their own index (same rule as control_reset_dof, manual Professional
+// 6.350): interface7 resets at index 15 between the control 10/20
+// phases.
+//
+// CONVERGENCE (2026-09-15, creset_iface): this runs at step CLOSE
+// (after the element loop promoted VERSION_NEW to VERSION_NORMAL),
+// NOT at step start. The manual Professional 6.355 says the strains
+// are reset "at this moment of resetting" and that "in the NEXT time
+// steps the new interface strains start with 0". Zeroing the
+// accumulated strain BEFORE the reset step's element loop let that
+// step's deformation increment be added again, so the target read
+// -5e-4 (the per-IP normal increment of the constant-velocity test)
+// instead of 0. Applying it after the step leaves the recorded
+// strain at exactly 0 and the remembered FORCE_NORM untouched.
+void control_reset_interface( long int icontrol )
+
+{
+  long int idum[1], ldum = 0;
+  double ddum[MDIM]; // geometry() writes normal/projection[MDIM]
+    long int ireset_i = 0, iel_i = 0, max_element_i = 0,
+      inol_i = 0, length_el_i = 0, all_in_i = 0, in_geom_i = 0,
+      geometry_i[2];
+    double rdum_i = 0.;
+    db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
+    for ( ireset_i=0; ireset_i<=1000; ireset_i++ ) {
+      long int full_reset = 0, strain_reset = 0;
+      if ( db_active_index( CONTROL_RESET_INTERFACE, ireset_i,
+           VERSION_NORMAL ) ) full_reset = 1;
+      if ( db_active_index( CONTROL_RESET_INTERFACE_STRAIN, ireset_i,
+           VERSION_NORMAL ) ) strain_reset = 1;
+      if ( !full_reset && !strain_reset ) continue;
+      if ( ireset_i!=icontrol ) continue;
+      {
+        long int geometry_src[2];
+        if ( full_reset )
+          db( CONTROL_RESET_INTERFACE, ireset_i, geometry_src, ddum,
+            ldum, VERSION_NORMAL, GET );
+        else
+          db( CONTROL_RESET_INTERFACE_STRAIN, ireset_i, geometry_src, ddum,
+            ldum, VERSION_NORMAL, GET );
+        geometry_i[0] = geometry_src[0];
+        geometry_i[1] = geometry_src[1];
+      }
+      for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
+        long int el_i[MNOL+1];
+        if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) )
+          continue;
+        db( ELEMENT, iel_i, el_i, ddum, length_el_i, VERSION_NORMAL, GET );
+        all_in_i = 1;
+        for ( inol_i=1; inol_i<length_el_i; inol_i++ ) {
+          geometry( el_i[inol_i], ddum, geometry_i, in_geom_i, rdum_i,
+            ddum, rdum_i, ddum, NODE_START_REFINED,
+            CONTROL_RESET_INTERFACE, VERSION_NORMAL );
+          if ( !in_geom_i ) all_in_i = 0;
+        }
+        if ( all_in_i ) {
+          // per-integration-point histories (one value per facing pair,
+          // ns1 = nnol/2); zero ALL slots in BOTH versions (FIX
+          // 2026-09-03: the old PUT passed a leftover length and a
+          // single value, so the reset never cleared the whole record
+          // and the accumulated strain survived the reset).
+          //
+          // control_reset_interface_strain (manual Professional 6.355):
+          // resets the accumulated STRAINS to 0 but REMEMBERS the
+          // stresses: "the interface stresses at this moment of resetting
+          // will be remembered by Tochnog. In the next time steps the new
+          // interface strains start with 0, and change when the
+          // interfaces deform further. And in the next time steps the new
+          // interface stresses are calculated from the interface stresses
+          // at this moment of resetting plus stress due to additional
+          // deformation". The normal stress lives in its own history
+          // (ELEMENT_INTERFACE_FORCE_NORM), so the strain reset zeroes
+          // ELEMENT_INTERFACE_STRAIN_NORMAL only and leaves FORCE_NORM
+          // untouched (interface10 of the corpus: after the reset the
+          // interface keeps sigma_n = -6 and stays in equilibrium - no
+          // extra compression in the next step - while the reported
+          // strain starts from 0). The tangential history
+          // ELEMENT_INTERFACE_FORCE_TANG(2) is the clamped tangential
+          // force (F4 T6d C52), i.e. the remembered shear stress: kept
+          // by the strain reset, zeroed only by control_reset_interface
+          // (probe vs Professional 02-08-2026: slide at c=5, strain
+          // reset, reverse -1.0 -> shear 4.0 both; full reset -> -1.0).
+          if ( strain_reset || full_reset ) {
+            long int ns1_r = ( length_el_i-1 )/2;
+            double zero_arr[9];
+            for ( inol_i=0; inol_i<ns1_r && inol_i<9; inol_i++ )
+              zero_arr[inol_i] = 0.;
+            db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+          }
+          if ( full_reset ) {
+            long int ns1_r = ( length_el_i-1 )/2;
+            double zero_arr[9];
+            for ( inol_i=0; inol_i<ns1_r && inol_i<9; inol_i++ )
+              zero_arr[inol_i] = 0.;
+            db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_NORM, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NORMAL, PUT );
+            db( ELEMENT_INTERFACE_FORCE_TANG2, iel_i, idum, zero_arr,
+              ns1_r, VERSION_NEW, PUT );
+          }
+        }
+      }
+    }
+}
+
 void data( long int task, double dtime, double time_current )
 
 {
   long int idat=0, in=0, iv=0, index=0, range_length=0, icontrol=0, length=0, 
     swit=0, max_index=0, inod=0, max_node=0, found=0, 
-    ichange=0, max_change=0, idim=0, operat=0, ldum=0, 
+    ichange=0, max_change=0, idim=0, operat=0, ldum=0, ipos=0,
+    ireset=0, max_reset=0, idof_reset=0, idof_value=0,
+    length_diagram=0, change_dataitem_apply=-YES,
+    reset_method=-USE,
     data_item_name=0, data_item_index=0, data_item_number=0,
+    change_dataitem_length=0,
     change_dataitem_time_discrete=-NO, change_dataitem_time_user=0,
-    idum[1], change_dataitem[4], *dof_label=NULL, *integer_range=NULL, 
-    *data_delete=NULL, *data_put=NULL;
+    change_dataitem_time_method=0, change_dataitem_geometry[2]={0,0},
+    idum[1], change_dataitem[DATA_ITEM_SIZE], *dof_label=NULL, *integer_range=NULL, 
+    *data_delete=NULL, *data_put=NULL, *reset_dof=NULL, *reset_value_dof=NULL;
   double rdum=0., val=0., ddum[MDIM], *change_dataitem_time=NULL, 
-    *dval=NULL, *coord=NULL;
+    *dval=NULL, *coord=NULL, *node_dof=NULL, *reset_value_diagram=NULL,
+    reset_value_constant=0., coords[MDIM];
 
   dof_label = get_new_int(MUKNWN);
   integer_range = get_new_int(MRANGE);
@@ -278,8 +443,252 @@ void data( long int task, double dtime, double time_current )
       db_error( CONTROL_DATA_PUT, icontrol );
   }
 
-  if ( db_active_index( CONTROL_DATA_INITELDOF_GEOMETRY, icontrol, VERSION_NORMAL )  ) {
+  // data_activate / data_delete (manual Professional 6.397-6.400):
+  // time-gated variants of control_data_activate/control_data_delete
+  // (not per control-timestep). Evaluated when time_current >= the
+  // data_*_time point (default: at the start of the calculation).
+  {
+    long int idata_recs = 0, max_idata = 0, iv2 = 0, idat2 = 0,
+      max_del2 = 0, *data_list = NULL, switch_val = -YES, length_list = 0;
+    double time_gate = 0.;
 
+    db_max_index( DATA_ACTIVATE, max_idata, VERSION_NORMAL, GET );
+    for ( idata_recs=0; idata_recs<=max_idata; idata_recs++ ) {
+      if ( !db_active_index( DATA_ACTIVATE, idata_recs, VERSION_NORMAL ) )
+        continue;
+      time_gate = 0.;
+      db( DATA_ACTIVATE_TIME, idata_recs, idum, &time_gate, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( time_current<(time_gate-EPS_TIME) ) continue;
+      data_list = db_int( DATA_ACTIVATE, idata_recs, VERSION_NORMAL );
+      length_list = db_len( DATA_ACTIVATE, idata_recs, VERSION_NORMAL );
+      switch_val = data_list[length_list-1];
+      if ( switch_val!=-NO ) continue;
+      for ( iv2=0; iv2<length_list-1; iv2++ ) {
+        idat2 = data_list[iv2];
+        if ( idat2>=0 ) continue;
+        db_max_index( idat2, max_del2, VERSION_NORMAL, GET );
+        for ( index=0; index<=max_del2; index++ )
+          if ( db_active_index( idat2, index, VERSION_NORMAL ) )
+            db_delete_index( idat2, index, VERSION_NORMAL );
+      }
+    }
+
+    db_max_index( DATA_DELETE, max_idata, VERSION_NORMAL, GET );
+    for ( idata_recs=0; idata_recs<=max_idata; idata_recs++ ) {
+      if ( !db_active_index( DATA_DELETE, idata_recs, VERSION_NORMAL ) )
+        continue;
+      time_gate = 0.;
+      db( DATA_DELETE_TIME, idata_recs, idum, &time_gate, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( time_current<(time_gate-EPS_TIME) ) continue;
+      data_list = db_int( DATA_DELETE, idata_recs, VERSION_NORMAL );
+      length_list = db_len( DATA_DELETE, idata_recs, VERSION_NORMAL );
+      idat2 = data_list[0];
+      if ( idat2>=0 ) continue;
+      if ( data_list[1]>=0 ) {
+        if      ( idat2==-ELEMENT ) delete_element( data_list[1], VERSION_NORMAL );
+        else if ( idat2==-NODE ) delete_node( data_list[1], VERSION_NORMAL );
+        else
+          db_delete_index( idat2, data_list[1], VERSION_NORMAL );
+      }
+      else if ( data_list[1]==-RA ) {
+        range_expand( &data_list[1], integer_range, length_list, range_length );
+        for ( in=0; in<range_length; in++ ) {
+          index = integer_range[in];
+          if      ( idat2==-ELEMENT ) delete_element( index, VERSION_NORMAL );
+          else if ( idat2==-NODE ) delete_node( index, VERSION_NORMAL );
+          else
+            db_delete_index( idat2, index, VERSION_NORMAL );
+        }
+      }
+      else if ( data_list[1]==-ALL ) {
+        db_max_index( idat2, max_del2, VERSION_NORMAL, GET );
+        for ( index=0; index<=max_del2; index++ ) {
+          if      ( idat2==-ELEMENT ) delete_element( index, VERSION_NORMAL );
+          else if ( idat2==-NODE ) delete_node( index, VERSION_NORMAL );
+          else
+            db_delete_index( idat2, index, VERSION_NORMAL );
+        }
+      }
+    }
+  }
+
+  // print_mesh_dof (manual Professional 6.31-6.33 via bounda_print_mesh_dof):
+  // one-shot dump of node coordinates and the listed dof values (all
+  // dofs when none are listed) at the first evaluation; nodes can be
+  // restricted to a geometry. Written to print_mesh_dof.dat.
+  {
+    static long int print_mesh_dof_done = 0;
+    long int *pmd_dofs = NULL, length_pmd = 0, pmd_geometry[2] = {0,0},
+      in_geometry_pmd = 0, indx_pmd = 0;
+    double *coord_pmd = NULL, *node_dof_pmd = NULL, rdum_pmd = 0.;
+
+    if ( !print_mesh_dof_done &&
+         db_active_index( PRINT_MESH_DOF, 0, VERSION_NORMAL ) ) {
+      print_mesh_dof_done = 1;
+      pmd_dofs = db_int( PRINT_MESH_DOF, 0, VERSION_NORMAL );
+      length_pmd = db_len( PRINT_MESH_DOF, 0, VERSION_NORMAL );
+      if ( db_active_index( PRINT_MESH_DOF_GEOMETRY, 0, VERSION_NORMAL ) )
+        db( PRINT_MESH_DOF_GEOMETRY, 0, pmd_geometry, ddum, ldum,
+          VERSION_NORMAL, GET );
+      ofstream pmd_out( "print_mesh_dof.dat" );
+      for ( inod=0; inod<=max_node; inod++ ) {
+        if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+        if ( pmd_geometry[0] ) {
+          geometry( inod, ddum, pmd_geometry, in_geometry_pmd, rdum_pmd,
+            ddum, rdum_pmd, ddum, NODE_START_REFINED, PROJECT_EXACT,
+            VERSION_NORMAL );
+          if ( !in_geometry_pmd ) continue;
+        }
+        coord_pmd = db_dbl( NODE_START_REFINED, inod, VERSION_NORMAL );
+        node_dof_pmd = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+        length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+        pmd_out << inod;
+        for ( idim=0; idim<ndim; idim++ )
+          pmd_out << " " << coord_pmd[idim];
+        for ( iv=0; iv<length_pmd; iv++ ) {
+          indx_pmd = pmd_dofs[iv];
+          if ( indx_pmd<0 ) {
+            array_member( dof_label, indx_pmd, nuknwn, indx_pmd );
+            if ( length==npuknwn ) indx_pmd /= nder;
+          }
+          if ( indx_pmd>=0 && indx_pmd<length )
+            pmd_out << " " << node_dof_pmd[indx_pmd];
+        }
+        pmd_out << "\n";
+      }
+      pmd_out.close();
+    }
+  }
+
+  // control_data_activate (manual Professional 6.114): activate/deactivate
+  // data items. -no deletes all records of the listed items (the records
+  // stop being used by the solvers); -yes is a no-op: input records are
+  // active by default, and the GNU deletion is destructive, so
+  // re-activation would require re-putting the records (documented
+  // difference with Professional).
+  if ( db_active_index( CONTROL_DATA_ACTIVATE, icontrol, VERSION_NORMAL ) ) {
+    long int *data_activate=NULL, activate_switch=0, idat_activate=0,
+      max_activate=0;
+    data_activate = db_int( CONTROL_DATA_ACTIVATE, icontrol, VERSION_NORMAL );
+    length = db_len( CONTROL_DATA_ACTIVATE, icontrol, VERSION_NORMAL );
+    activate_switch = data_activate[length-1];
+    for ( in=0; in<length-1; in++ ) {
+      idat_activate = data_activate[in];
+      if ( idat_activate>=0 )
+        db_error( CONTROL_DATA_ACTIVATE, icontrol );
+      if ( activate_switch==-NO ) {
+        db_max_index( idat_activate, max_activate, VERSION_NORMAL, GET );
+        for ( index=0; index<=max_activate; index++ )
+          if ( db_active_index( idat_activate, index, VERSION_NORMAL ) )
+            db_delete_index( idat_activate, index, VERSION_NORMAL );
+      }
+    }
+  }
+
+  // control_data_arithmetic (manual Professional 6.115/6.116): change the
+  // selected data item with the value of control_data_arithmetic_double
+  // (same index) using -plus/-minus/-multiply/-divide. Record layout:
+  //   [ item, index | -RA range..., number | -ALL, operat ]
+  // number and operat are the LAST two slots; -ALL applies the operation
+  // to all numbers of the record.
+  if ( db_active_index( CONTROL_DATA_ARITHMETIC, icontrol, VERSION_NORMAL ) ) {
+    long int *data_arith=NULL, arith_operat=0, arith_number=0, idat_arith=0,
+      iindx=0, length_record=0, number_indx=0, *arith_doflabel=NULL;
+    double arith_val=0.;
+    db( CONTROL_DATA_ARITHMETIC_DOUBLE, icontrol, idum, &arith_val, ldum,
+      VERSION_NORMAL, GET );
+    data_arith = db_int( CONTROL_DATA_ARITHMETIC, icontrol, VERSION_NORMAL );
+    length = db_len( CONTROL_DATA_ARITHMETIC, icontrol, VERSION_NORMAL );
+    idat_arith = data_arith[0];
+    arith_number = data_arith[length-2];
+    arith_operat = data_arith[length-1];
+    if ( idat_arith>=0 || db_type(idat_arith)==INTEGER )
+      db_error( CONTROL_DATA_ARITHMETIC, icontrol );
+    if ( arith_operat==-DIVIDE && scalar_dabs(arith_val)<TINY )
+      db_error( CONTROL_DATA_ARITHMETIC, icontrol );
+    if ( data_arith[1]==-RA )
+      range_expand( &data_arith[1], integer_range, length, range_length );
+    else {
+      integer_range[0] = data_arith[1];
+      range_length = 1;
+    }
+    arith_doflabel = get_new_int(MUKNWN);
+    for ( iindx=0; iindx<range_length; iindx++ ) {
+      index = integer_range[iindx];
+      if ( db_active_index( idat_arith, index, VERSION_NORMAL ) ) {
+        length_record = db_len( idat_arith, index, VERSION_NORMAL );
+        db( idat_arith, index, idum, dval, ldum, VERSION_NORMAL, GET );
+        if ( arith_number==-ALL ) {
+          for ( in=0; in<length_record; in++ ) {
+            if      ( arith_operat==-PLUS )    dval[in] += arith_val;
+            else if ( arith_operat==-MINUS )   dval[in] -= arith_val;
+            else if ( arith_operat==-MULTIPLY ) dval[in] *= arith_val;
+            else if ( arith_operat==-DIVIDE )  dval[in] /= arith_val;
+          }
+        }
+        else {
+          number_indx = arith_number;
+          if ( number_indx<0 ) {
+            db( DOF_LABEL, 0, arith_doflabel, ddum, ldum,
+              VERSION_NORMAL, GET );
+            array_member( arith_doflabel, number_indx, nuknwn, number_indx );
+            if ( length_record==npuknwn ) number_indx /= nder;
+          }
+          if ( number_indx<0 || number_indx>length_record-1 )
+            db_error( CONTROL_DATA_ARITHMETIC, icontrol );
+          if      ( arith_operat==-PLUS )    dval[number_indx] += arith_val;
+          else if ( arith_operat==-MINUS )   dval[number_indx] -= arith_val;
+          else if ( arith_operat==-MULTIPLY ) dval[number_indx] *= arith_val;
+          else if ( arith_operat==-DIVIDE )  dval[number_indx] /= arith_val;
+          else
+            db_error( CONTROL_DATA_ARITHMETIC, icontrol );
+        }
+        db( idat_arith, index, idum, dval, length_record,
+          VERSION_NORMAL, PUT );
+      }
+    }
+  }
+
+  // control_data_copy (manual Professional 6.117): copy ALL indices of
+  // data_item_from to data_item_to, with optional multiplication factor
+  // from control_data_copy_factor (same index).
+  if ( db_active_index( CONTROL_DATA_COPY, icontrol, VERSION_NORMAL ) ) {
+    long int *data_copy=NULL, idat_from=0, idat_to=0, max_copy=0;
+    double copy_factor=1.;
+    db( CONTROL_DATA_COPY_FACTOR, icontrol, idum, &copy_factor, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    data_copy = db_int( CONTROL_DATA_COPY, icontrol, VERSION_NORMAL );
+    idat_from = data_copy[0];
+    idat_to = data_copy[1];
+    if ( idat_from>=0 || idat_to>=0 ) db_error( CONTROL_DATA_COPY, icontrol );
+    db_max_index( idat_from, max_copy, VERSION_NORMAL, GET );
+    for ( index=0; index<=max_copy; index++ )
+      if ( db_active_index( idat_from, index, VERSION_NORMAL ) )
+        data_copy_apply( idat_from, index, idat_to, index, copy_factor,
+          CONTROL_DATA_COPY, icontrol );
+  }
+
+  // control_data_copy_index (manual Professional 6.119): copy a single
+  // record index_from of data_item_from to index_to of data_item_to, with
+  // optional multiplication factor from control_data_copy_index_factor.
+  if ( db_active_index( CONTROL_DATA_COPY_INDEX, icontrol, VERSION_NORMAL ) ) {
+    long int *data_copy=NULL, idat_from=0, idat_to=0;
+    double copy_factor=1.;
+    db( CONTROL_DATA_COPY_INDEX_FACTOR, icontrol, idum, &copy_factor, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    data_copy = db_int( CONTROL_DATA_COPY_INDEX, icontrol, VERSION_NORMAL );
+    idat_from = data_copy[0];
+    idat_to = data_copy[2];
+    if ( idat_from>=0 || idat_to>=0 )
+      db_error( CONTROL_DATA_COPY_INDEX, icontrol );
+    if ( db_active_index( idat_from, data_copy[1], VERSION_NORMAL ) )
+      data_copy_apply( idat_from, data_copy[1], idat_to, data_copy[3],
+        copy_factor, CONTROL_DATA_COPY_INDEX, icontrol );
+  }
+
+  if ( db_active_index( CONTROL_DATA_INITELDOF_GEOMETRY, icontrol, VERSION_NORMAL )  ) {
     long int in_geometry=0, max_element=0, *node_in_geometry=NULL,
     	control_data_initeldof_geometry[2], nodes[MNOL], el[MNOL+1], zero=0, one=1,
 	length_nodes = 1+max_node;
@@ -327,13 +736,23 @@ void data( long int task, double dtime, double time_current )
   db_max_index( CHANGE_DATAITEM, max_change, VERSION_NORMAL, GET );
   if ( max_change>=0 ) {
     swit = set_swit(-1,-1,"data");
+    db( CONTROL_CHANGE_DATAITEM_APPLY, icontrol, &change_dataitem_apply,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( change_dataitem_apply!=-NO ) {
     for ( ichange=0; ichange<=max_change; ichange++ ) {
       if ( db_active_index( CHANGE_DATAITEM, ichange, VERSION_NORMAL ) ) {
         db( CHANGE_DATAITEM, ichange, change_dataitem, ddum, ldum, VERSION_NORMAL, GET );
+        change_dataitem_length = ldum;
         data_item_name = change_dataitem[0];
         data_item_index = change_dataitem[1];
-        data_item_number = change_dataitem[2];
-        operat = change_dataitem[3];
+        // The record is variable length (database.cc CHANGE_DATAITEM):
+        // the last stored value is the operat (-use/-add), the middle
+        // values are the number positions the time-table value applies
+        // to. The Professional allows several positions in one record
+        // (manual 6.47 "you can change multiple numbers at once");
+        // excavate1 of the corpus changes the y levels at positions 5
+        // and 7 of a 4-point groundflow_phreatic_level in one record.
+        operat = change_dataitem[change_dataitem_length-1];
         change_dataitem_time_user = -NO;
         found = 0;
         db( CHANGE_DATAITEM_TIME_USER, ichange, &change_dataitem_time_user, ddum, ldum, 
@@ -361,28 +780,733 @@ void data( long int task, double dtime, double time_current )
               length, time_current, val );
           }
         }
+        // change_dataitem_time_method (manual Professional 6.51): the time
+        // table contains cosinus, sinus or tangent values; the inverse
+        // trigonometric angle is stored instead of the value itself.
+        // Typically used for phi-c reduction: the table gives tan(phi),
+        // the stored parameter is phi = atan(val), so cohesion and tangent
+        // of the friction angle can be decreased at the same ratio.
+        change_dataitem_time_method = 0;
+        db( CHANGE_DATAITEM_TIME_METHOD, ichange, &change_dataitem_time_method,
+          ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        if ( found ) {
+          if      ( change_dataitem_time_method==-COSINUS ) val = acos(val);
+          else if ( change_dataitem_time_method==-SINUS )   val = asin(val);
+          else if ( change_dataitem_time_method==-TANGENT ) val = atan(val);
+        }
+
+        // change_dataitem_geometry (manual Professional 6.48): restrict the
+        // change of a group_* record to the elements of the group that are
+        // inside the geometry. Materialized by splitting the group: on the
+        // first application a clone group with identical group records is
+        // created and the elements fully inside the geometry move to it;
+        // the value change is then applied to the clone only, so elements
+        // outside the geometry (and the original group record) keep the old
+        // value. Element internal state (NODE_DOF history) is untouched.
+        if ( db( CHANGE_DATAITEM_GEOMETRY, ichange, change_dataitem_geometry,
+              ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+          if ( strncmp( db_name(data_item_name), "group_", 6 ) )
+            db_error( CHANGE_DATAITEM_GEOMETRY, ichange );
+          {
+            static long int *clone_map = NULL;
+            static long int clone_map_len = 0;
+            long int idat2=0, ielem2=0, max_element2=0, in_geometry2=0,
+              all_in=0, new_group=0, max_group=0, length_clone=0,
+              el_group2=0, length_nodes2=0, *node_in_geometry2=NULL,
+              *ival_clone=NULL, el2[MNOL+1];
+            double rdum2=0.;
+            if ( found ) {
+              db_max_index( GROUP_TYPE, max_group, VERSION_NORMAL, GET );
+              if ( !clone_map ) {
+                clone_map_len = 2*max_group + 64;
+                clone_map = new long int[clone_map_len];
+                for ( long int k=0; k<clone_map_len; k++ ) clone_map[k] = -1;
+              }
+              if ( data_item_index>=clone_map_len ) {
+                long int new_len = 2*data_item_index + 64, *new_map =
+                  new long int[new_len];
+                for ( long int k=0; k<new_len; k++ )
+                  new_map[k] = ( k<clone_map_len ? clone_map[k] : -1 );
+                delete[] clone_map; clone_map = new_map;
+                clone_map_len = new_len;
+              }
+              new_group = clone_map[data_item_index];
+              if ( new_group<0 ) {
+                new_group = max_group + 1;
+                clone_map[data_item_index] = new_group;
+                // clone all per-group records ("group_*") of the original
+                ival_clone = get_new_int(DATA_ITEM_SIZE);
+                for ( idat2=0; idat2<MDAT; idat2++ ) {
+                  if ( !strncmp(db_name(idat2),"group_",6) &&
+                       db_active_index(idat2, data_item_index,
+                         VERSION_NORMAL) ) {
+                    length_clone = db_len( idat2, data_item_index,
+                      VERSION_NORMAL );
+                    if ( db_type(idat2)==INTEGER ) {
+                      db( idat2, data_item_index, ival_clone, ddum,
+                        length_clone, VERSION_NORMAL, GET );
+                      db( idat2, new_group, ival_clone, ddum,
+                        length_clone, VERSION_NORMAL, PUT );
+                    }
+                    else {
+                      db( idat2, data_item_index, idum, dval,
+                        length_clone, VERSION_NORMAL, GET );
+                      db( idat2, new_group, idum, dval,
+                        length_clone, VERSION_NORMAL, PUT );
+                    }
+                  }
+                }
+                // move the elements fully inside the geometry to the clone
+                node_in_geometry2 = get_new_int( 1+max_node );
+                array_set( node_in_geometry2, 0, 1+max_node );
+                for ( inod=0; inod<=max_node; inod++ ) {
+                  if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+                    geometry( inod, ddum, change_dataitem_geometry,
+                      in_geometry2, rdum2, ddum, rdum2, ddum,
+                      NODE_START_REFINED, CHANGE_DATAITEM_GEOMETRY,
+                      VERSION_NORMAL );
+                    if ( in_geometry2 ) node_in_geometry2[inod] = 1;
+                  }
+                }
+                db_max_index( ELEMENT, max_element2, VERSION_NORMAL, GET );
+                for ( ielem2=0; ielem2<=max_element2; ielem2++ ) {
+                  if ( db_active_index( ELEMENT, ielem2, VERSION_NORMAL ) ) {
+                    el_group2 = -1;
+                    db( ELEMENT_GROUP, ielem2, &el_group2, ddum, ldum,
+                      VERSION_NORMAL, GET_IF_EXISTS );
+                    if ( el_group2==data_item_index ) {
+                      db( ELEMENT, ielem2, el2, ddum, length_nodes2,
+                        VERSION_NORMAL, GET );
+                      all_in = 1;
+                      for ( long int k=1; k<length_nodes2; k++ )
+                        if ( !node_in_geometry2[el2[k]] ) all_in = 0;
+                      if ( all_in )
+                        db( ELEMENT_GROUP, ielem2, &new_group, ddum, ldum,
+                          VERSION_NORMAL, PUT );
+                    }
+                  }
+                }
+                delete[] node_in_geometry2;
+              }
+              // from now on the change applies to the clone group
+              data_item_index = new_group;
+            }
+          }
+        }
         if ( found && db_active_index( data_item_name, data_item_index, VERSION_NORMAL ) ) {
           length = db_len( data_item_name, data_item_index, VERSION_NORMAL );
-          if ( data_item_number<0 ) {
-            db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
-            array_member( dof_label, data_item_number, nuknwn, data_item_number );
-            if ( length==npuknwn ) data_item_number /= nder;
-          }
-          if ( data_item_number<0 || data_item_number>length ) 
-            db_error( CHANGE_DATAITEM, ichange );
           if ( db_type(data_item_name)==INTEGER ) db_error( CHANGE_DATAITEM, ichange );
           db( data_item_name, data_item_index, idum, dval, ldum, VERSION_NORMAL, GET );
-          if      ( operat==-USE )
-            dval[data_item_number] = val;
-          else if ( operat==-ADD && task==-YES )
-            dval[data_item_number] += val*dtime;
-          else
-            db_error( CHANGE_DATAITEM, ichange );
+          // apply the time-table value to every number position of the
+          // record (positions 2 .. length-2, the last value is operat)
+          for ( ipos=2; ipos<change_dataitem_length-1; ipos++ ) {
+            data_item_number = change_dataitem[ipos];
+            if ( data_item_number<0 ) {
+              db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+              array_member( dof_label, data_item_number, nuknwn, data_item_number );
+              if ( length==npuknwn ) data_item_number /= nder;
+            }
+            if ( data_item_number<0 || data_item_number>length )
+              db_error( CHANGE_DATAITEM, ichange );
+            if      ( operat==-USE )
+              dval[data_item_number] = val;
+            else if ( operat==-ADD && task==-YES )
+              dval[data_item_number] += val*dtime;
+            else
+              db_error( CHANGE_DATAITEM, ichange );
+          }
           db( data_item_name, data_item_index, idum, dval, ldum, VERSION_NORMAL, PUT );
         }
       }
     }
+    }
   }
+
+  // control_reset_dof: reset the listed node dofs to a value that is
+  // constant, or depends on another dof (via control_reset_value_dof +
+  // control_reset_value_dof_diagram). Method -add or -multiply relative
+  // to the current value, or -use to set the value.
+  reset_dof = get_new_int(DATA_ITEM_SIZE);
+  reset_value_dof = get_new_int(DATA_ITEM_SIZE);
+  reset_value_diagram = get_new_dbl(DATA_ITEM_SIZE);
+  db_max_index( CONTROL_RESET_DOF, max_reset, VERSION_NORMAL, GET );
+  // control_reset_interface / control_reset_interface_strain (manual
+  // Professional 6.354/6.355) may exist WITHOUT any control_reset_dof
+  // (interface7 of the corpus). FIX (2026-09-03): the interface history
+  // reset is scanned with db_active_index over the control range (its
+  // db_max_index returns -1 although the records are active - measured
+  // on interface7, record 15 active but max index -1), and it is no
+  // longer nested inside the control_reset_dof gate, so it fires even
+  // when only the interface reset record is present.
+  if ( max_reset>=0 ) {
+    swit = set_swit(-1,-1,"data");
+    if ( swit ) pri( "In routine DATA (control_reset)" );
+    db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET );
+  }
+
+  // control_reset_interface / control_reset_interface_strain: reset the
+  // accumulated histories of the interface elements located in the
+  // geometry. _interface resets ALL interface data (strains + tangential
+  // forces); _interface_strain resets only the normal strain, keeping
+  // the tangential force history (the stresses are "remembered": new
+  // strains start at 0 and new stresses grow from the remembered ones
+  // through the stiffness). Control records fire in the control step of
+  // their own index (same rule as control_reset_dof, manual Professional
+  // 6.350): interface7 resets at index 15 between the control 10/20
+  // phases.
+
+    long int *reset_dof_node_filter = NULL, reset_dof_length = 0, idof_list = 0;
+    for ( ireset=0; ireset<=max_reset; ireset++ ) {
+      if ( db_active_index( CONTROL_RESET_DOF, ireset, VERSION_NORMAL ) ) {
+        // CONVERGENCE (2026-09-15, delete3-vs-creset_geom reconciliation):
+        // a reset at a NON-timestep control index is a ONE-SHOT
+        // initialisation: it fires only in its own control step
+        // (icontrol==ireset), like every control record (manual
+        // Professional 6.350). This is required by delete3: the reset
+        // -sigyy at index 5 (timestep at index 10) initialises sigma=1
+        // ONCE; re-applying it at every timestep re-injects sigma=1 and
+        // moves the fixed point from 0.6 to 0.920015.
+        //
+        // A reset whose index ALSO carries a control_timestep is
+        // step-scoped: the legacy GNU applies it at every data() call
+        // (archived b6e1f70 reference), and creset_geom relies on that.
+        // There reset index 1 (constant 0, geometry brick) shares the
+        // timestep index 1; it must also fire at step 0 so the brick
+        // ELEMENT_INTPNT_DOF IP history follows the node. With the strict gate
+        // the brick IP keeps 0.5, and at step 1 the material equation
+        // solves -1 instead of 0. The Professional REJECTS a reset
+        // sharing a timestep index ("Error detected for data item :
+        // control_reset_dof, record : 20" - measured), so this branch is
+        // only reachable for legacy/GNU-only inputs; Professional-aligned
+        // corpus tests (sfnet-197: hypo2/3/4, mohrcou4, ...) keep the
+        // one-shot behaviour.
+        if ( ireset!=icontrol &&
+             !db_active_index( CONTROL_TIMESTEP, ireset, VERSION_NORMAL ) )
+          continue;
+        db( CONTROL_RESET_DOF, ireset, reset_dof, ddum, ldum, VERSION_NORMAL, GET );
+        // the record may list SEVERAL dofs (-sigxx -sigyy -sigzz ...);
+        // every listed dof gets the reset value.
+        reset_dof_length = ldum;
+        if ( reset_dof_length<1 ) db_error( CONTROL_RESET_DOF, ireset );
+        for ( idof_list=0; idof_list<reset_dof_length; idof_list++ ) {
+        idof_reset = reset_dof[idof_list];
+        // materi_displacement_relative: a displacement reset re-synchronizes
+        // the relative displacement reference (manual 4.13).
+        if ( materi_displacement_relative ) {
+          long int idof_reset_idx = idof_reset;
+          if ( idof_reset_idx<0 ) {
+            array_member( dof_label, idof_reset_idx, nuknwn, idof_reset_idx );
+            if ( db_len( NODE_DOF, 1, VERSION_NORMAL )==npuknwn )
+              idof_reset_idx /= nder;
+          }
+          if ( idof_reset_idx==dis_indx ) {
+            for ( inod=0; inod<=max_node; inod++ ) {
+              if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
+                node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                for ( long int idim=0; idim<ndim; idim++ )
+                  node_dof[dis_rel_indx+idim*nder] = 0.;
+              }
+            }
+          }
+        }
+        reset_method = -USE;
+        db( CONTROL_RESET_VALUE_METHOD, ireset, &reset_method, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+
+        // node selection filters (manual Professional 6.352/6.353/6.356):
+        // control_reset_geometry (nodes of elements completely inside the
+        // geometry), control_reset_node (nodes of elements with all their
+        // nodes listed) and control_reset_element_group (restrict to
+        // elements of the listed groups). Without any filter all nodes are
+        // treated (previous behaviour).
+        {
+          long int use_filter = 0, length_rn = 0, length_reg = 0,
+            iel2 = 0, inol2 = 0, max_element2 = 0, length_el2 = 0,
+            all_in = 0, in_geometry2 = 0, all_nodes_listed = 0,
+            el_group2 = 0, el2[MNOL+1];
+          long int *reset_nodes_list = NULL;
+          double rdum2 = 0.;
+          reset_nodes_list = get_new_int(1+max_node);
+          array_set( reset_nodes_list, 0, 1+max_node );
+          if ( db_active_index( CONTROL_RESET_GEOMETRY, ireset,
+              VERSION_NORMAL ) ||
+               db_active_index( CONTROL_RESET_NODE, ireset,
+              VERSION_NORMAL ) ||
+               db_active_index( CONTROL_RESET_ELEMENT_GROUP, ireset,
+              VERSION_NORMAL ) ) {
+            long int reset_geometry[2] = {0,0};
+            use_filter = 1;
+            if ( db_active_index( CONTROL_RESET_GEOMETRY, ireset,
+                VERSION_NORMAL ) )
+              db( CONTROL_RESET_GEOMETRY, ireset, reset_geometry, ddum,
+                ldum, VERSION_NORMAL, GET );
+            if ( db_active_index( CONTROL_RESET_NODE, ireset,
+                VERSION_NORMAL ) ) {
+              db( CONTROL_RESET_NODE, ireset, reset_nodes_list, ddum,
+                length_rn, VERSION_NORMAL, GET );
+              // convert the listed nodes to a marker set (avoid clashing
+              // with the output array usage below)
+              for ( long int k=0; k<length_rn; k++ )
+                reset_nodes_list[reset_nodes_list[k]] = 1;
+            }
+            db_max_index( ELEMENT, max_element2, VERSION_NORMAL, GET );
+            for ( iel2=0; iel2<=max_element2; iel2++ ) {
+              if ( !db_active_index( ELEMENT, iel2, VERSION_NORMAL ) )
+                continue;
+              if ( db_active_index( CONTROL_RESET_ELEMENT_GROUP, ireset,
+                  VERSION_NORMAL ) ) {
+                long int go = 0;
+                long int *reg = NULL;
+                reg = db_int( CONTROL_RESET_ELEMENT_GROUP, ireset,
+                  VERSION_NORMAL );
+                length_reg = db_len( CONTROL_RESET_ELEMENT_GROUP, ireset,
+                  VERSION_NORMAL );
+                el_group2 = -1;
+                db( ELEMENT_GROUP, iel2, &el_group2, ddum, ldum,
+                  VERSION_NORMAL, GET_IF_EXISTS );
+                if ( array_member( reg, el_group2, length_reg, ldum ) )
+                  go = 1;
+                if ( !go ) continue;
+              }
+              db( ELEMENT, iel2, el2, ddum, length_el2, VERSION_NORMAL, GET );
+              all_in = 1;
+              all_nodes_listed = 1;
+              for ( inol2=1; inol2<length_el2; inol2++ ) {
+                if ( db_active_index( CONTROL_RESET_GEOMETRY, ireset,
+                    VERSION_NORMAL ) ) {
+                  geometry( el2[inol2], ddum, reset_geometry, in_geometry2,
+                    rdum2, ddum, rdum2, ddum, NODE_START_REFINED,
+                    CONTROL_RESET_GEOMETRY, VERSION_NORMAL );
+                  if ( !in_geometry2 ) all_in = 0;
+                }
+                if ( db_active_index( CONTROL_RESET_NODE, ireset,
+                    VERSION_NORMAL ) ) {
+                  if ( !reset_nodes_list[el2[inol2]] )
+                    all_nodes_listed = 0;
+                }
+              }
+              if ( all_in && all_nodes_listed ) {
+                for ( inol2=1; inol2<length_el2; inol2++ )
+                  reset_nodes_list[el2[inol2]] = 2;
+              }
+            }
+          }
+          if ( use_filter ) {
+            // marker 2 = selected; collapse to 0/1
+            for ( inod=0; inod<=max_node; inod++ )
+              reset_nodes_list[inod] = ( reset_nodes_list[inod]==2 );
+          }
+          else {
+            for ( inod=0; inod<=max_node; inod++ )
+              reset_nodes_list[inod] = 1;
+          }
+          reset_dof_node_filter = reset_nodes_list;
+        }
+
+        // reset value = CONTROL_RESET_VALUE_CONSTANT + the active spatial
+        // distributions (+ the CONTROL_RESET_VALUE_DOF diagram when the
+        // record pair is present). manual Professional 6.350: "The records
+        // control_reset_value_constant, control_reset_value_linear etc.
+        // can be arbitrarily combined so that complex dependency of the
+        // value of space coordinates is possible." The legacy GNU chain
+        // treated the value records as MUTUALLY EXCLUSIVE: with a constant
+        // record at the index the spatial (and dof) records were skipped,
+        // so a geostatic reset written as constant 0. + linear 0. 10.15
+        // (ground11_nonsaturated / ground11_phreatic_level of the corpus)
+        // applied only the constant and left the stress dofs at 0 - the
+        // hypoplasticity tangent at zero confining stress vanishes and the
+        // coupled solve is singular. reset1 of the corpus pins the
+        // combination: temp = constant 1. + linear 1.23*x = 2.23 at x=1.
+        // The reset method (-USE/-ADD/-MULTIPLY) applies to the combined
+        // value.
+        {
+          long int reset_value_constant_found =
+            db_active_index( CONTROL_RESET_VALUE_CONSTANT, ireset,
+              VERSION_NORMAL );
+          long int reset_value_dof_found = db_active_index(
+            CONTROL_RESET_VALUE_DOF, ireset, VERSION_NORMAL );
+          long int spatial_data[7] = { CONTROL_RESET_VALUE_LINEAR,
+            CONTROL_RESET_VALUE_EXPONENT, CONTROL_RESET_VALUE_POWER,
+            CONTROL_RESET_VALUE_SQUARE_ROOT, CONTROL_RESET_VALUE_LOGARITHMIC,
+            CONTROL_RESET_VALUE_LOGARITHMIC_SECOND,
+            CONTROL_RESET_VALUE_MULTI_LINEAR };
+          long int spatial_active[7], spatial_nl[7], sdat = 0,
+            nspatial = 0;
+          for ( sdat=0; sdat<7; sdat++ ) {
+            spatial_active[sdat] = db_active_index( spatial_data[sdat],
+              ireset, VERSION_NORMAL );
+            spatial_nl[sdat] = 0;
+            if ( spatial_active[sdat] ) {
+              if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LINEAR )
+                spatial_nl[sdat] = ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_POWER )
+                spatial_nl[sdat] = 2*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_SQUARE_ROOT )
+                spatial_nl[sdat] = 3*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_EXPONENT )
+                spatial_nl[sdat] = 5*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC )
+                spatial_nl[sdat] = 5*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC_SECOND )
+                spatial_nl[sdat] = 7*ndim;
+              else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_MULTI_LINEAR )
+                spatial_nl[sdat] = 0;
+              nspatial++;
+            }
+          }
+          if ( reset_value_constant_found ) {
+            db( CONTROL_RESET_VALUE_CONSTANT, ireset, idum,
+              &reset_value_constant, ldum, VERSION_NORMAL, GET );
+          }
+          else
+            reset_value_constant = 0.;
+          if ( reset_value_dof_found ) {
+            db( CONTROL_RESET_VALUE_DOF, ireset, &idof_value, ddum, ldum,
+              VERSION_NORMAL, GET );
+            db( CONTROL_RESET_VALUE_DOF_DIAGRAM, ireset, idum,
+              reset_value_diagram, length_diagram, VERSION_NORMAL, GET );
+          }
+          // reset value at a point (node or integration point): constant
+          // + dof diagram + spatial distributions, before the -add /
+          // -multiply / -use method (xyz: coordinates, dofs: dof values
+          // of the point, dofs_length: their number)
+          auto reset_value_at = [&]( const double *xyz, const double *dofs,
+              long int dofs_length ) -> double {
+                double val = reset_value_constant;
+                if ( reset_value_dof_found ) {
+                  long int indx_val = idof_value;
+                  if ( indx_val<0 ) {
+                    array_member( dof_label, indx_val, nuknwn, indx_val );
+                    if ( dofs_length==npuknwn ) indx_val /= nder;
+                  }
+                  if ( indx_val<0 || indx_val>dofs_length-1 )
+                    db_error( CONTROL_RESET_DOF, ireset );
+                  table_xy( reset_value_diagram,
+                    "CONTROL_RESET_VALUE_DOF_DIAGRAM", length_diagram,
+                    dofs[indx_val], val );
+                }
+                for ( sdat=0; sdat<7; sdat++ ) {
+                  if ( !spatial_active[sdat] ) continue;
+                  for ( idim=0; idim<ndim; idim++ )
+                    coords[idim] = xyz[idim];
+                  db( spatial_data[sdat], ireset, idum, reset_value_diagram,
+                    ldum, VERSION_NORMAL, GET );
+                  if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LINEAR ) {
+                    // ax x + ay y + az z
+                    for ( idim=0; idim<ndim; idim++ )
+                      val += reset_value_diagram[idim] * coords[idim];
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_POWER ) {
+                    // ax x^bx + ay y^by + az z^bz
+                    for ( idim=0; idim<ndim; idim++ )
+                      val += reset_value_diagram[2*idim] *
+                        scalar_power( coords[idim],
+                          reset_value_diagram[2*idim+1] );
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_SQUARE_ROOT ) {
+                    // ax sqrt( bx x + cx x^2 ) ... (3 coefs per dim)
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      double b = reset_value_diagram[3*idim+1];
+                      double c = reset_value_diagram[3*idim+2];
+                      val += reset_value_diagram[3*idim] *
+                        sqrt( scalar_dabs( b*coords[idim] +
+                          c*coords[idim]*coords[idim] ) );
+                    }
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_EXPONENT ) {
+                    // control_reset_value_exponent (manual Professional
+                    // 6.360): ax e^( (bx + cx x) / (dx + ex x) ) per dim
+                    // (5 coefs per dim); a zero denominator is an error, as
+                    // in the Professional 02-08-2026 (the GNU evaluated
+                    // e^(b + c x d + e x) before F5 W1 U2)
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      double a = reset_value_diagram[5*idim+0];
+                      double b = reset_value_diagram[5*idim+1];
+                      double c = reset_value_diagram[5*idim+2];
+                      double d = reset_value_diagram[5*idim+3];
+                      double e = reset_value_diagram[5*idim+4];
+                      double den = d + e * coords[idim];
+                      if ( den==0. ) {
+                        pri( "Error, divide by zero detected for "
+                          "control_reset_value_exponent", ireset );
+                        exit(TN_EXIT_STATUS);
+                      }
+                      val += a * exp( ( b + c * coords[idim] ) / den );
+                    }
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC ) {
+                    // control_reset_value_logarithmic_first (manual
+                    // Professional 6.362): ax ln( (bx + cx x) / (dx + ex x) )
+                    // per dim (5 coefs per dim); a non-positive argument is
+                    // an error, as in the Professional 02-08-2026 (the GNU
+                    // evaluated ln|b + c x d + e x| before F5 W1 U2)
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      double a = reset_value_diagram[5*idim+0];
+                      double b = reset_value_diagram[5*idim+1];
+                      double c = reset_value_diagram[5*idim+2];
+                      double d = reset_value_diagram[5*idim+3];
+                      double e = reset_value_diagram[5*idim+4];
+                      double num = b + c * coords[idim];
+                      double den = d + e * coords[idim];
+                      if ( den==0. || num/den<=0. ) {
+                        pri( "Error, non-positive ln argument detected for "
+                          "control_reset_value_logarithmic_first", ireset );
+                        exit(TN_EXIT_STATUS);
+                      }
+                      val += a * log( num / den );
+                    }
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_LOGARITHMIC_SECOND ) {
+                    // (ax + bx) e^(cx ln(dx (x+ex)/fx)) + gx (7 per dim)
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      double a = reset_value_diagram[7*idim+0];
+                      double b = reset_value_diagram[7*idim+1];
+                      double c = reset_value_diagram[7*idim+2];
+                      double d = reset_value_diagram[7*idim+3];
+                      double e = reset_value_diagram[7*idim+4];
+                      double f = reset_value_diagram[7*idim+5];
+                      double g = reset_value_diagram[7*idim+6];
+                      val += (a+b) * exp( c * log( scalar_dabs(
+                        d*(coords[idim]+e)/f ) ) ) + g;
+                    }
+                  }
+                  else if ( spatial_data[sdat]==CONTROL_RESET_VALUE_MULTI_LINEAR ) {
+                    // table (z0 value0 z1 value1 ...); vertical coord:
+                    // 1D -> x, 2D -> y, 3D -> z
+                    long int vdim = ( ndim==1 ) ? 0 : ( ndim==2 ) ? 1 : 2;
+                    table_xy( reset_value_diagram,
+                      "CONTROL_RESET_VALUE_MULTI_LINEAR",
+                      spatial_nl[sdat]/2, coords[vdim], val );
+                  }
+                }
+                return val;
+          };
+          if ( reset_value_constant_found || reset_value_dof_found ||
+               nspatial>0 ) {
+            for ( inod=0; inod<=max_node; inod++ ) {
+              if ( db_active_index( NODE, inod, VERSION_NORMAL ) &&
+                   ( !reset_dof_node_filter ||
+                     reset_dof_node_filter[inod] ) ) {
+                node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+                length = db_len( NODE_DOF, inod, VERSION_NORMAL );
+                long int indx_reset = idof_reset;
+                if ( indx_reset<0 ) {
+                  array_member( dof_label, indx_reset, nuknwn, indx_reset );
+                  if ( length==npuknwn ) indx_reset /= nder;
+                }
+                if ( indx_reset<0 || indx_reset>length-1 )
+                  db_error( CONTROL_RESET_DOF, ireset );
+                coord = db_dbl( NODE, inod, VERSION_NORMAL );
+                val = reset_value_at( coord, node_dof, length );
+                if      ( reset_method==-ADD ) node_dof[indx_reset] += val;
+                else if ( reset_method==-MULTIPLY ) node_dof[indx_reset] *= val;
+                else                             node_dof[indx_reset] = val;
+              }
+            }
+            // global_element_dof_from_node_dof -no (manual Professional
+            // 6.554, default; C100): the integration points of the
+            // elements without element_intpnt_dof input start from zero and
+            // are marked initialised (top.cc), so they no longer copy the
+            // node values at the first element loop. The reset must then
+            // reach them directly: the reset value is evaluated at the
+            // coordinates of every integration point (h-interpolated node
+            // coordinates of the pol() rule), as the Professional 02-08-2026
+            // does (control_reset_value_exponent1: element_intpnt_dof
+            // 1.99093 = e^((1+x)/(2+x)) at the Gauss point x = 1.2113;
+            // hypo_masin_history_slots1: hyhis0 reset to 1.03 without
+            // node_dof input). Only initialised continuum elements whose
+            // nodes are all selected. With -yes nothing changes here: the
+            // first-step node copy carries the reset.
+            if ( options_element_dof==-YES && nuknwn>0 ) {
+              long int from_node_dof = -NO;
+              db( GLOBAL_ELEMENT_DOF_FROM_NODE_DOF, 0, &from_node_dof, ddum,
+                ldum, VERSION_NORMAL, GET_IF_EXISTS );
+              long int indx_ip = idof_reset;
+              if ( indx_ip<0 )
+                array_member( dof_label, indx_ip, nuknwn, indx_ip );
+              if ( from_node_dof==-NO && indx_ip>=0 && indx_ip<nuknwn ) {
+                long int max_element_i = 0, iel_i = 0, length_el_i = 0,
+                  inol_i = 0, init_i = 0, len_ip = 0, npoint_i = 0,
+                  group_i = 0, el_i[MNOL+1];
+                double coord_i[MNOL*MDIM], xyz_i[MDIM],
+                  save_shape_factor_i = check_element_shape_factor;
+                double *h_i = get_new_dbl( MPOINT*MNOL );
+                double *old_d_i = get_new_dbl( MPOINT*MDIM*MNOL );
+                double *new_d_i = get_new_dbl( MPOINT*MDIM*MNOL );
+                double *new_b_i = get_new_dbl( MPOINT*MSTRAIN*MNOL*MDIM );
+                double *volume_i = get_new_dbl( MPOINT );
+                check_element_shape_factor = 0.;
+                db_max_index( ELEMENT, max_element_i, VERSION_NORMAL, GET );
+                for ( iel_i=0; iel_i<=max_element_i; iel_i++ ) {
+                  if ( !db_active_index( ELEMENT, iel_i, VERSION_NORMAL ) ||
+                       !db_active_index( ELEMENT_INTPNT_DOF, iel_i,
+                         VERSION_NORMAL ) ||
+                       !db_active_index( ELEMENT_DOF_INITIALISED, iel_i,
+                         VERSION_NORMAL ) ) continue;
+                  db( ELEMENT_DOF_INITIALISED, iel_i, &init_i, ddum, ldum,
+                    VERSION_NORMAL, GET );
+                  if ( init_i!=1 ) continue;
+                  group_i = 0;
+                  db( ELEMENT_GROUP, iel_i, &group_i, ddum, ldum,
+                    VERSION_NORMAL, GET_IF_EXISTS );
+                  if ( db_active_index( GROUP_INTERFACE, group_i,
+                      VERSION_NORMAL ) ) continue;
+                  db( ELEMENT, iel_i, el_i, ddum, length_el_i,
+                    VERSION_NORMAL, GET );
+                  long int nnol_i = length_el_i - 1;
+                  if ( !element_intpnt_supported( el_i[0], nnol_i ) ) continue;
+                  long int all_in_i = 1;
+                  for ( inol_i=0; inol_i<nnol_i; inol_i++ ) {
+                    if ( reset_dof_node_filter &&
+                         !reset_dof_node_filter[el_i[1+inol_i]] ) all_in_i = 0;
+                  }
+                  if ( !all_in_i ) continue;
+                  for ( inol_i=0; inol_i<nnol_i; inol_i++ )
+                    db( NODE, el_i[1+inol_i], idum, &coord_i[inol_i*ndim],
+                      ldum, VERSION_NORMAL, GET );
+                  pol( iel_i, group_i, el_i[0], nnol_i, coord_i, coord_i,
+                    npoint_i, h_i, old_d_i, new_d_i, new_b_i, volume_i );
+                  double *ip_i = db_dbl( ELEMENT_INTPNT_DOF, iel_i,
+                    VERSION_NORMAL );
+                  len_ip = db_len( ELEMENT_INTPNT_DOF, iel_i, VERSION_NORMAL );
+                  for ( long int ipnt=0; ipnt<npoint_i &&
+                        (ipnt+1)*nuknwn<=len_ip; ipnt++ ) {
+                    for ( idim=0; idim<ndim; idim++ ) {
+                      xyz_i[idim] = 0.;
+                      for ( inol_i=0; inol_i<nnol_i; inol_i++ )
+                        xyz_i[idim] += h_i[ipnt*nnol_i+inol_i] *
+                          coord_i[inol_i*ndim+idim];
+                    }
+                    double *dof_ip = &ip_i[ipnt*nuknwn];
+                    double val_ip = reset_value_at( xyz_i, dof_ip, nuknwn );
+                    if      ( reset_method==-ADD ) dof_ip[indx_ip] += val_ip;
+                    else if ( reset_method==-MULTIPLY ) dof_ip[indx_ip] *= val_ip;
+                    else                             dof_ip[indx_ip] = val_ip;
+                  }
+                }
+                check_element_shape_factor = save_shape_factor_i;
+                delete[] h_i;
+                delete[] old_d_i;
+                delete[] new_d_i;
+                delete[] new_b_i;
+                delete[] volume_i;
+              }
+            }
+          }
+          // CONVERGENCE (2026-09-03, mohr_coul_direct4): a reset of a
+          // normal stress dof (-sigxx/-sigyy/-sigzz) also initialises the
+          // accumulated normal strain of the interface elements whose
+          // normal aligns with the reset axis: sigma_n := reset_value ->
+          // ELEMENT_INTERFACE_STRAIN_NORMAL := reset_value/kn. Verified
+          // against the Professional .dbs: mohr_coul_direct4 resets
+          // -sigyy to -1 and the horizontal interface carries
+          // sigma_n = -1 (eps_n = -1e-6 with kn = 1e6) through the whole
+          // run, so the yield limit sees c + |Fn|*tan(phi) = 1.20271
+          // instead of the unconfined cohesion c. (Only the CONSTANT part
+          // seeds the interface pre-stress: the interface strain is a
+          // single value per interface, not a spatial field.)
+          if ( reset_value_constant_found && reset_method!=-ADD &&
+               reset_method!=-MULTIPLY ) {
+            long int reset_axis = -1;
+            const char *reset_name = db_name( labs( idof_reset ) );
+            if ( reset_name && !strcmp( reset_name, "sigxx" ) ) reset_axis = 0;
+            else if ( reset_name && !strcmp( reset_name, "sigyy" ) ) reset_axis = 1;
+            else if ( reset_name && !strcmp( reset_name, "sigzz" ) ) reset_axis = 2;
+            if ( reset_axis>=0 && reset_axis<ndim ) {
+              long int max_element_r = 0, iel_r = 0, length_el_r = 0,
+                element_group_r = 0, inol_r = 0;
+              double ddum_r[1], kn_r = 0., normal_r[MDIM];
+              db_max_index( ELEMENT, max_element_r, VERSION_NORMAL, GET );
+              for ( iel_r=0; iel_r<=max_element_r; iel_r++ ) {
+                if ( !db_active_index( ELEMENT, iel_r, VERSION_NORMAL ) ) continue;
+                element_group_r = 0;
+                db( ELEMENT_GROUP, iel_r, &element_group_r, ddum_r, ldum,
+                  VERSION_NORMAL, GET_IF_EXISTS );
+                if ( !db_active_index( GROUP_INTERFACE, element_group_r,
+                    VERSION_NORMAL ) ) continue;
+                long int el_r[MNOL+1];
+                db( ELEMENT, iel_r, el_r, ddum_r, length_el_r, VERSION_NORMAL, GET );
+                if ( length_el_r<3 ) continue;
+                // normal of the interface plane from the reference
+                // geometry (NODE_START_REFINED, total_linear frame of
+                // interface_element()): 2D normal perpendicular to the
+                // side-1 edge; 3D normal = cross product of the side-1
+                // edges.
+                {
+                  double *ca = db_dbl( NODE_START_REFINED, el_r[1], VERSION_NORMAL );
+                  double *cb = db_dbl( NODE_START_REFINED, el_r[2], VERSION_NORMAL );
+                  if ( ndim==2 ) {
+                    normal_r[0] = -( cb[1] - ca[1] );
+                    normal_r[1] =    cb[0] - ca[0];
+                  }
+                  else if ( length_el_r>=4 ) {
+                    double *cc = db_dbl( NODE_START_REFINED, el_r[3], VERSION_NORMAL );
+                    double e1[MDIM], e2[MDIM];
+                    for ( long int d=0; d<3; d++ ) {
+                      e1[d] = cb[d] - ca[d];
+                      e2[d] = cc[d] - ca[d];
+                    }
+                    normal_r[0] = e1[1]*e2[2] - e1[2]*e2[1];
+                    normal_r[1] = e1[2]*e2[0] - e1[0]*e2[2];
+                    normal_r[2] = e1[0]*e2[1] - e1[1]*e2[0];
+                  }
+                  else continue;
+                }
+                {
+                  double dot = 0.;
+                  for ( long int d=0; d<ndim; d++ ) dot += normal_r[d]*normal_r[d];
+                  if ( dot<1.e-24 ) continue;
+                  dot = normal_r[reset_axis]*normal_r[reset_axis]/dot;
+                  if ( dot<0.99 ) continue;
+                }
+                {
+                  double ddum3_r[DATA_ITEM_SIZE];
+                  array_set( ddum3_r, 0., 3 );
+                  db( GROUP_INTERFACE_MATERI_ELASTI_STIFFNESS, element_group_r,
+                    idum, ddum3_r, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                  kn_r = ddum3_r[0];
+                }
+                if ( kn_r<=0. ) continue;
+                // all nodes of the element inside the reset filter (when
+                // a geometry/node/element_group filter is active)
+                if ( reset_dof_node_filter ) {
+                  long int all_in_r = 1;
+                  for ( inol_r=1; inol_r<length_el_r; inol_r++ ) {
+                    if ( !reset_dof_node_filter[el_r[inol_r]] ) all_in_r = 0;
+                  }
+                  if ( !all_in_r ) continue;
+                }
+                {
+                  long int ns1_r = ( length_el_r-1 )/2;
+                  double strain_r[9], force_norm_r[9];
+                  for ( inol_r=0; inol_r<ns1_r && inol_r<9; inol_r++ ) {
+                    strain_r[inol_r] = reset_value_constant / kn_r;
+                    // ELEMENT_INTERFACE_FORCE_NORM stores the accumulated
+                    // contact normal STRESS the interface record and
+                    // assembly carry; it starts from the pre-stress value
+                    // (stress,normal = kn * eps with eps = value/kn).
+                    force_norm_r[inol_r] = reset_value_constant;
+                  }
+                  ldum = ns1_r;
+                  db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_r, idum, strain_r,
+                    ldum, VERSION_NORMAL, PUT );
+                  db( ELEMENT_INTERFACE_STRAIN_NORMAL, iel_r, idum, strain_r,
+                    ldum, VERSION_NEW, PUT );
+                  db( ELEMENT_INTERFACE_FORCE_NORM, iel_r, idum, force_norm_r,
+                    ldum, VERSION_NORMAL, PUT );
+                  db( ELEMENT_INTERFACE_FORCE_NORM, iel_r, idum, force_norm_r,
+                    ldum, VERSION_NEW, PUT );
+                }
+              }
+            }
+          }
+        }
+        }
+        }   // end dof list loop
+      }
+      delete[] reset_dof;
+      delete[] reset_value_dof;
+      delete[] reset_value_diagram;
 
   delete[] dof_label;
   delete[] integer_range;

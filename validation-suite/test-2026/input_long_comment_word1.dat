@@ -1,0 +1,33 @@
+( F4 T6a / BACKLOG C56: a word longer than the 100-character parser
+  buffer inside a comment, as the URL in line 2 of the Professional
+  ground19_water_under_dam. The old GNU read it with an unbounded
+  cin >> str into char str[100] and wrote past the buffer [ASan stack
+  overflow; the results were right by layout luck]. Now the word is
+  read in pieces of at most 99 characters and the comment is skipped
+  as before: rc 0 and the target below.
+  https://example.org/a/very/long/path/that/goes/on/and/on/well/past/the/hundred/character/limit/of/the/tochnog/parser/buffer/index.html
+  Also a word of exactly 99 characters, the longest one that fits:
+  abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstu )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+( a long word in a comment in the data part, with the closing
+  parenthesis inside the long word itself:
+  https://example.org/another/very/long/path/that/goes/on/and/on/well/past/the/hundred/character/limit/x.html)
+node  1  0
+node  2  1
+element  1  -bar2 1 2
+group_type  0  -materi
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -total_linear
+bounda_dof  0  1 -velx
+bounda_time  0  0. 0. 100. 0.
+bounda_dof  1  2 -velx
+bounda_time  1  0. 0.01 100. 0.01
+control_timestep  0  1. 1.
+target_item  0  -node_dof 2 -sigxx
+target_value  0  10. 1.e-6
+end_data

@@ -1,0 +1,45 @@
+( C110 {owner 2026-11-05}: post_node_rhside_fixed / _free {manual Professional
+  6.948, 6.949} are the signed sums of node_rhside over the prescribed / free
+  nodes per principal dof; post_node_rhside_ratio {6.950} is, per principal
+  dof, the mean |node_rhside| of the free nodes over that of the fixed nodes,
+  the largest over the dofs. Same input as post_node_rhside_ratio_method1
+  without the method record. Professional 02-08-2026: fixed -3.98859
+  0.0908132, free 3.98859 -0.0908132, ratio 12.9442 {vely:
+  1.17548/0.0908132}. Checked in scripts/build_safe.sh. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_plasti
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  2 0
+node 4  3 0
+node 5  0 1
+node 6  1 1
+node 7  2 1
+node 8  3 1
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+element_group 3 1
+group_type 0 -materi
+group_type 1 -materi
+group_materi_elasti_young 0 100.
+group_materi_elasti_young 1 1000.
+group_materi_memory 0 -total_linear
+group_materi_memory 1 -total_linear
+bounda_dof 1 -ra 1 5 -ra -velx
+bounda_dof 2 1 -vely
+bounda_dof 3 -ra 4 8 -ra -velx
+bounda_time 3 0. 0. 1. 0.1
+geometry_point 1  3 0 1.e-4
+geometry_line 2  3 0 3 1 1.e-4
+
+group_materi_plasti_vonmises 1 1.
+group_materi_plasti_vonmises 0 1.
+control_timestep_iterations 0 2
+control_timestep 0 1. 1.
+end_data

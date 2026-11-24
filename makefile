@@ -2,18 +2,53 @@
 # Modified by Fernando Lorenzo on 9-25-2010 to use Lapack Solver
 # Modified by Fernando Lorenzo on  April 1st 2011 to add Von Mises Stresses
 
-#***********  fortran 2 c *******************
-# Set F2C (for unix -lf2c and for MS windows if using Visual C++ to f2c.lib)
-
-F2C= -lf2c 
 #  ***********  hypoplasticity ****************
 # For hypoplasticity:
-#    install f2c on your computer (also see F2C above)
 #    set HYPO_USE to 1 in tnhypo.h
 #    set HYPO_SRC to hypo.c below
 #    set HYPO_OBJ to hypo.o below
+#    hypo.c is a pure-C port (no libf2c needed)
 HYPO_SRC=hypo.c
 HYPO_OBJ=hypo.o
+
+#  ***********  Masin clay hypoplasticity ****************
+# masin.c is a pure-C port of the reference Fortran umat_hcea.for
+# (Masin 2014 clay hypoplasticity, GPL). Built like hypo.c.
+# masin_visco.c is the visco extension (Jerman & Masin 2020, umat_visco.f).
+MASIN_SRC=masin.c
+MASIN_OBJ=masin.o
+MASIN_BASIC_SRC=masin_basic.c
+MASIN_BASIC_OBJ=masin_basic.o
+MASIN_VISCO_SRC=masin_visco.c
+MASIN_VISCO_OBJ=masin_visco.o
+
+#  ***********  SQLite (optional, tabular export) ******************
+SQLITE_SRC=sqlite.cc
+SQLITE_OBJ=sqlite.o
+PRINT_TB_SRC=print_tb.cc
+PRINT_TB_OBJ=print_tb.o
+PRINT_FR_SRC=print_fr.cc
+PRINT_FR_OBJ=print_fr.o
+PRINT_IFACE_STRESS_SRC=print_interface_stress.cc
+PRINT_IFACE_STRESS_OBJ=print_interface_stress.o
+PRINT_NODE_SRC=print_node.cc
+PRINT_NODE_OBJ=print_node.o
+PRINT_BEAM_FORCE_MOMENT_SRC=print_beam_force_moment.cc
+PRINT_BEAM_FORCE_MOMENT_OBJ=print_beam_force_moment.o
+PRINT_MATERI_STRESS_FORCE_SRC=print_materi_stress_force.cc
+PRINT_MATERI_STRESS_FORCE_OBJ=print_materi_stress_force.o
+CALCUL_FORCE_SRC=calcul_force.cc
+CALCUL_FORCE_OBJ=calcul_force.o
+DERIVED_SRC=derived.cc
+DERIVED_OBJ=derived.o
+
+#  ***********  INCREMENTAL_DRIVER (manual Professional 6.784) ******
+INCRE_SRC=incremental.cc
+INCRE_OBJ=incremental.o
+
+#  ***********  SANISAND (Dafalias & Manzari 2004) ******************
+SANISAND_SRC=sanisand.c
+SANISAND_OBJ=sanisand.o
 
 #  ***********  profiler ***********************
 # for the gnu profiler, use as follows:
@@ -34,7 +69,7 @@ COMPILER_C=bcc32
 COMPILER_CPP=bcc32
 COMPILER_FLAGS= -c -O2 -w-
 OBJ=obj
-LINK_FLAGS_BEFORE= -l$(F2C)
+LINK_FLAGS_BEFORE= 
 LINK_FLAGS_AFTER=
 
 #  ***********  SUPERLU library *******************
@@ -76,8 +111,18 @@ LAPACK_LIB=
 #
 #  ***********  All libraries *******************
 
-ALL_INCLUDE= $(PETSC_INCLUDE) $(SUPERLU_INCLUDE) $(LAPACK_INCLUDE)
-ALL_LIB=  $(LAPACK_LIB)  $(BLAS_LIB) $(F2C) -lm $(PETSC_LIB) $(SUPERLU_LIB)
+ALL_INCLUDE= $(PETSC_INCLUDE) $(SUPERLU_INCLUDE) $(LAPACK_INCLUDE) $(SQLITE_INCLUDE)
+#  ***********  SQLite library (optional, for tabular export) ***********
+# For SQLite usage (control_print_tabular -sqlite):
+#   1. Set SQLITE_USE to 1 in tn_sqlite.h
+#   2. Activate and adjust the next two lines
+SQLITE_INCLUDE=-I/usr/include
+SQLITE_LIB=-lsqlite3
+#   3. Requires the SQLite development headers (libsqlite3-dev on Debian).
+#      If compiled without SQLITE_USE, requesting -sqlite prints a warning
+#      and falls back to CSV.
+
+ALL_LIB=  $(LAPACK_LIB)  $(BLAS_LIB) -lm $(PETSC_LIB) $(SUPERLU_LIB) $(SQLITE_LIB)
 
 #  ***********  default platform  *******************
 default: darwin-intel
@@ -100,7 +145,7 @@ visual_cpp:
 	"COMPILER_CPP=cl" \
 	"COMPILER_FLAGS= /c /O2 $(PROFILE)" \
 	"LINK_FLAGS_BEFORE=" \
-	"LINK_FLAGS_AFTER= /link $(F2C) $(PROFILE) /OUT:tochnog.exe"
+	"LINK_FLAGS_AFTER= /link $(PROFILE) /OUT:tochnog.exe"
 
 # multi processor windows; visual c++ compiler
 visual_cpp_parallel:
@@ -113,7 +158,7 @@ visual_cpp_parallel:
 	"COMPILER_CPP=cl" \
 	"COMPILER_FLAGS= /MT /c /O2 $(PROFILE)" \
 	"LINK_FLAGS_BEFORE=" \
-	"LINK_FLAGS_AFTER= /link $(F2C) $(PROFILE) /OUT:tochnog.exe"
+	"LINK_FLAGS_AFTER= /link $(PROFILE) /OUT:tochnog.exe"
 
 # Mac OSX; gnu gcc compiler -undefined dynamic_lookup
 # Use this option to build tochnog with code optimized for darwin-intel64bit:
@@ -168,6 +213,51 @@ linux_insure:
 	"COMPILER_FLAGS= -ansi -g -c -Wall $(PROFILE) $(ALL_INCLUDE)" \
 	"LINK_FLAGS_BEFORE=" \
 	"LINK_FLAGS_AFTER= $(PROFILE) $(ALL_LIB) -static -lm -o tochnog"
+
+#  ***********  quality/CI targets (linux; gnu gcc) ******************
+# Objetivos de calidad del PLAN.md (auditoria y endurecimiento):
+#   make audit   -> compila TODO con -Wall -Wextra -Wpedantic (sin
+#                   sanitizers) para revisar warnings. Legacy C-style:
+#                   MUCHOS warnings esperables; NO se corrigen aqui.
+#   make asan    -> compila y linka con -fsanitize=address,undefined
+#                   -fno-omit-frame-pointer -g -O1 (ASan + UBSan juntos,
+#                   decision PLAN.md) y corre la suite interna con
+#                   ASAN_OPTIONS=detect_leaks=0 (los leaks son un
+#                   ejercicio aparte; aqui se cazan errores de memoria).
+#   make ubsan   -> variante undefined-only (-fsanitize=undefined).
+#
+# El build canonico (scripts/build_safe.sh) compila con -O2 desde F4 T13
+# (2026-10-10); los targets de sanitizers anaden -O1 al final a proposito
+# (TN_EXTRA_FLAGS va despues, gana el ultimo -O): trazas legibles y el
+# mismo nivel con el que se validaron.
+#
+# Implementacion: cada target delega en scripts/build_safe.sh (la misma
+# resolucion de dependencias y el mismo runner de la suite) y SOLO anade
+# flags via TN_EXTRA_FLAGS. El binario sale en build/tochnog-<modo>, asi
+# el build/tochnog por defecto no se pisa. Cada build de calidad es LIMPIO
+# (recompila todos los .o con los flags nuevos); los .o resultantes quedan
+# en el arbol, asi que para volver al build por defecto corre
+# ./scripts/build_safe.sh --clean (solo las builds limpias son fiables en
+# este arbol, ver AGENTS.md).
+.PHONY: audit asan ubsan
+
+audit:
+	TN_EXTRA_FLAGS="-Wall -Wextra -Wpedantic" \
+	TN_BIN=tochnog-audit \
+	./scripts/build_safe.sh --clean
+
+asan:
+	TN_EXTRA_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g -O1" \
+	TN_BIN=tochnog-asan \
+	TN_MEMLIMIT_KB=unlimited \
+	ASAN_OPTIONS=detect_leaks=0 \
+	./scripts/build_safe.sh --clean
+
+ubsan:
+	TN_EXTRA_FLAGS="-fsanitize=undefined -fno-omit-frame-pointer -g -O1" \
+	TN_BIN=tochnog-ubsan \
+	TN_MEMLIMIT_KB=unlimited \
+	./scripts/build_safe.sh --clean
 
 # single processor hp unix; hp CC compiler
 hp: 
@@ -248,13 +338,13 @@ alpha_parallel:
 	"LINK_FLAGS_AFTER= $(PROFILE) $(ALL_LIB) -lm -o tochnog"
 
 # NOTICE THAT SINCE WE ARE USING THE LAPACK LIBRARY BUILT WITH YOUR SYSTEM, WE DO NOT 
-# BUILD THE clapack.c É However, you need to have it to do eigenvalues or if you want 
+# BUILD THE clapack.c ï¿½ However, you need to have it to do eigenvalues or if you want 
 # a fast solver. Most Linux applications allow you to install Lapack and Blas 
 
 # In lines below I removed ---clapack.$(OBJ) 
 
 tochnog: adjust.$(OBJ) area.$(OBJ) \
-	beam.$(OBJ) bounda.$(OBJ) calcul.$(OBJ) \
+	beam.$(OBJ) bounda.$(OBJ) calcul.$(OBJ) $(CALCUL_FORCE_OBJ) \
 	change.$(OBJ) check.$(OBJ) \
 	condif.$(OBJ) \
 	contact.$(OBJ) conspr.$(OBJ) \
@@ -264,33 +354,37 @@ tochnog: adjust.$(OBJ) area.$(OBJ) \
 	dof.$(OBJ) elasti.$(OBJ) elem.$(OBJ) \
 	error.$(OBJ) extrude.$(OBJ) failure.$(OBJ) \
 	filter.$(OBJ) force.$(OBJ) general.$(OBJ) \
-	geometry.$(OBJ) generate.$(OBJ) \
+	geometry.$(OBJ) geometry_moving.$(OBJ) generate.$(OBJ) \
 	groundda.$(OBJ) groundfl.$(OBJ) group.$(OBJ) \
-        hyperela.$(OBJ) $(HYPO_OBJ) \
+        hyperela.$(OBJ) $(HYPO_OBJ) $(MASIN_OBJ) $(MASIN_BASIC_OBJ) $(MASIN_VISCO_OBJ) $(SANISAND_OBJ) $(SQLITE_OBJ) \
 	hypoplas.$(OBJ) initia.$(OBJ) \
 	input.$(OBJ) integra.$(OBJ) intersec.$(OBJ) \
 	inverse.$(OBJ) locate.$(OBJ) \
 	macro.$(OBJ) map.$(OBJ) mat_diff.$(OBJ) \
 	materi.$(OBJ) math.$(OBJ) maxwell.$(OBJ) \
-	membrane.$(OBJ) merge.$(OBJ) mesh.$(OBJ) \
-	miscel.$(OBJ) new_mesh.$(OBJ) \
+	membrane.$(OBJ) merge.$(OBJ) mesh.$(OBJ) mesh_map.$(OBJ) \
+	mesh_remove.$(OBJ) \
+	miscel.$(OBJ) mpc.$(OBJ) new_mesh.$(OBJ) \
 	node.$(OBJ) nonloc.$(OBJ) order.$(OBJ) \
 	plasti.$(OBJ) plasti_i.$(OBJ)  \
 	point_el.$(OBJ) \
+	safety_slip.$(OBJ) \
 	polynom.$(OBJ) post.$(OBJ) \
 	pri.$(OBJ) print_db.$(OBJ) \
 	print_da.$(OBJ) print_dx.$(OBJ) print_el.$(OBJ) \
-	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ)\
-	print_gm.$(OBJ) print_hi.$(OBJ) \
+	print_gi.$(OBJ) print_g5.$(OBJ) print_g6.$(OBJ) mesh_gid.$(OBJ)\
+	print_gm.$(OBJ) print_hi.$(OBJ) print_dl.$(OBJ) print_node.$(OBJ) \
+	$(PRINT_BEAM_FORCE_MOMENT_OBJ) $(PRINT_MATERI_STRESS_FORCE_OBJ) \
 	print_pl.$(OBJ) print_ma.$(OBJ) print_rs.$(OBJ) \
-	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) \
+	print_te.$(OBJ) print_un.$(OBJ) print_vt.$(OBJ) print_tb.$(OBJ) $(PRINT_FR_OBJ) $(PRINT_IFACE_STRESS_OBJ) $(DERIVED_OBJ) \
 	project.$(OBJ) range.$(OBJ) \
 	refine_g.$(OBJ) refine_l.$(OBJ) remesh.$(OBJ) \
 	renumber.$(OBJ) repeat.$(OBJ) restart.$(OBJ) \
 	slide.$(OBJ) \
-	so.$(OBJ) so_bicg.$(OBJ) \
+	so.$(OBJ) so_bicg.$(OBJ) so_suplu.$(OBJ) \
 	   split.$(OBJ) \
-	spring.$(OBJ) stress.$(OBJ) \
+	spring.$(OBJ) stress.$(OBJ) interface.$(OBJ) \
+	$(INCRE_OBJ) \
 	$(SYS_FILE).$(OBJ) tendon.$(OBJ) time.$(OBJ) tn.$(OBJ) \
 	top.$(OBJ) truss.$(OBJ) \
 	umat.$(OBJ) unknown.$(OBJ) user.$(OBJ) \
@@ -370,6 +464,9 @@ error.$(OBJ): error.$(SRC_CPP) tochnog.h
 extrude.$(OBJ): extrude.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)extrude.$(SRC_CPP)
 
+geometry_moving.$(OBJ): geometry_moving.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)geometry_moving.$(SRC_CPP)
+
 failure.$(OBJ): failure.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)failure.$(SRC_CPP)
 
@@ -402,6 +499,21 @@ hyperela.$(OBJ): hyperela.$(SRC_CPP) tochnog.h
 
 $(HYPO_OBJ): $(HYPO_SRC)
 	$(COMPILER_C) $(COMPILER_FLAGS) $(HYPO_SRC)
+
+$(MASIN_OBJ): $(MASIN_SRC)
+	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_SRC)
+
+$(MASIN_BASIC_OBJ): $(MASIN_BASIC_SRC)
+	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_BASIC_SRC)
+
+$(MASIN_VISCO_OBJ): $(MASIN_VISCO_SRC)
+	$(COMPILER_C) $(COMPILER_FLAGS) $(MASIN_VISCO_SRC)
+
+$(SANISAND_OBJ): $(SANISAND_SRC)
+	$(COMPILER_C) $(COMPILER_FLAGS) $(SANISAND_SRC)
+
+$(SQLITE_OBJ): $(SQLITE_SRC)
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(SQLITE_SRC)
 
 hypoplas.$(OBJ): hypoplas.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)hypoplas.$(SRC_CPP)
@@ -451,8 +563,20 @@ merge.$(OBJ): merge.$(SRC_CPP) tochnog.h
 mesh.$(OBJ): mesh.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh.$(SRC_CPP)
 
+mesh_map.$(OBJ): mesh_map.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh_map.$(SRC_CPP)
+
+mesh_remove.$(OBJ): mesh_remove.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh_remove.$(SRC_CPP)
+
+safety_slip.$(OBJ): safety_slip.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)safety_slip.$(SRC_CPP)
+
 miscel.$(OBJ): miscel.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)miscel.$(SRC_CPP)
+
+mpc.$(OBJ): mpc.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mpc.$(SRC_CPP)
 
 new_mesh.$(OBJ): new_mesh.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)new_mesh.$(SRC_CPP)
@@ -505,11 +629,29 @@ print_g5.$(OBJ): print_g5.$(SRC_CPP) tochnog.h
 print_g6.$(OBJ): print_g6.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_g6.$(SRC_CPP)
 
+mesh_gid.$(OBJ): mesh_gid.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)mesh_gid.$(SRC_CPP)
+
 print_gm.$(OBJ): print_gm.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_gm.$(SRC_CPP)
 
 print_hi.$(OBJ): print_hi.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_hi.$(SRC_CPP)
+
+print_dl.$(OBJ): print_dl.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_dl.$(SRC_CPP)
+
+print_node.$(OBJ): print_node.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_node.$(SRC_CPP)
+
+print_beam_force_moment.$(OBJ): print_beam_force_moment.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_beam_force_moment.$(SRC_CPP)
+
+print_materi_stress_force.$(OBJ): print_materi_stress_force.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_materi_stress_force.$(SRC_CPP)
+
+calcul_force.$(OBJ): calcul_force.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)calcul_force.$(SRC_CPP)
 
 print_ma.$(OBJ): print_ma.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_ma.$(SRC_CPP)
@@ -528,6 +670,18 @@ print_un.$(OBJ): print_un.$(SRC_CPP) tochnog.h
 
 print_vt.$(OBJ): print_vt.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_vt.$(SRC_CPP)
+
+print_tb.$(OBJ): print_tb.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)print_tb.$(SRC_CPP)
+
+$(DERIVED_OBJ): $(DERIVED_SRC) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)$(DERIVED_SRC)
+
+$(PRINT_FR_OBJ): $(PRINT_FR_SRC) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)$(PRINT_FR_SRC)
+
+$(PRINT_IFACE_STRESS_OBJ): $(PRINT_IFACE_STRESS_SRC) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)$(PRINT_IFACE_STRESS_SRC)
 
 project.$(OBJ): project.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)project.$(SRC_CPP)
@@ -562,6 +716,9 @@ so.$(OBJ): so.$(SRC_CPP) tochnog.h
 so_bicg.$(OBJ): so_bicg.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)so_bicg.$(SRC_CPP)
 
+so_suplu.$(OBJ): so_suplu.c tochnog.h tnsuplu.h
+	$(COMPILER_C) $(COMPILER_FLAGS) so_suplu.c
+
 #so_petsc.$(OBJ): so_petsc.$(SRC_C) tochnog.h
 #	$(COMPILER_C) $(COMPILER_FLAGS) so_petsc.$(SRC_C)
 
@@ -570,6 +727,12 @@ split.$(OBJ): split.$(SRC_CPP) tochnog.h
 
 spring.$(OBJ): spring.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)spring.$(SRC_CPP)
+
+interface.$(OBJ): interface.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)interface.$(SRC_CPP)
+
+incremental.$(OBJ): incremental.$(SRC_CPP) tochnog.h
+	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)incremental.$(SRC_CPP)
 
 stress.$(OBJ): stress.$(SRC_CPP) tochnog.h
 	$(COMPILER_CPP) $(COMPILER_FLAGS) $(BCPP) $(VCPP)stress.$(SRC_CPP)

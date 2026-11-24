@@ -25,31 +25,54 @@
 long int 
   echo=0, ndim=-1, derivatives=0, 
   beam_rotation=0, condif_temperature=0, 
-  groundflow_velocity=0, groundflow_pressure=0, 
+  groundflow_velocity=0, groundflow_pressure=0, groundflow_saturation=0,
+  groundflow_pressure_gradient=0,
   materi_history_variables=0, materi_damage=0, materi_density=0, 
-  materi_displacement=0, materi_diffusion=0, materi_maxwell_stress=0, 
+  materi_displacement=0, materi_displacement_relative=0, materi_diffusion=0, materi_maxwell_stress=0, 
   materi_plasti_incremental_substeps=0,
   materi_plasti_kappa=0, materi_strain_intergranular=0,
+  materi_plasti_cap1_history=0,
+  materi_plasti_camclay_history=0,
+  materi_plasti_diprisco_history=0,
+  materi_plasti_hypo_history=0, materi_plasti_kappa_shear=0,
+  materi_plasti_hardsoil_history=0, materi_strain_plasti_hardsoil=0,
+  materi_strain_plasti_cap=0, materi_strain_plasti_compression=0,
+  materi_strain_plasti_diprisco=0, materi_strain_plasti_druckprag=0,
+  materi_strain_plasti_camclay=0, materi_strain_plasti_mohr_coul=0,
+  materi_strain_plasti_tension=0, materi_strain_plasti_vonmises=0,
+  materi_plasti_gencam_bonded_history=0, materi_strain_plasti_gencam_bonded=0,
+  materi_strain_total_kappa=0, materi_strain_total_compression_kappa=0,
+  materi_strain_total_shear_kappa=0, materi_strain_total_tension_kappa=0,
   materi_plasti_rho=0, materi_plasti_f=0, materi_plasti_f_nonlocal=0,
   materi_plasti_softvar_local=0,
   materi_plasti_softvar_nonlocal=0,
-  materi_strainenergy=0, materi_strain_elasti=0, 
+  materi_strainenergy=0, materi_plasti_phimob=0, materi_strain_elasti=0, 
   materi_strain_plasti=0, materi_strain_total=0,
   materi_stress=0, materi_velocity=0, materi_velocity_integrated=0,
+  materi_acceleration=0,
+  materi_stress_pressure_history=0,
   materi_void_fraction=0, materi_work=0, 
   maxwell_e=0, maxwell_fe=0, maxwell_er=0, maxwell_ei=0,
   residue=0, wave_scalar=0, wave_fscalar=0,
   find_local_softvar=0, find_nonlocal_weights=0, nonlocal_first_set=0;
 long int 
-  any_runtime=0, nder=1, npuknwn=0, nuknwn=0, npointmax=6, nprinc=0, dam_indx=-1,
-  dens_indx=-1, diff_indx=-1, dis_indx=-1, ener_indx=-1,
+  any_runtime=0, nder=1, npuknwn=0, nuknwn=0, npointmax=27, nprinc=0, dam_indx=-1,
+  dens_indx=-1, diff_indx=-1, dis_indx=-1, dis_rel_indx=-1, ener_indx=-1, phimob_indx=-1,
   epe_indx=-1, epi_indx=-1, epp_indx=-1, ept_indx=-1,
+  hsepp_indx=-1,
+  capepp_indx=-1, cepp_indx=-1, depp_indx=-1, dpepp_indx=-1,
+  camepp_indx=-1, mcepp_indx=-1, tnepp_indx=-1, vmepp_indx=-1,
+  gencamepp_indx=-1,
+  eptk_indx=-1, eptkc_indx=-1, eptks_indx=-1, eptkt_indx=-1,
   maxfe_indx=-1, maxe_indx=-1, maxer_indx=-1, maxei_indx=0,
-  gvel_indx=-1, hisv_indx=-1, kap_indx=-1, f_indx=-1, fn_indx=-1,
+  gvel_indx=-1, hisv_indx=-1, kap_indx=-1, kapsh_indx=-1, f_indx=-1, fn_indx=-1,
+  cap1_indx=-1,
   mstres_indx=-1, pres_indx=-1, res_indx=-1, rho_indx=-1,
-  rot_indx=-1, scal_indx=-1, stres_indx=-1, substeps_indx=-1,
+  gsat_indx=-1, pres_grad_indx=-1,
+  rot_indx=-1, scal_indx=-1, stres_indx=-1, sph_indx=-1, substeps_indx=-1,
   svloc_indx=-1, svnonloc_indx=-1,
   temp_indx=-1, fscal_indx=-1, vel_indx=-1,
+  acc_indx=-1,
   veli_indx=-1, void_indx=-1, work_indx=-1;
 char 
   data_file[MCHAR], 
@@ -60,7 +83,8 @@ char
 long int 
   map_version_from=0, map_version_to=0, map_always=0;
 long int 
-  post_found=0, post_node[4], post_node_length=0, npost_node=0;
+  post_found=0, post_node[4], post_node_length=0, npost_node=0,
+  post_stale=0, post_element_force_stale=0;
 double 
   post_point[MDIM], post_point_dof[MUKNWN], post_node_result[DATA_ITEM_SIZE];
 long int 
@@ -86,7 +110,22 @@ char
   swit_routine_stack[MSTACK][MCHAR];
 	// added for options_element_dof
 long int options_element_dof=-YES;
+// global_element_dof_apply -only (manual Professional 6.553)
+long int element_dof_only=0;
+// print_precision (manual Professional 6.997)
+long int tn_print_precision=12;
 double options_nonlocal_softvar=0;
+long int check_used=-NO;
+long int check_target=-YES;
+long int check_error=-YES;
+long int check_warning=-YES;
+long int check_nan=-NO;
+long int check_data=-NO;
+long int check_memory=-NO;
+long int check_memory_usage=-NO;
+double check_memory_usage_result=0.;
+double check_solver_eps=0.;
+double check_element_shape_factor=0.;
 
 
 void initialize( void )

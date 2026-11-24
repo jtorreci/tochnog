@@ -1,0 +1,40 @@
+( F5 T3 C114: wall reduction of group_materi_plasti_druck_prag through
+  group_materi_plasti_mpc: phi, phi_flow and c times 2/3 on element 2
+  {nodes 5, 6 in the mpc}. Node 5 sigyy -2.83937; Professional 02-08-2026
+  -2.83475, equal to its explicit reduced group; node 1 unchanged.
+  Reducing phi alone gives -4.24546 in the Professional; before C114
+  the GNU kept c: -4.25110. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_plasti
+materi_plasti_kappa_shear
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 2 0
+node 6 2 1
+element 1 -quad4 1 2 3 4
+element 2 -quad4 2 5 4 6
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_materi_plasti_druck_prag 0 0.5 1. 0.
+group_materi_plasti_mpc 0 -yes
+geometry_line 1 0 0 2 0 0.01
+geometry_line 2 0 0 0 1 0.01
+geometry_line 3 0 1 2 1 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+bounda_dof 2 -geometry_line 3 -vely
+bounda_time 2 0 -0.02 100 -0.02
+mpc_node_number 0 6 -velx 5 -velx
+control_timestep 0 0.1 1.
+target_item 0 -node_dof 5 -sigyy
+target_value 0 -2.83937 1.e-4
+end_data

@@ -1,0 +1,83 @@
+( C85 {F4 T6f, 2026-10-17}: lumped condif absorption of the
+  AXISYMMETRIC tria6 [same mesh as tria6_condif_absorption_hrz1, every
+  group -axisymmetric; element 1 has two nodes on the axis r = 0].
+  Uniform initial temperature 1, density 1, capacity 1, absorption 1, no
+  conductivity: every node obeys dT/dt = -T, one implicit step of dt 0.1
+  gives T = 1/1.1 = 0.909090909091 at EVERY node when the absorption
+  [condif.cc] and the capacity [general.cc] use the same lumped weight
+  [tria6: the r-weighted HRZ weight, deliberate divergence TRIA6-HRZ;
+  quad4 control: h]. With the plain weight h the tria6 absorption uses
+  the r-weighted row sum [zero / negative at corners] against the HRZ
+  capacity, and the corners do not decay at the rate 1. )
+echo -no
+number_of_space_dimensions 2
+condif_temperature
+end_initia
+inertia_apply -yes
+node 1 0. 0.
+node 2 .5 0.
+node 3 1. 0.
+node 4 0. .5
+node 5 .5 .5
+node 6 0. 1.
+node 7 3. 0.
+node 8 3.5 0.
+node 9 4. 0.
+node 10 3. .5
+node 11 3.5 .5
+node 12 3. 1.
+node 13 6. 0.
+node 14 7. 0.
+node 15 7. 1.
+node 16 6. 1.
+element 1 -tria6 1 2 3 4 5 6
+element 2 -tria6 7 8 9 10 11 12
+element 3 -quad4 13 14 16 15
+element_group 2 1
+node_dof 1 1.
+node_dof 2 1.
+node_dof 3 1.
+node_dof 4 1.
+node_dof 5 1.
+node_dof 6 1.
+node_dof 7 1.
+node_dof 8 1.
+node_dof 9 1.
+node_dof 10 1.
+node_dof 11 1.
+node_dof 12 1.
+node_dof 13 1.
+node_dof 14 1.
+node_dof 15 1.
+node_dof 16 1.
+group_type 0 -condif
+group_condif_density 0 1.
+group_condif_capacity 0 1.
+group_condif_absorption 0 1.
+group_axisymmetric 0 -yes
+group_type 1 -condif
+group_condif_density 1 1.
+group_condif_capacity 1 1.
+group_condif_absorption 1 1.
+group_axisymmetric 1 -yes
+group_integration_points 1 -minimal
+control_timestep 10 .1 .1
+target_item 1 -node_dof 9 -temp
+target_value 1 0.909090909091 1.e-9
+target_item 2 -node_dof 2 -temp
+target_value 2 0.909090909091 1.e-9
+target_item 3 -node_dof 3 -temp
+target_value 3 0.909090909091 1.e-9
+target_item 4 -node_dof 5 -temp
+target_value 4 0.909090909091 1.e-9
+target_item 5 -node_dof 7 -temp
+target_value 5 0.909090909091 1.e-9
+target_item 6 -node_dof 8 -temp
+target_value 6 0.909090909091 1.e-9
+target_item 7 -node_dof 12 -temp
+target_value 7 0.909090909091 1.e-9
+target_item 8 -node_dof 6 -temp
+target_value 8 0.909090909091 1.e-9
+target_item 9 -node_dof 13 -temp
+target_value 9 0.909090909091 1.e-9
+end_data

@@ -32,7 +32,51 @@ void hyperelasticity( long int gr, long int element,
   double ddum[1], new_stress[MDIM*MDIM];
 
   swit = set_swit(element,-1,"hyperelasticity");
+  (void)swit;
   array_set( sig, 0., MDIM*MDIM );
+
+  // group_materi_elasti_borja_tamagnini G0 alpha khat pr (manual
+  // Professional 6.641; Borja, Tamagnini 1998, eq. 3.4-3.12) on the
+  // small elastic strain: P = -pr exp{Omega} {1 + 3 alpha eps_s^2/{2 khat}},
+  // s = 2 mu e, mu = G0 + alpha pr exp{Omega}, Omega = -eps_v/khat.
+  // The stress at zero elastic strain is -pr; the analytic tangent goes
+  // to Chyper.
+  double bt[4];
+  if ( get_group_data( GROUP_MATERI_ELASTI_BORJA_TAMAGNINI, gr, element,
+      unknowns, bt, ldum, GET_IF_EXISTS ) ) {
+    long int idim=0, jdim=0, kdim=0, ldim=0;
+    double g0=bt[0], alpha=bt[1], khat=bt[2], pr=bt[3], eps_v=0.,
+      eps_s2=0., ex=0., p=0., mu=0., k_t=0., dev[MDIM*MDIM];
+    if ( khat<=0. ) {
+      pri( "Error: khat in group_materi_elasti_borja_tamagnini should be larger than 0." );
+      exit(TN_EXIT_STATUS);
+    }
+    eps_v = epe[0] + epe[4] + epe[8];
+    array_move( epe, dev, MDIM*MDIM );
+    for ( idim=0; idim<MDIM; idim++ ) dev[idim*MDIM+idim] -= eps_v/3.;
+    eps_s2 = 2./3. * array_inproduct( dev, dev, MDIM*MDIM );
+    ex = exp( -eps_v/khat );
+    p = -pr * ex * ( 1. + 1.5*alpha*eps_s2/khat );
+    mu = g0 + alpha * pr * ex;
+    k_t = pr * ex / khat * ( 1. + 1.5*alpha*eps_s2/khat );
+    for ( idim=0; idim<MDIM; idim++ ) {
+      for ( jdim=0; jdim<MDIM; jdim++ ) {
+        sig[idim*MDIM+jdim] = 2. * mu * dev[idim*MDIM+jdim];
+        if ( idim==jdim ) sig[idim*MDIM+jdim] += p;
+        for ( kdim=0; kdim<MDIM; kdim++ ) {
+          for ( ldim=0; ldim<MDIM; ldim++ ) {
+            double c = 0.;
+            if ( idim==kdim && jdim==ldim ) c += 2. * mu;
+            if ( idim==jdim && kdim==ldim ) c += k_t - 2. * mu / 3.;
+            if ( idim==jdim ) c -= 2. * alpha * pr * ex / khat * dev[kdim*MDIM+ldim];
+            if ( kdim==ldim ) c -= 2. * alpha * pr * ex / khat * dev[idim*MDIM+jdim];
+            Chyper[idim][jdim][kdim][ldim] = c;
+          }
+        }
+      }
+    }
+    return;
+  }
 
   if ( hyper_stress( gr, element, memory, unknowns, epe, new_stress ) ) {
     array_move( new_stress, sig, MDIM*MDIM );

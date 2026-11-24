@@ -1,0 +1,36 @@
+( bounda_baseline_correction over [0,2] (manual 6.19), F5 T5 U9: the
+  coefficients minimize the sum of the squared velocities of the 20 time
+  steps (backward integration v_n = v_n-1 + a_n*dt, the same as the
+  prescribed acceleration in bounda.cc). Sum of v^2: 21.68 without and
+  6.34e-4 with the correction. The Professional 02-08-2026 gives other
+  coefficients (-0.8183 -1.3759 2.1862) with a fit that could not be
+  reproduced: DIVERGENCES BASELINE-CORRECTION-SIGNAL. )
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof  10  1 -accx
+bounda_time 10  0. 1.  0.5 1.  1. 1.  2. 0.
+bounda_baseline_correction 0. 2.
+control_timestep 10  0.1 2.
+target_item  0  -bounda_baseline_correction_parameters 10 0
+target_value 0  -0.9027362126125 1.e-10
+target_item  1  -bounda_baseline_correction_parameters 10 1
+target_value 1  -1.055204571298 1.e-10
+target_item  2  -bounda_baseline_correction_parameters 10 2
+target_value 2  2.050629834893 1.e-10
+target_item  3  -node_dof 1 -velx
+target_value 3  0.007889681447367 1.e-10
+target_item  4  -node_dof 1 -disx
+target_value 4  0.0007135443694872 1.e-10
+end_data

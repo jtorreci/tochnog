@@ -1,0 +1,36 @@
+( F3/C20: group_materi_memory -updated_jaumann (manual Professional 2.2.1,
+  6.686). Single quad4, simple shear gamma = 0.5 in ONE step, velocity
+  kinematics, young 1, poisson 0, mesh -fixed_in_space. Linear
+  incremental strain, previous plus extra stress rotated with the
+  first-order rotation R = I + 0.5(F-F^T): sigxx 0.125, sigxy 0.234375,
+  sigyy -0.125. Professional 02-08-2026 gives exactly these values.
+  Before F3 GNU rejected the value (Error in data part). )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.0
+group_materi_memory 0 -updated_jaumann
+mesh -fixed_in_space -fixed_in_space
+bounda_dof 0 -ra 1 2 -ra -velx
+bounda_dof 1 -ra 3 4 -ra -velx
+bounda_dof 2 -ra 1 2 3 4 -ra -vely
+bounda_time 1 0. 0.5 1. 0.5
+control_timestep 0 1.0 1.
+control_timestep_iterations 0 20
+target_item 0  -node_dof 4 -sigxx
+target_value 0  0.125 1e-06
+target_item 1  -node_dof 4 -sigxy
+target_value 1  0.234375 1e-06
+target_item 2  -node_dof 4 -sigyy
+target_value 2  -0.125 1e-06
+end_data

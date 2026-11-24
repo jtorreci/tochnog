@@ -1,0 +1,42 @@
+( strain_volume_absolute_time + strain_volume_element (manual 6.1062/6.1063),
+  F5 T5 U8: example other/strain_volume1 of the Professional. One free hex8
+  (volume 4) gets an absolute volume increase of 0.1234 at t = 3.
+  Professional 02-08-2026: post_strain_volume_absolute 0.1234,
+  post_strain_volume_relative 3.085.
+)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+node 1  0 0 0
+node 2  2 0 0
+node 3  0 2 0
+node 4  2 2 0
+node 5  0 0 1
+node 6  2 0 1
+node 7  0 2 1
+node 8  2 2 1
+element 1  -hex8 1 2 3 4 5 6 7 8
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.0e6
+group_materi_elasti_poisson 0  0.2
+group_materi_memory 0  -total_linear
+
+bounda_dof 10  -ra 1 2 5 6 -ra -vely
+bounda_dof 20  -ra 1 3 5 7 -ra -velx
+bounda_dof 30  -ra 1 2 3 4 -ra -velz
+
+strain_volume_absolute_time 10  0. 0. 3. 0.1234 1.e10 0.1234
+strain_volume_element       10  1
+
+control_timestep 10  1. 3.
+
+target_item    1  -post_strain_volume_absolute 10 0
+target_value   1  0.1234 1.e-8
+target_item    2  -post_strain_volume_relative 10 0
+target_value   2  3.085 1.e-8
+end_data

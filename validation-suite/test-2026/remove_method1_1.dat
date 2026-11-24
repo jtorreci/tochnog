@@ -1,0 +1,24 @@
+( F5 T4 U5c: control_mesh_remove -method1 2 1 [6.229] without a geometry:
+  element 7 of group 2 lies on the nodes of element 5 of group 1 and is
+  removed [behaviour before U5c, kept]. Elements = Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 3 2. 0.
+node 4 0. 1.
+node 5 1. 1.
+node 6 2. 1.
+element 2 -quad4 1 2 4 5
+element 5 -quad4 2 3 5 6
+element 7 -quad4 2 3 5 6
+element_group 5 1
+element_group 7 2
+group_type -ra 0 1 2 -ra -materi
+group_materi_elasti_young -ra 0 1 2 -ra 1.
+control_mesh_remove 10 -method1 2 1
+end_data

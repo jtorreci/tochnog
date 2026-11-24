@@ -1,0 +1,54 @@
+(C68, F4 T6f: the damage d (Mazars) is an integration-point state. Four tria3
+ (1-point rule, nodal recovery = arithmetic mean, Professional) on a
+ non-uniform field; HEAD read the h-lumped nodal value back.
+ Targets = Professional 02-08-2026, scratch probe c68_damage3_tri.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+materi_strain_elasti
+materi_damage
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 2
+node 6 2 1
+element 1 -tria3 1 2 4
+element 2 -tria3 2 5 4
+element 3 -tria3 2 3 5
+element 4 -tria3 3 6 5
+bounda_dof 0 1 -velx -vely
+bounda_time 0 0. 0. 1.e10 0.
+bounda_dof 1 2 -vely
+bounda_time 1 0. 0. 1.e10 0.
+bounda_dof 2 3 -vely
+bounda_time 2 0. 0. 1.e10 0.
+bounda_dof 3 4 -vely
+bounda_time 3 0. 0.00035 1.e10 0.00035
+bounda_dof 4 5 -vely
+bounda_time 4 0. 0.00035 1.e10 0.00035
+bounda_dof 5 6 -vely
+bounda_time 5 0. 0.00035 1.e10 0.00035
+group_type 0 -materi
+group_materi_elasti_young 0 23400.e6
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0 -total_linear
+group_materi_damage_mazars 0 2.6e-4 1. 15000. 1.2 649. 1.05
+control_timestep 10 0.1 1.
+target_item 0 -node_rhside 1 -vely
+target_value 0 1.327541036013e+06 1.33e+03
+target_item 1 -node_rhside 2 -vely
+target_value 1 5.429792908188e+06 5.43e+03
+target_item 2 -node_rhside 4 -vely
+target_value 2 -2.427192791777e+06 2.43e+03
+target_item 3 -node_dof 1 -dam
+target_value 3 6.918625053519e-01 1.38e-03
+target_item 4 -node_dof 2 -dam
+target_value 4 2.306208351173e-01 4.61e-04
+target_item 5 -node_dof 5 -dam
+target_value 5 2.332990720767e-01 4.67e-04
+end_data

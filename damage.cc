@@ -29,6 +29,18 @@ void damage( long int gr, double new_epe[], double new_sig[],
   double damage_data[DATA_ITEM_SIZE];
 
   swit = set_swit(-1,-1,"damage");
+
+  // materi_damage_apply (manual Professional 6.798, global) and
+  // control_materi_damage_apply (6.140, per timestep index) -no: ignore
+  // any damage data in the input file for these timesteps (new_damage
+  // stays old_damage). The failure switches do NOT gate damage: measured
+  // on the Professional 02-08-2026, materi_failure_apply -no leaves the
+  // damage evolution unchanged (they gate failure(), see failure.cc).
+  if ( materi_apply_gate_off( MATERI_DAMAGE_APPLY,
+       CONTROL_MATERI_DAMAGE_APPLY ) ) {
+    new_damage = old_damage;
+    return;
+  }
   if ( swit ) pri( "In routine DAMAGE" );
 
   if ( db( GROUP_MATERI_DAMAGE_MAZARS, gr, idum, damage_data, 
@@ -89,7 +101,7 @@ void damage_mazars( double materi_damage_mazars[], double new_epe[], double new_
     epseq = 0.;
     for ( idim=0; idim<MDIM; idim++ ) {
       epssiz += epsp[idim]*epsp[idim];
-      if ( epsp[idim]>0. ) epseq += epseq + epsp[idim]*epsp[idim];
+      if ( epsp[idim]>0. ) epseq += epsp[idim]*epsp[idim];
     }
     epssiz = sqrt( scalar_dabs(epssiz) );
     epseq = sqrt( scalar_dabs(epseq) );

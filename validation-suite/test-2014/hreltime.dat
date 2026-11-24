@@ -1,0 +1,36 @@
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+bounda_force  2  2 -velx
+bounda_time  1  0 0 100 0
+bounda_time  2  0 0.1 100 0.1
+bounda_unknown  1  1 -velx
+control_print_history  20  -node_dof 1 -disx
+control_print_history  21  -node_dof 2 -disx
+control_print_history_relative_time  20  0.2
+control_timestep  20  0.1 0.3
+control_timestep  21  0.1 0.1
+element  1  -bar2 1 2
+geometry_line  1  0 1 0.0001
+group_materi_elasti_young  0  1
+group_materi_memory  0  -total
+group_truss_area  1  1
+group_truss_memory  1  -updated_without_rotation
+group_truss_young  1  1
+group_type  0  -materi
+group_type  1  -truss
+node  1  0
+node  2  1
+options_mesh   -fixed_in_space
+options_processors   1
+options_stabilization   -static
+target_item  0  -node_dof 2 -disx
+target_value  0  0.1 0.01
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

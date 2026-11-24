@@ -19,7 +19,78 @@
 
 #include "tochnog.h"
 
-void  user_bounda_time( long int index, double time_current, double &val )
+void user_slide_friction_force( long int /*inod*/, long int /*islide*/,
+  double /*normal_force*/, double /*tangential_displacement*/,
+  double &/*friction_force*/ )
+
+  /* Purpose: user supplied maximum friction force of a slide
+     (slide_user -yes, manual 6.1044). It replaces the slide_plasti_friction
+     cap c + |Fn|*tan(phi) of the slide_stiffness law.
+
+     You need to skip the error message.
+
+     inod: Input. The node on the slide geometry.
+     islide: Input. The index of the slide_geometry record.
+     normal_force: Input. The normal spring force per unit size
+       (compression positive).
+     tangential_displacement: Input. The size of the tangential slide
+       displacement.
+     friction_force: Input and Output. On input the slide_plasti_friction
+       cap (1.e300 without that record); on output the maximum tangential
+       force per unit size.
+  */
+
+{
+  pri( "Error: routine user_slide_friction_force is not programmed." );
+  exit(TN_EXIT_STATUS);
+}
+
+void user_young( double /*new_unknowns*/[], double /*old_hisv*/[],
+  double /*old_stress*/[], double &/*young*/ )
+
+  /* Purpose: user supplied routine for the young modulus
+     (group_materi_elasti_young_user -yes), for example a degradation
+     of the stiffness in cyclic loading.
+
+     You need to skip the error message.
+
+     new_unknowns: Input. The primary dof values at this integration
+       point at the new time point.
+     old_hisv: Input. The old materi history variables (if initialized).
+     old_stress: Input. The old stresses (xx, xy, xz, yx, yy, yz, zx, zy, zz).
+     young: Input and Output. On input the group_materi_elasti_young value
+       (0 if not given); on output the young modulus to be used.
+  */
+
+{
+  pri( "Error: routine user_young is not programmed." );
+  exit(TN_EXIT_STATUS);
+}
+
+void user_materi_history_variable( double /*parameters*/[],
+  long int /*nparameters*/, double /*new_unknowns*/[], double /*old_hisv*/[],
+  double /*new_hisv*/[], double /*new_stress*/[] )
+
+  /* Purpose: user supplied routine for the materi history variables
+     (group_materi_history_variable_user -yes), called after the stress
+     update of every integration point.
+
+     You need to skip the error message.
+
+     parameters: Input. The group_materi_history_variable_user_parameters
+       values (nparameters of them).
+     new_unknowns: Input. The primary dof values at the new time point.
+     old_hisv: Input. The old materi history variables.
+     new_hisv: Input and Output. The new materi history variables.
+     new_stress: Input. The new stresses.
+  */
+
+{
+  pri( "Error: routine user_materi_history_variable is not programmed." );
+  exit(TN_EXIT_STATUS);
+}
+
+void  user_bounda_time( long int /*index*/, double /*time_current*/, double &/*val*/ )
  
   /* Purpose: user supplied routine for time table for
        bounda_unknown index.
@@ -39,7 +110,7 @@ void  user_bounda_time( long int index, double time_current, double &val )
   exit(0);
 }               
 
-void  user_change_dataitem_time( long int index, double time_current, double &val )
+void  user_change_dataitem_time( long int /*index*/, double /*time_current*/, double &/*val*/ )
 
   /* Purpose: user supplied routine for time table for
        change_dataitem index.
@@ -57,7 +128,7 @@ void  user_change_dataitem_time( long int index, double time_current, double &va
   exit(0);
 }
 
-void  user_change_geometry_time( long int index, double time_current, double &val )
+void  user_change_geometry_time( long int /*index*/, double /*time_current*/, double &/*val*/ )
 
   /* Purpose: user supplied routine for time table for
        change_geometry index.
@@ -75,8 +146,8 @@ void  user_change_geometry_time( long int index, double time_current, double &va
   exit(0);
 }
 
-void user_plasti( long int task, double user_data[], double new_unknowns[], 
-  double old_hisv[], double new_hisv[], double new_stress[], double &f )
+void user_plasti( long int /*task*/, double /*user_data*/[], double /*new_unknowns*/[], 
+  double /*old_hisv*/[], double /*new_hisv*/[], double /*new_stress*/[], double &/*f*/ )
 
   /* Purpose: user supplied routine for calculation of plasticity yield 
        function and flow rule function.
@@ -121,10 +192,10 @@ void user_plasti( long int task, double user_data[], double new_unknowns[],
 }
 
 
-void user_sigma( double user_data[], double new_unknowns[], 
-  double inc_epe[], double old_hisv[],
-  double new_hisv[], double old_stress[], double new_stress[], 
-  double Cuser[3][3][3][3] )
+void user_sigma( double /*user_data*/[], double /*new_unknowns*/[], 
+  double /*inc_epe*/[], double /*old_hisv*/[],
+  double /*new_hisv*/[], double /*old_stress*/[], double /*new_stress*/[], 
+  double /*Cuser*/[3][3][3][3] )
 
   /* Purpose: user supplied routine for adding incremental stresses 
      (stress increments over dt).
@@ -164,7 +235,7 @@ void user_sigma( double user_data[], double new_unknowns[],
 {
 }
 
-void user_viscosity( double user_data[], double new_unknowns[], double &visc )
+void user_viscosity( double /*user_data*/[], double /*new_unknowns*/[], double &/*visc*/ )
 
   /* Purpose: user supplied routine for calculation of viscosity.
 
@@ -186,5 +257,25 @@ void user_viscosity( double user_data[], double new_unknowns[], double &visc )
 
 {
   cout << "\nError: routine user_viscosity not programmed.\n";
+  exit(0);
+}
+
+void user_condif_heat_volume( long int /*ind*/, double /*time*/, double /*coord*/[],
+  double &/*heat*/ )
+
+  /* condif_heat_volume_user -yes: distributed volume heat source defined
+     by the user.
+
+     ind:   Input. Index of the condif_heat_volume record.
+     time:  Input. Total time (time_current + dtime).
+     coord: Input. Coordinates of the integration point.
+     heat:  Output. The heat source value; enters the record as the value
+            of condif_heat_volume (edit this routine to define it).
+
+     Example: heat = 1. + coord[0];
+  */
+
+{
+  cout << "\nError: routine user_condif_heat_volume not programmed.\n";
   exit(0);
 }

@@ -1,0 +1,34 @@
+( C71 replica in post_calcul -materi_stress -force {F4 T6f C79, 2026-10-13}: one axisymmetric quad4 touching the axis in a -lobatto group under uniaxial compression. pol{} integrates it with Gauss {C71, = Professional}, so the section forces must use the Gauss rule too: target = the same model with group_integration_method -gauss {momx_sig 0.166666666667}. GNU before: momx_sig 0.5 {Lobatto points on the axis}. The Professional 02-08-2026 prints zero section forces for this axisymmetric input, so it is not the oracle here. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node  1  0 0
+node  2  1 0
+node  3  0 2
+node  4  1 2
+element  1  -quad4 1 2 3 4
+group_type  0  -materi
+group_axisymmetric  0  -yes
+group_integration_method 0 -lobatto
+group_materi_elasti_poisson  0  0.3
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -total_linear
+bounda_dof  0  -ra 1 2 -ra -vely
+bounda_time  0  0 0 100 0
+bounda_dof  1  -ra 3 4 -ra -vely
+bounda_time  1  0 -0.002 100 -0.002
+bounda_dof  2  -ra 1 3 -ra -velx
+bounda_time  2  0 0 100 0
+post_calcul -materi_stress -force
+post_calcul_materi_stress_force_element_group 0
+post_calcul_materi_stress_force_reference_point 0. 1.
+control_timestep  10  0.1 1
+target_item 0 -node_dof_calcul 1 -momx_sig
+target_value 0 1.66666666667e-01 1.0e-09
+target_item 1 -node_dof_calcul 1 -norx_sig
+target_value 1 1.0 1.0e-09
+end_data

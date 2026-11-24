@@ -1,0 +1,34 @@
+(
+F5 W1 U2: control_reset_value_exponent (manual Professional 6.360)
+ ax e^((bx + cx x)/(dx + ex x)): quad4 x = 1..2, reset sigxx at the
+ no-timestep index 1 with a b c d e = 1 1 1 2 1 (y part 0):
+ e^(2/3) = 1.947734041055 at x = 1, e^(3/4) = 2.117000016613 at x = 2
+ = Professional 02-08-2026 (GNU before: e^(1 + 2x + x)).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+node 1 1 0
+node 2 2 0
+node 3 1 1
+node 4 2 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -updated_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.
+bounda_dof 0 1 -velx -vely
+bounda_dof 1 2 -velx -vely
+bounda_dof 2 3 -velx -vely
+bounda_dof 3 4 -velx -vely
+geometry_quadrilateral 0 0.5 -0.5 2.5 -0.5 0.5 1.5 2.5 1.5 0.01
+control_timestep 0 1 1
+control_reset_dof 1 -sigxx
+control_reset_geometry 1 -geometry_quadrilateral 0
+control_reset_value_exponent 1 1 1 1 2 1 0 1 0 1 0
+target_item 0 -node_dof 1 -sigxx
+target_value 0 1.947734041055 1.e-9
+target_item 1 -node_dof 2 -sigxx
+target_value 1 2.117000016613 1.e-9
+end_data

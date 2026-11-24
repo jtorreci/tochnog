@@ -1,0 +1,62 @@
+( F5 T2 V9: post_count, post_data / _factor / _result, post_node_factor,
+  post_group_volume_summed and post_strain_volume_initial (manual
+  Professional 6.923-6.926, 6.946, 6.937, 6.966). Three unit quad4
+  elements along x (elements 1-2 group 0, element 3 group 1), right edge
+  pulled to velx 0.1. Professional 02-08-2026 (probe v9pro / v9t t1):
+  post_count_result 3 8 1 (-element -node -geometry_point);
+  post_data_result 0 = 1*x(node 2) + 2*x(node 3) + 10*velx(node 4) = 6;
+  post_node_result 1 velx = 3 * 0.2 (factor 3), post_node_result 2 0.2;
+  post_group_volume_summed 2 1; post_strain_volume_initial 10 = 1 (the
+  volume of element 3). The GNU computes post_group_volume_summed on
+  demand (here the target asks for it). )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  2 0
+node 4  3 0
+node 5  0 1
+node 6  1 1
+node 7  2 1
+node 8  3 1
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+element_group 3 1
+group_type 0 -materi
+group_type 1 -materi
+group_materi_elasti_young 0 100.
+group_materi_elasti_young 1 1000.
+group_materi_memory 0 -total_linear
+group_materi_memory 1 -total_linear
+bounda_dof 1 -ra 1 5 -ra -velx
+bounda_dof 2 1 -vely
+bounda_dof 3 -ra 4 8 -ra -velx
+bounda_time 3 0. 0. 1. 0.1
+geometry_point 1  3 0 1.e-4
+geometry_line 2  3 0 3 1 1.e-4
+post_count -element -node -geometry_point
+post_data 0 -node 2 0 -node 3 0 -node_dof 4 0
+post_data_factor 0 1. 2. 10.
+post_node 1 -node_dof -sum -geometry_line 2
+post_node_factor 1 3.
+post_node 2 -node_dof -sum -geometry_line 2
+strain_volume_element 10 3
+control_timestep 0 1. 1.
+target_item 0 -post_data_result 0 0
+target_value 0 6. 1.e-8
+target_item 1 -post_node_result 1 0
+target_value 1 0.6 1.e-8
+target_item 2 -post_node_result 2 0
+target_value 2 0.2 1.e-8
+target_item 3 -post_group_volume_summed 0 0
+target_value 3 2. 1.e-8
+target_item 4 -post_group_volume_summed 0 1
+target_value 4 1. 1.e-8
+target_item 5 -post_strain_volume_initial 10 0
+target_value 5 1. 1.e-8
+end_data

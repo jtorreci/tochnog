@@ -1,0 +1,36 @@
+( F5 T4 U9c: VTK output of the -prism12 {owner rule 2026-11-09}: the native
+  cell type 31 VTK_QUADRATIC_LINEAR_WEDGE with 12 points: corners 0 2 5
+  6 8 11, base mid-edge 1 4 3, top mid-edge 7 10 9. Same element as
+  prism12_gauss1. The Professional 02-08-2026 cannot run this file {its
+  prism12 default rule stops}; with -minimal it drops the cell {CELLS 0 0}
+  [DIVERGENCES VTK-PRISM12]. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 0 0 1
+node 8 0.5 0 1
+node 9 1 0 1
+node 10 0 0.5 1
+node 11 0.5 0.5 1
+node 12 0 1 1
+element 1 -prism12 1 2 3 4 5 6 7 8 9 10 11 12
+group_type 0 -materi
+group_materi_elasti_young 0 1.0e6
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+force_gravity 0. 0. -1.
+bounda_dof 10 -ra 1 2 3 4 5 6 -ra -velx -vely -velz
+bounda_time 10 0.
+control_timestep 10 0.5 1.0
+control_print_vtk 10 -yes
+end_data

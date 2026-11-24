@@ -1,0 +1,25 @@
+( group_truss_elasti_elongation_force_diagram (manual 6.773), F5 T5 U6.
+  Truss length 2, diagram l: -0.01 -20  0 0  0.01 10  0.02 15 (l = elongation /
+  initial length). Professional 02-08-2026 values.
+  Shortening 0.01, l = -0.005: force -10.
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0.
+node 2 2.
+element 1 -truss 1 2
+group_type 0 -truss
+group_truss_area 0 1.
+group_truss_elasti_elongation_force_diagram 0 -0.01 -20 0 0 0.01 10 0.02 15
+bounda_dof 1 1 -velx
+bounda_time 1 0.
+bounda_dof 2 2 -velx
+bounda_time 2 -0.01
+control_timestep 0 1. 1.
+target_item    1  -element_truss_force 1 0
+target_value   1  -10. 1.e-8
+end_data

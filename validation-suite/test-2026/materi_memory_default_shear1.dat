@@ -1,0 +1,36 @@
+( C16: default group_materi_memory. Single quad4, simple shear
+  gamma = 1 with velocity kinematics - materi_velocity_integrated -, young 1,
+  poisson 0, NO group_materi_memory record. The Professional default
+  behaves as -updated_linear: sigxy = gamma*G = 0.5 and sigxx = sigyy = 0.
+  Professional 02-08-2026 gives exactly these values. Before C16 GNU
+  defaulted to -updated, Jaumann-like: sigxx 0.2311, sigxy 0.4207,
+  sigyy -0.2286. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_stress
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+group_type 0  -materi
+group_materi_elasti_young 0  1.0
+group_materi_elasti_poisson 0  0.0
+bounda_dof 0  -ra 1 2 -ra -velx
+bounda_dof 1  -ra 3 4 -ra -velx
+bounda_dof 2  -ra 1 2 3 4 -ra -vely
+bounda_time 1  0. 1. 1. 1.
+control_timestep 0  0.01 1.
+control_timestep_iterations 0  20
+target_item 0  -node_dof 4 -sigxy
+target_value 0  0.5 1.e-6
+target_item 1  -node_dof 4 -sigxx
+target_value 1  0. 1.e-6
+target_item 2  -node_dof 4 -sigyy
+target_value 2  0. 1.e-6
+target_item 3  -node_dof 3 -sigxy
+target_value 3  0.5 1.e-6
+end_data

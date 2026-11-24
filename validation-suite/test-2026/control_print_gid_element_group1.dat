@@ -1,0 +1,59 @@
+(control_print_gid_element_group [6.301] 10 1: only the mesh block of
+ element group 1 [the truss_beam] is written; the coordinates of all nodes
+ stay; the element_group result only for that block.
+ Model: quad4 [group 0] + truss_beam [group 1] + spring2 [group 2], materi and
+ condif, two time steps [0.5, 1.0], the Professional GiD probe model.
+ build_safe.sh runs it in a scratch copy and checks the .flavia files.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+beam_rotation
+condif_temperature
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  1 1
+node 4  0 1
+node 5  2 0
+node 6  3 0
+element 1  -quad4 1 2 4 3
+element 2  -truss_beam 2 5
+element 3  -spring2 5 6
+element_group 1 0
+element_group 2 1
+element_group 3 2
+group_type 0  -materi -condif
+group_materi_elasti_young 0 1.e3
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0 -total_linear
+group_condif_conductivity 0 1.
+group_type 1  -truss_beam
+group_beam_young 1  1.0e3
+group_beam_shear 1  1.0e3
+group_beam_inertia 1  1. 1. 1.
+group_beam_memory 1  -total_linear
+group_truss_area 1  1.0
+group_truss_elasti_young 1  1.0e3
+group_truss_memory 1  -total_linear
+group_type 2  -spring
+group_spring_memory 2  -total_linear
+group_spring_stiffness 2 100.
+bounda_dof 0  1 -velx -vely
+bounda_time 0 0.
+bounda_dof 1  4 -velx
+bounda_time 1 0.
+bounda_dof 2  6 -velx -vely -rotz
+bounda_time 2 0.
+bounda_dof 4  1 -temp
+bounda_time 4 1.
+bounda_dof 5  6 -temp
+bounda_time 5 0.
+bounda_force 3  3 -vely
+bounda_time 3  0. 1. 1. 1.
+control_timestep 10  0.5 1.
+control_print_gid 10 -yes
+control_print_gid_group 10 -yes
+control_print_gid_element_group 10 1
+end_data

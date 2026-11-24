@@ -1,0 +1,42 @@
+(
+F5 W1 U5: mesh_element_group_apply 0 0 (manual 6.817): only group 0 is
+ evaluated; node 6 (only in group 1) stays dormant: sigyy 0. = Professional
+ 02-08-2026 (which deletes the group-1 element). Two quad4 side by side (group 0 E 1000 at x 0..1, group 1 E 2000 at x 1..2), pulled at the top: disy 0.015 at t = 1, 0.05 at t = 2 (two control indices); sigyy 50 / 100 when both groups are evaluated.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element_group 1 0
+element_group 2 1
+group_type 0 -materi
+group_type 1 -materi
+group_materi_memory 0 -total_linear
+group_materi_memory 1 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_young 1 2000.
+group_materi_elasti_poisson 0 0.
+group_materi_elasti_poisson 1 0.
+geometry_line 1 0 0 2 0 0.01
+geometry_line 3 0 1 2 1 0.01
+bounda_dof 0 -geometry_line 1 -velx -vely
+bounda_dof 1 -geometry_line 3 -vely
+bounda_time 1 0 0 2 0.04
+control_timestep 0 0.5 1
+control_timestep 1 0.5 1
+mesh_element_group_apply 0 0
+target_item 0 -node_dof 4 -sigyy
+target_value 0 50. 1.e-8
+target_item 1 -node_dof 6 -sigyy
+target_value 1 0. 1.e-12
+end_data

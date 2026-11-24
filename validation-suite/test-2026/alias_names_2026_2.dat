@@ -1,0 +1,39 @@
+(
+F5 T3 B: 2026 manual names that are aliases of GNU records:
+ group_materi_hyper_reduced_polynomial (6.678),
+ group_materi_hyper_volumetric_simo_taylor (6.683), group_materi_umat
+ (6.757) and group_materi_umat_parameters (6.758). build_safe checks
+ that the records are stored under the GNU names. Group 1 has no
+ elements; group 0 is the elastic square of alias_names_2026_1.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_elasti
+materi_strain_total
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_type 1 -materi
+group_materi_hyper_reduced_polynomial 1 0.5 0.25 0.125
+group_materi_hyper_volumetric_simo_taylor 1 20.
+group_materi_umat 1 -no
+group_materi_umat_parameters 1 1. 2. 3.
+geometry_line 1 0 0 1 0 0.01
+geometry_line 2 0 0 0 1 0.01
+geometry_line 3 0 1 1 1 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+bounda_dof 2 -geometry_line 3 -vely
+bounda_time 2 0 0 1 0.02
+control_timestep 0 0.1 0.5
+end_data

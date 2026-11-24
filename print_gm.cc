@@ -279,3 +279,312 @@ void print_gmv( long int icontrol, long int ival[] )
 
   if ( swit ) pri( "Out routine PRINT_GMV" );
 }
+
+// print_gmsh - control_print_gmsh: Gmsh 2.2 ASCII output (.msh).
+// Writes the mesh once (nodes + elements, plus dummy point elements for
+// vector plots) and appends NodeData / ElementData per time step.
+// switch task: -yes (single <base>.msh, mesh written only the first time),
+// -separate_index (<base><icontrol>.msh), -separate_sequential
+// (<base><n>.msh with increasing n).
+void print_gmsh( long int icontrol, long int task )
+
+{
+  long int inod=0, element=0, max_node=0, max_element=0, nnol=0, name=0,
+    length=0, idim=0, ipuknwn=0,
+    nder_=0, nuknwn_=0, element_group=0, swit=0, ldum=0, first=1,
+    dummy=-YES, element_data=-YES, node_method=-NODE;
+  long int idum[1], *dof_label=NULL, *dof_type=NULL, *dof_scal_vec_mat=NULL,
+    *nodes=NULL, *el=NULL;
+  double ddum[1], time_current=0., coord[MDIM], *node_dof=NULL;
+  char filename[MCHAR], str[MCHAR];
+
+  swit = set_swit(-1,-1,"print_gmsh");
+  if ( swit ) pri( "In routine PRINT_GMSH" );
+
+  // options (per control record): control_print_gmsh_dummy (default -yes),
+  // gmsh_element_data (default -yes -> ElementData; -no -> ElementNodeData),
+  // gmsh_node_method (default -node).
+  // The global print_gmsh_dummy (6.992) / print_gmsh_node_type (6.993)
+  // are the defaults of the control records (control index overrules).
+  dummy = print_option( PRINT_GMSH_DUMMY, CONTROL_PRINT_GMSH_DUMMY,
+    icontrol, -YES );
+  db( CONTROL_PRINT_GMSH_ELEMENT_DATA, icontrol, &element_data, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  node_method = print_option( PRINT_GMSH_NODE_TYPE,
+    CONTROL_PRINT_GMSH_NODE_METHOD, icontrol, -NODE );
+
+  db_version_copy( VERSION_NORMAL, VERSION_PRINT );
+  renumbering( VERSION_PRINT, NO, 0, 0, idum, idum );
+  db_highest_index( NODE, max_node, VERSION_PRINT );
+  db_highest_index( ELEMENT, max_element, VERSION_PRINT );
+  if ( max_node<0 || max_element<0 ) return;
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET );
+  // print_gmsh_calculation (end of the run, icontrol -1): skip when the
+  // <base>.msh file already holds the state at this time (a
+  // control_print_gmsh -yes at the last time step; = Professional).
+  {
+    static long int gmsh_yes_printed=0;
+    static double gmsh_yes_time=0.;
+    if ( task==-YES ) {
+      if ( icontrol<0 && gmsh_yes_printed && gmsh_yes_time==time_current ) {
+        db_version_delete( VERSION_PRINT );
+        return;
+      }
+      gmsh_yes_printed = 1; gmsh_yes_time = time_current;
+    }
+  }
+  nder_ = nder;
+  nuknwn_ = nuknwn;
+
+  dof_label = get_new_int(MUKNWN);
+  dof_type = get_new_int(MUKNWN);
+  dof_scal_vec_mat = get_new_int(MUKNWN);
+  nodes = get_new_int(MAXIMUM_NODE);
+  el = get_new_int(MAXIMUM_NODE+1);
+  db( DOF_LABEL, 0, dof_label, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DOF_SCAL_VEC_MAT, 0, dof_scal_vec_mat, ddum, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+
+  // file name: -yes -> <base>.msh (mesh once); -separate_index ->
+  // <base><icontrol>.msh; -separate_sequential -> <base><n>.msh.
+  strcpy( filename, data_file_base );
+  if      ( task==-SEPARATE_INDEX && icontrol>=0 ) {
+    long_to_a( icontrol, str );
+    strcat( filename, str );
+  }
+  else if ( task==-SEPARATE_SEQUENTIAL ) {
+    static long int gmsh_seq=0;
+    long_to_a( gmsh_seq++, str );
+    strcat( filename, str );
+  }
+  strcat( filename, ".msh" );
+
+  {
+    std::ifstream fexists( filename );
+    first = !fexists.is_open();
+    fexists.close();
+  }
+
+  std::ofstream out( filename, std::ios::app );
+  out.precision(TN_PRECISION);
+
+  if ( first ) {
+    out << "$MeshFormat\n";
+    out << "2.2 0 8\n";
+    out << "$EndMeshFormat\n";
+
+    out << "$Nodes\n" << max_node+1 << "\n";
+    for ( inod=0; inod<=max_node; inod++ ) {
+      db( NODE, inod, idum, coord, ldum, VERSION_PRINT, GET );
+      if ( node_method==-NODE_DEFORMED_MESH && materi_displacement ) {
+        node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+        out << inod+1;
+        for ( idim=0; idim<ndim; idim++ )
+          out << " " << coord[idim]+node_dof[dis_indx+idim*nder_];
+        for ( idim=ndim; idim<MDIM; idim++ ) out << " 0";
+      }
+      else if ( node_method==-NODE_START_REFINED &&
+                db_active_index( NODE_START_REFINED, inod, VERSION_PRINT ) ) {
+        db( NODE_START_REFINED, inod, idum, coord, ldum, VERSION_PRINT, GET );
+        out << inod+1;
+        // ndim values are stored (z of a 2D mesh was stack garbage)
+        for ( idim=0; idim<ndim; idim++ ) out << " " << coord[idim];
+        for ( idim=ndim; idim<MDIM; idim++ ) out << " 0";
+      }
+      else {
+        out << inod+1;
+        for ( idim=0; idim<ndim; idim++ ) out << " " << coord[idim];
+        for ( idim=ndim; idim<MDIM; idim++ ) out << " 0";
+      }
+      out << "\n";
+    }
+    out << "$EndNodes\n";
+
+    // element connectivity (Gmsh 2.2 types; node order matches print_vtk)
+    out << "$Elements\n";
+    // dummy point element in each node for vector-field plots (group 1234)
+    long int ntotal = max_element+1;
+    if ( dummy!=-NO ) ntotal += max_node+1;
+    out << ntotal << "\n";
+    long int nelem=0;
+    for ( element=0; element<=max_element; element++ ) {
+      if ( !db_active_index( ELEMENT, element, VERSION_PRINT ) ) continue;
+      db( ELEMENT, element, el, ddum, length, VERSION_PRINT, GET );
+      name = el[0];
+      nnol = length - 1; array_move( &el[1], nodes, nnol );
+      if ( db_active_index( ELEMENT_GROUP, element, VERSION_PRINT ) )
+        db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+          VERSION_PRINT, GET );
+      else
+        element_group = 0;
+      if      ( name==-BAR2 ) {
+        nelem++;
+        out << nelem << " 1 2 " << element_group << " " << element_group;
+        out << " " << nodes[0]+1 << " " << nodes[1]+1 << "\n";
+      }
+      else if ( name==-TRIA3 ) {
+        nelem++;
+        out << nelem << " 2 2 " << element_group << " " << element_group;
+        out << " " << nodes[0]+1 << " " << nodes[1]+1 << " " << nodes[2]+1 << "\n";
+      }
+      else if ( name==-QUAD4 ) {
+        nelem++;
+        out << nelem << " 3 2 " << element_group << " " << element_group;
+        out << " " << nodes[0]+1 << " " << nodes[1]+1 << " " << nodes[3]+1
+            << " " << nodes[2]+1 << "\n";
+      }
+      else if ( name==-TET4 ) {
+        nelem++;
+        out << nelem << " 4 2 " << element_group << " " << element_group;
+        out << " " << nodes[0]+1 << " " << nodes[1]+1 << " " << nodes[2]+1
+            << " " << nodes[3]+1 << "\n";
+      }
+      else if ( name==-HEX8 ) {
+        nelem++;
+        out << nelem << " 5 2 " << element_group << " " << element_group;
+        out << " " << nodes[0]+1 << " " << nodes[1]+1 << " " << nodes[3]+1
+            << " " << nodes[2]+1 << " " << nodes[4]+1 << " " << nodes[5]+1
+            << " " << nodes[7]+1 << " " << nodes[6]+1 << "\n";
+      }
+    }
+    if ( dummy!=-NO ) {
+      for ( inod=0; inod<=max_node; inod++ ) {
+        nelem++;
+        out << nelem << " 15 2 1234 1234 " << inod+1 << "\n";
+      }
+    }
+    out << "$EndElements\n";
+  }
+
+  // node / element data for each exported dof (append per time step)
+  // One set of node_/element_ blocks per component of each PRIMARY
+  // unknown, as in print_vt.cc and print_dof (BACKLOG C23/C24): the
+  // primary unknown ipuknwn starts at iuknwn = ipuknwn*nder_, the dof_*
+  // arrays are indexed by iuknwn (set for every value AND derivative of
+  // the dof) and a vector/matrix dof spans nval primary unknowns. Looping
+  // ipuknwn over nuknwn_ wrote shifted duplicate blocks and, with
+  // derivatives, read node_dof past the end of the record. Field names
+  // use the dof type (materi_velocity, condif_temperature, ...) as the
+  // Professional does; components get _0/_1/_2 (vector) or _xx.. (matrix).
+  long int npuknwn_ = nder_>0 ? nuknwn_/nder_ : 0;
+  if ( npuknwn_>0 ) {
+    long int nval = 1;
+    for ( ipuknwn=0; ipuknwn<npuknwn_; ipuknwn+=nval ) {
+      long int iuknwn = ipuknwn*nder_;
+      long int dsvm = dof_scal_vec_mat[iuknwn];
+      nval = 1;
+      if ( dsvm!=-SCALAR && dsvm!=-VECTOR && dsvm!=-MATRIX ) continue;
+      if      ( dsvm==-VECTOR ) nval = ndim;
+      else if ( dsvm==-MATRIX ) nval = 6;
+      long int base_indx = iuknwn;
+      for ( idim=0; idim<nval; idim++ ) {
+        char label[MCHAR];
+        if      ( dsvm==-SCALAR )
+          strcpy( label, db_name(dof_type[iuknwn]) );
+        else if ( dsvm==-VECTOR ) {
+          sprintf( label, "%s_%ld", db_name(dof_type[iuknwn]), idim );
+        }
+        else {
+          // matrix: idim 0..5 = xx,yy,zz,xy,xz,yz (Voigt)
+          const char* comp[6] = { "xx","yy","zz","xy","xz","yz" };
+          sprintf( label, "%s_%s", db_name(dof_type[iuknwn]), comp[idim] );
+        }
+        // node_* data
+        out << "$NodeData\n";
+        out << "1\n\"node_" << label << "\"\n1\n" << time_current
+            << "\n3\n0\n0\n1\n" << max_node+1 << "\n";
+        for ( inod=0; inod<=max_node; inod++ ) {
+          node_dof = db_dbl( NODE_DOF, inod, VERSION_PRINT );
+          long int indx = base_indx;
+          if      ( dsvm==-VECTOR )
+            indx = base_indx + idim*nder_;
+          else if ( dsvm==-MATRIX ) {
+            long int kk, ll;
+            if      ( idim==0 ) { kk=0; ll=0; }
+            else if ( idim==1 ) { kk=1; ll=1; }
+            else if ( idim==2 ) { kk=2; ll=2; }
+            else if ( idim==3 ) { kk=0; ll=1; }
+            else if ( idim==4 ) { kk=0; ll=2; }
+            else                 { kk=1; ll=2; }
+            indx = base_indx + stress_indx(kk,ll)*nder_;
+          }
+          out << inod+1 << " " << node_dof[indx] << "\n";
+        }
+        out << "$EndNodeData\n";
+
+        // element_* data: averaged over the element (ElementData) or
+        // per element node (ElementNodeData), per gmsh_element_data.
+        long int nact=0;
+        for ( element=0; element<=max_element; element++ )
+          if ( db_active_index( ELEMENT, element, VERSION_PRINT ) ) nact++;
+        out << "$" << ( element_data==-NO ? "ElementNodeData" : "ElementData" )
+            << "\n";
+        out << "1\n\"element_" << label << "\"\n1\n" << time_current
+            << "\n3\n0\n0\n1\n" << nact << "\n";
+        for ( element=0; element<=max_element; element++ ) {
+          if ( !db_active_index( ELEMENT, element, VERSION_PRINT ) ) continue;
+          db( ELEMENT, element, el, ddum, length, VERSION_PRINT, GET );
+          name = el[0];
+          nnol = length - 1; array_move( &el[1], nodes, nnol );
+          double sum=0.;
+          for ( inod=0; inod<nnol; inod++ ) {
+            node_dof = db_dbl( NODE_DOF, nodes[inod], VERSION_PRINT );
+            long int indx = base_indx;
+            if      ( dsvm==-VECTOR )
+              indx = base_indx + idim*nder_;
+            else if ( dsvm==-MATRIX ) {
+              long int kk, ll;
+              if      ( idim==0 ) { kk=0; ll=0; }
+              else if ( idim==1 ) { kk=1; ll=1; }
+              else if ( idim==2 ) { kk=2; ll=2; }
+              else if ( idim==3 ) { kk=0; ll=1; }
+              else if ( idim==4 ) { kk=0; ll=2; }
+              else                 { kk=1; ll=2; }
+              indx = base_indx + stress_indx(kk,ll)*nder_;
+            }
+            sum += node_dof[indx];
+          }
+          double avg = ( nnol>0 ) ? sum/((double)nnol) : 0.;
+          if ( element_data==-NO ) {
+            out << element+1 << " " << nnol;
+            for ( inod=0; inod<nnol; inod++ ) {
+              node_dof = db_dbl( NODE_DOF, nodes[inod], VERSION_PRINT );
+              long int indx = base_indx;
+              if      ( dsvm==-VECTOR )
+                indx = base_indx + idim*nder_;
+              else if ( dsvm==-MATRIX ) {
+                long int kk, ll;
+                if      ( idim==0 ) { kk=0; ll=0; }
+                else if ( idim==1 ) { kk=1; ll=1; }
+                else if ( idim==2 ) { kk=2; ll=2; }
+                else if ( idim==3 ) { kk=0; ll=1; }
+                else if ( idim==4 ) { kk=0; ll=2; }
+                else                 { kk=1; ll=2; }
+                indx = base_indx + stress_indx(kk,ll)*nder_;
+              }
+              out << " " << nodes[inod]+1 << " " << node_dof[indx];
+            }
+            out << "\n";
+          }
+          else {
+            out << element+1 << " " << avg << "\n";
+          }
+        }
+        out << "$End" << ( element_data==-NO ? "ElementNodeData" : "ElementData" )
+            << "\n";
+      }
+    }
+  }
+
+  out.close();
+
+  db_version_delete( VERSION_PRINT );
+  delete[] dof_label;
+  delete[] dof_type;
+  delete[] dof_scal_vec_mat;
+  delete[] nodes;
+  delete[] el;
+
+  if ( swit ) pri( "Out routine PRINT_GMSH" );
+}

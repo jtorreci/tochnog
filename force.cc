@@ -41,6 +41,28 @@ void force_element_volume_set( long int element, long int nnol,
     if ( db_active_index( FORCE_ELEMENT_VOLUME, iforce, VERSION_NORMAL ) ) {
       db( FORCE_ELEMENT_VOLUME, iforce, idum, force_work, ldum, VERSION_NORMAL, GET );
       ok = 1;
+      // force_element_volume_element / _element_group (Professional
+      // force_volume_element / _element_group, manual 6.503/6.504):
+      // restrict the elements (and groups) the record applies to
+      if ( db_active_index( FORCE_ELEMENT_VOLUME_ELEMENT, iforce,
+          VERSION_NORMAL ) ) {
+        long int *fel = db_int( FORCE_ELEMENT_VOLUME_ELEMENT, iforce,
+          VERSION_NORMAL );
+        long int lfel = db_len( FORCE_ELEMENT_VOLUME_ELEMENT, iforce,
+          VERSION_NORMAL );
+        if ( !array_member( fel, element, lfel, ldum ) ) ok = 0;
+      }
+      if ( ok && db_active_index( FORCE_ELEMENT_VOLUME_ELEMENT_GROUP,
+          iforce, VERSION_NORMAL ) ) {
+        long int *fgr = db_int( FORCE_ELEMENT_VOLUME_ELEMENT_GROUP,
+          iforce, VERSION_NORMAL );
+        long int lfgr = db_len( FORCE_ELEMENT_VOLUME_ELEMENT_GROUP,
+          iforce, VERSION_NORMAL );
+        long int element_group = -1;
+        db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        if ( !array_member( fgr, element_group, lfgr, ldum ) ) ok = 0;
+      }
       if ( db_active_index( FORCE_ELEMENT_VOLUME_GEOMETRY, iforce, VERSION_NORMAL ) ) {
         force_element_volume_geometry = 
           db_int( FORCE_ELEMENT_VOLUME_GEOMETRY, iforce, VERSION_NORMAL );
@@ -197,6 +219,37 @@ void force_factor( long int factor_name, long int iforce,
       }
     }
   }
+
+  // multilinear multiplication factor in x-direction for edge forces:
+  // force_element_edge_multi_linear_factor_x with x_0 factor_0 x_1
+  // factor_1 ... ; factor 0 outside the specified x-range.
+  if ( factor_name==FORCE_ELEMENT_EDGE_FACTOR &&
+       db_active_index( FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X, iforce,
+         VERSION_NORMAL ) ) {
+    length = db_len( FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X, iforce,
+      VERSION_NORMAL );
+    factor_name_values = db_dbl( FORCE_ELEMENT_EDGE_MULTI_LINEAR_FACTOR_X,
+      iforce, VERSION_NORMAL );
+    x = coord[0];
+    double mlfactor = 0.;
+    for ( j=0; j+1<length; j+=2 ) {
+      double xa = factor_name_values[j];
+      double fa = factor_name_values[j+1];
+      if ( j+3>=length ) {
+        // last segment: constant beyond its right end
+        if ( x>=xa ) mlfactor = fa;
+      }
+      else {
+        double xb = factor_name_values[j+2];
+        double fb = factor_name_values[j+3];
+        if ( x>=xa && x<=xb ) {
+          mlfactor = (xb>xa) ? fa + (fb-fa)*(x-xa)/(xb-xa) : fa;
+          break;
+        }
+      }
+    }
+    factor *= mlfactor;
+  }
 }
 
 void force_gravity_calculate( double force_gravity[] ) 
@@ -220,6 +273,95 @@ void force_gravity_calculate( double force_gravity[] )
         force_gravity_time = db_dbl( FORCE_GRAVITY_TIME, 0, VERSION_NORMAL );
         force_time( force_gravity_time, "FORCE_GRAVITY_TIME", length, factor );
         for ( idim=0; idim<ndim; idim++ ) force_gravity[idim] *= factor;
+      }
+    }
+  }
+
+}
+
+// force_gravity_geometry (manual 6.499): does the element get the
+// gravity? Without the record every element does; with it only an element
+// whose nodes are ALL inside the geometry (Professional 02-08-2026: two
+// quad4 columns, a quadrilateral reaching into the second column gives
+// the gravity to the first column only; covering both nodes lines gives
+// it to both).
+long int force_gravity_element_inside( long int element )
+
+{
+  long int inol=0, nnol=0, length=0, in_geometry=0, ldum=0,
+    el[1+MNOL], geometry_entity[2];
+  double ddum[MDIM], rdum=0.;
+
+  if ( !db_active_index( FORCE_GRAVITY_GEOMETRY, 0, VERSION_NORMAL ) )
+    return 1;
+  db( FORCE_GRAVITY_GEOMETRY, 0, geometry_entity, ddum, ldum,
+    VERSION_NORMAL, GET );
+  db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+  nnol = length - 1;
+  for ( inol=0; inol<nnol; inol++ ) {
+    geometry( el[1+inol], ddum, geometry_entity, in_geometry, rdum, ddum,
+      rdum, ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
+    if ( !in_geometry ) return 0;
+  }
+  return 1;
+}
+
+void force_point_calculate( void )
+
+{
+  // distribute point forces (force_point) to the nodes of the element
+  // that contains the specified coordinate. A point force can be anywhere
+  // in space, also not on a node.
+  long int iforce=0, max_force=0, length=0, inol=0, nnol=0, inod=0, 
+    element=0, max_element=0, ldum=0, idum[1], el[1+MNOL], nodes[MNOL], 
+    ipuknwn=0, idim=0;
+  double ddum[1], coords[MNOL*MDIM], weight[MNOL], *force_point=NULL, 
+    *node_rhside=NULL;
+
+  db_max_index( FORCE_POINT, max_force, VERSION_NORMAL, GET );
+  if ( max_force<0 ) return;
+
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  if ( max_element<0 ) return;
+
+  for ( iforce=0; iforce<=max_force; iforce++ ) {
+    if ( db_active_index( FORCE_POINT, iforce, VERSION_NORMAL ) ) {
+      force_point = db_dbl( FORCE_POINT, iforce, VERSION_NORMAL );
+      // locate element containing the point
+      element = -1;
+      for ( element=0; element<=max_element; element++ ) {
+        if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) ) {
+          db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
+          nnol = length - 1; array_move( &el[1], nodes, nnol );
+          for ( inol=0; inol<nnol; inol++ ) {
+            inod = nodes[inol];
+            db( NODE_START_REFINED, inod, idum, &coords[inol*ndim], ldum, 
+              VERSION_NORMAL, GET );
+          }
+          if ( point_el( force_point, coords, weight, el[0], nnol ) ) break;
+        }
+      }
+      if ( element>max_element ) {
+        pri( "Error: force_point not in any element." );
+        exit(TN_EXIT_STATUS);
+      }
+      // distribute the force to the nodes of the found element. The
+      // record is coord_0..coord_ndim-1 force_0..force_ndim-1 (manual
+      // Professional 6.501): the forces act on the velocity equations
+      // as an EXTERNAL load, +force along +x (node_rhside holds
+      // external - internal; the force_element_edge loads are added
+      // with the same sign in area.cc). K04 force18 (2026-10-06): the
+      // old "-=" pushed the node the wrong way (velx -0.8, Pro +0.8),
+      // and the loop ran over every principal unknown, reading past
+      // the ndim forces of the record.
+      length = db_len( FORCE_POINT, iforce, VERSION_NORMAL );
+      for ( inol=0; inol<nnol; inol++ ) {
+        inod = nodes[inol];
+        node_rhside = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
+        for ( idim=0; idim<ndim && ndim+idim<length; idim++ ) {
+          ipuknwn = vel_indx/nder + idim;
+          node_rhside[ipuknwn] += weight[inol]*force_point[ndim+idim];
+        }
       }
     }
   }

@@ -1,0 +1,44 @@
+( F5 T5 U1b: groundflow_phreatic_bounda yes (manual 6.570).
+  -yes (the default): the nodes at and above the level are dry, their pressure dof is bounded.
+  Column of three quad4, level at y = 1.5, bottom pressure prescribed.
+  The total pressures equal the Professional 02-08-2026 for the same input
+  (bottom head -2.5, i.e. the GNU dynamic pressure -1 plus rho*g*z_L = -1.5).
+)
+echo -no
+number_of_space_dimensions 2
+groundflow_pressure
+groundflow_velocity
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+node 5  0 2
+node 6  1 2
+node 7  0 3
+node 8  1 3
+element 1  -quad4 1 2 3 4
+element 2  -quad4 3 4 5 6
+element 3  -quad4 5 6 7 8
+element_group 1 1
+element_group 2 1
+element_group 3 1
+force_gravity 0. -1.
+groundflow_density 1.
+groundflow_phreatic_level 0. 1.5 1. 1.5
+groundflow_phreatic_bounda -yes
+bounda_dof 1 -ra 1 2 -ra -pres
+bounda_time 1 0. -1. 10. -1.
+post_calcul -groundflow_pressure -total_pressure
+group_type 1  -groundflow
+group_groundflow_permeability 1  0.1 0.1
+control_timestep   10  1. 1.
+target_item  0   -node_dof_calcul 1 0
+target_value 0   -2.5 1.e-6
+target_item  1   -node_dof_calcul 3 0
+target_value 1   -1. 1.e-6
+target_item  2   -node_dof_calcul 5 0
+target_value 2   0. 1.e-6
+target_item  3   -node_dof 5 0
+target_value 3   0. 1.e-6
+end_data

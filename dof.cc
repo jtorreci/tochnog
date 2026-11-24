@@ -20,6 +20,43 @@
 
 #include "tochnog.h"
 
+// dof_limit (manual Professional 6.411): clamp the primary values of a
+// node to the allowed [lower, upper] range of each dof (two values per dof
+// in dof_label order). Measured on the Professional 02-08-2026 (probes
+// f5/v5b b_lim, b_m22, f_s1): the node_dof records of every node are
+// clamped, prescribed nodes and averaged dofs (stresses) included; a
+// clamped velocity also clamps the displacement increment; the
+// element_intpnt_dof records are not clamped.
+static void dof_limit_clamp( double node_dof_new[], double limit[] )
+{
+  long int ipuknwn=0, iuknwn=0;
+
+  for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
+    iuknwn = ipuknwn*nder;
+    if ( node_dof_new[iuknwn]<limit[2*ipuknwn] )
+      node_dof_new[iuknwn] = limit[2*ipuknwn];
+    if ( node_dof_new[iuknwn]>limit[2*ipuknwn+1] )
+      node_dof_new[iuknwn] = limit[2*ipuknwn+1];
+  }
+}
+
+// dof_limit on every node (serial): used after the nodal updates that do
+// not pass through parallel_new_dof_diagonal (top.cc, hoisted stress sync
+// and the end of the time step).
+void dof_limit_apply( void )
+{
+  long int inod=0, max_node=-1, ldum=0, idum[1];
+  double limit[2*MPUKNWN];
+
+  if ( !db( DOF_LIMIT, 0, idum, limit, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+    return;
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( db_active_index( NODE, inod, VERSION_NORMAL ) )
+      dof_limit_clamp( db_dbl( NODE_DOF, inod, VERSION_NEW ), limit );
+  }
+}
+
 void parallel_new_dof_before( void )
 
 {
@@ -36,6 +73,9 @@ void parallel_new_dof_before( void )
     array_set( force_gravity, 0., ndim );
     db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
     force_gravity_calculate( force_gravity );
+    // force_point is applied by top(), serially, before the threads
+    // start: called here, inside parallel_sys_routine, it ran once per
+    // thread and the load was added nthread times.
     db_max_index( NODE, max_node, VERSION_NORMAL, GET );
     if ( max_node>=0 ) {
       next_of_loop = get_new_int(1+max_node);
@@ -49,25 +89,62 @@ void parallel_new_dof_before( void )
           node_dof_new = db_dbl( NODE_DOF, inod, VERSION_NEW );
           node_lhside = db_dbl( NODE_LHSIDE, inod, VERSION_NORMAL );
           node_rhside = db_dbl( NODE_RHSIDE, inod, VERSION_NORMAL );
-          db( NODE_DAMPING, inod, idum, node_damping, ldum, 
+          db( NODE_DAMPING, inod, idum, node_damping, ldum,
             VERSION_NORMAL, GET_IF_EXISTS );
-          db( NODE_STIFFNESS, inod, idum, node_stiffness, ldum, 
+          db( NODE_STIFFNESS, inod, idum, node_stiffness, ldum,
             VERSION_NORMAL, GET_IF_EXISTS );
-          db( NODE_MASS, inod, idum, node_mass, ldum, 
+          db( NODE_MASS, inod, idum, node_mass, ldum,
             VERSION_NORMAL, GET_IF_EXISTS );
+          // node_force: discrete nodal force (manual Professional 6.887),
+          // an EXTERNAL load, +force along +x: node_rhside holds
+          // external - internal, so the force is ADDED (same convention
+          // as force_point and force_element_edge). C28 (2026-10-06):
+          // the old "-=" pushed the node the wrong way (1D probe Pro
+          // velx +1, GNU -2: the reversed load compressed the bar to
+          // exactly zero length, a singular state, hence the "-2").
+          {
+            double node_force[MDIM];
+            array_set( node_force, 0., MDIM );
+            if ( db( NODE_FORCE, inod, idum, node_force, ldum,
+                VERSION_NORMAL, GET_IF_EXISTS ) ) {
+              for ( idim=0; idim<ndim; idim++ ) {
+                ipuknwn = vel_indx/nder + idim;
+                node_rhside[ipuknwn] += node_force[idim];
+              }
+            }
+          }
           for ( idim=0; idim<ndim; idim++ ) {
             ipuknwn = vel_indx/nder + idim;
             iuknwn = vel_indx + idim * nder;
-            node_lhside[ipuknwn] += node_stiffness[idim]*dtime + node_damping[idim] + 
+            node_lhside[ipuknwn] += node_stiffness[idim]*dtime + node_damping[idim] +
               node_mass[idim] / dtime;
             tmp = node_damping[idim] * node_dof_new[iuknwn] +
-              node_mass[idim] * ( node_dof_new[iuknwn] - node_dof[iuknwn] ) / 
+              node_mass[idim] * ( node_dof_new[iuknwn] - node_dof[iuknwn] ) /
               dtime + node_mass[idim] * force_gravity[idim];
-            if ( materi_displacement ) 
+            if ( materi_displacement )
               tmp += node_stiffness[idim] * node_dof_new[dis_indx+idim*nder];
             else if ( materi_velocity_integrated ) 
               tmp += node_stiffness[idim] * node_dof_new[veli_indx+idim*nder];
             node_rhside[ipuknwn] -= tmp;
+          }
+          // node_inertia (manual Professional 6.889): fill the record with
+          // the calculated inertia terms (mass*acceleration + gravity
+          // share, per direction). Consumers: printing and the d'alembert
+          // trick control_data_copy node_inertia -> node_force with
+          // factor -1 (static nodal forces replacing the mass inertia for
+          // the remainder of the calculation).
+          if ( db_active_index( NODE_INERTIA, inod, VERSION_NORMAL ) ) {
+            double inertia_terms[MDIM];
+            for ( idim=0; idim<ndim; idim++ )
+              inertia_terms[idim] = node_mass[idim] *
+                ( node_dof_new[vel_indx+idim*nder] -
+                  node_dof[vel_indx+idim*nder] ) / dtime +
+                node_mass[idim] * force_gravity[idim];
+            // PUT in VERSION_NEW: the end-of-step db_version_copy
+            // (NEW -> NORMAL) would overwrite a NORMAL write with the
+            // input values
+            db( NODE_INERTIA, inod, idum, inertia_terms, ndim,
+              VERSION_NEW, PUT );
           }
         }
       }
@@ -82,15 +159,21 @@ void parallel_new_dof_diagonal( void )
 {
   long int inod=0, max_node=0, ipuknwn=0, iuknwn=0, iprinc=0, iloop=0, nloop=0, 
     ithread=0, icontrol=0, idim=0, ind=0, options_solver=-MATRIX_ITERATIVE_BICG, 
-    ldum=0, idum[1], dof_principal[MUKNWN], *next_of_loop=NULL, *node_bounded=NULL;
+    ldum=0, idum[1], dof_principal[MUKNWN], *next_of_loop=NULL, *node_bounded=NULL,
+    use_dof_limit=0;
   double tmp=0., dtime=0., ddum[1], options_relaxation[MPRINC], *node_dof=NULL, 
-    *node_dof_new=NULL, *node_rhside=NULL, *node_lhside=NULL;
+    *node_dof_new=NULL, *node_rhside=NULL, *node_lhside=NULL,
+    dof_limit[2*MPUKNWN];
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
-  db( OPTIONS_SOLVER, 0, &options_solver, ddum, ldum, 
+  db( OPTIONS_SOLVER, 0, &options_solver, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
-  db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum, ldum, 
+  db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  // solver (manual Professional 6.1047): the global record overwrites
+  // every control_solver (see top.cc)
+  db( SOLVER, 0, &options_solver, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET );
   db_max_index( NODE, max_node, VERSION_NORMAL, GET );
@@ -99,6 +182,8 @@ void parallel_new_dof_diagonal( void )
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( CONTROL_OPTIONS_RELAXATION, icontrol, idum, options_relaxation, 
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  use_dof_limit = db( DOF_LIMIT, 0, idum, dof_limit, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
 
   if ( max_node>=0 ) {
     next_of_loop = get_new_int(1+max_node);
@@ -117,14 +202,38 @@ void parallel_new_dof_diagonal( void )
         for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
           iuknwn = ipuknwn*nder;
           if ( !node_bounded[ipuknwn] && node_lhside[ipuknwn]!=0. ) {
-            if ( options_solver==-DIAGONAL || dof_principal[iuknwn]<0 ) {
+            // global_element_dof_apply -only: the non-principal dofs stay in
+            // the integration points, the nodes are not updated
+            if ( element_dof_only && dof_principal[iuknwn]<0 ) ;
+            else if ( options_solver==-DIAGONAL || dof_principal[iuknwn]<0 ) {
               tmp = node_rhside[ipuknwn] / node_lhside[ipuknwn];
               if ( dof_principal[iuknwn]>=0 ) tmp *= options_relaxation[iprinc];
-              node_dof_new[iuknwn] += tmp;
+              // Nodal stress recovery (2026-09-15, Professional
+              // alignment): the Professional ASSIGNS the absolute
+              // weighted average of the per-element nodal stresses
+              // (node_rhside = sum(volume*weight*new_sig),
+              // node_lhside = sum(volume*weight)); it does not
+              // accumulate the element stress increments. The stress
+              // dofs are non-principal, so this is a post-solve update.
+              // Every other non-principal dof keeps the incremental
+              // (+=) form.
+              if ( stress_recovery_absolute && stres_indx>=0 &&
+                   iuknwn>=stres_indx && iuknwn<stres_indx+6*nder )
+                node_dof_new[iuknwn] = tmp;
+              else
+                node_dof_new[iuknwn] += tmp;
+              if ( iuknwn==stres_indx+0*nder ) {
+              }
+              if ( iuknwn==stres_indx+3*nder ) {
+              }
             }
           }
           if ( dof_principal[iuknwn]>=0 ) iprinc++;
         }
+        // dof_limit: clamp the solved and updated values first, so the
+        // integrated dofs below (displacement = old + v*dt, ...) follow
+        // the clamped velocity (Professional b_m22: disx = clamped velx*dt)
+        if ( use_dof_limit ) dof_limit_clamp( node_dof_new, dof_limit );
         if ( materi_damage ) {
           iuknwn = dam_indx;
           if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;
@@ -137,9 +246,55 @@ void parallel_new_dof_diagonal( void )
             node_dof_new[iuknwn] = node_dof[iuknwn] + node_dof_new[ind] * dtime;   
           }
         }
+        if ( materi_displacement_relative ) {
+          for ( idim=0; idim<ndim; idim++ ) {
+            iuknwn = dis_rel_indx + idim * nder;
+            ind = vel_indx+idim*nder;   
+            node_dof_new[iuknwn] = node_dof[iuknwn] + node_dof_new[ind] * dtime;   
+          }
+        }
         if ( materi_plasti_kappa ) {
           iuknwn = kap_indx;
           if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;
+        }
+        if ( materi_plasti_cap1_history ) {
+          iuknwn = cap1_indx;
+          if ( node_dof_new[iuknwn]<0. ) node_dof_new[iuknwn] = 0.;
+        }
+        if ( ( materi_stress_pressure_history || materi_plasti_hardsoil_history ) &&
+             materi_stress ) {
+          // materi_stress_pressure_history (manual Professional 4.50)
+          // and materi_plasti_hardsoil_history (manual 4.22, hardsoil
+          // model): the maximum of the absolute value of the pressure
+          // over time is added to the node_dof records (SHARED dof
+          // sph_indx, same concept). p = -sig_mean (positive in
+          // compression, same convention as the young_power/poisson_power
+          // records). node_dof_new was copied from node_dof (VERSION_NORMAL)
+          // at step start, so this is max(previous max, |p_new|): the
+          // record is kept while unloading/reloading (|p| < max) and
+          // updated when the current pressure is the new maximum. The
+          // consumers are group_materi_elasti_stress_pressure_history_factor
+          // and the hardsoil E50/Eur switch in set_stress() (stress.cc),
+          // which read the interpolated dof.
+          iuknwn = sph_indx;
+          tmp = scalar_dabs( -( node_dof_new[stres_indx] +
+            node_dof_new[stres_indx+3*nder] +
+            node_dof_new[stres_indx+5*nder] ) / 3. );
+          if ( node_dof_new[iuknwn] < tmp ) node_dof_new[iuknwn] = tmp;
+        }
+        if ( materi_acceleration ) {
+          // acceleration records (manual Professional 4.11): the GNU
+          // scheme solves velocities, so a = (v_new - v_old)/dt of the
+          // step. For nodes whose acceleration is prescribed via
+          // bounda_dof -accx the velocity bound is v_new = v_old + a*dt
+          // (bounda.cc), so the derived value equals the prescribed
+          // acceleration automatically.
+          for ( idim=0; idim<ndim; idim++ ) {
+            iuknwn = acc_indx + idim * nder;
+            ind = vel_indx+idim*nder;
+            node_dof_new[iuknwn] =
+              ( node_dof_new[ind] - node_dof[ind] ) / dtime;
+          }
         }
         if ( materi_velocity_integrated ) {
           for ( idim=0; idim<ndim; idim++ ) {
@@ -179,6 +334,8 @@ void parallel_new_dof_diagonal( void )
             iuknwn = vel_indx + idim * nder;
           }
         }
+        // dof_limit on the integrated dofs as well
+        if ( use_dof_limit ) dof_limit_clamp( node_dof_new, dof_limit );
       }
     }
     delete[] next_of_loop;

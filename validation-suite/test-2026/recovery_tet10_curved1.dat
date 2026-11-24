@@ -1,0 +1,121 @@
+( C70 {F4 T6f, 2026-10-13} tet10 5-point Keast recovery on two curved tet10 sharing a face: per-element linear least squares 1,x,y,z in PHYSICAL coordinates {GNU before: barycentric fit, equal only on straight-edged tet10}. Prescribed velocity at every node. Targets = Professional 02-08-2026 node_dof; GNU before: node 14 sigxx 2.53163; node 10 sigxx -0.191184; node 14 sigyy 2.06214. )
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space -fixed_in_space
+inertia_apply -no
+node 1 0.0 0.0 0.0
+node 2 0.51 0.0275 -0.0125
+node 3 1.04 0.11 -0.05
+node 4 0.0325 0.5 0.0175
+node 5 0.5425 0.5275 0.0275
+node 6 0.13 1.0 0.07
+node 7 0.0125 0.0 0.5
+node 8 0.5025 0.0375 0.4875
+node 9 0.045 0.485 0.5175
+node 10 0.05 0.0 1.0
+node 11 1.045 0.615 0.5125
+node 12 0.6325 1.0075 0.6025
+node 13 0.5525 0.5175 1.0275
+node 14 1.14 1.09 1.11
+element 1 -tet10 1 2 3 4 5 6 7 8 9 10
+element 2 -tet10 3 5 6 8 9 10 11 12 13 14
+bounda_dof 0 -ra 1 -ra -velx
+bounda_time 0 0. 0.0 10. 0.0
+bounda_dof 1 -ra 1 -ra -vely
+bounda_time 1 0. 0.0 10. 0.0
+bounda_dof 2 -ra 1 -ra -velz
+bounda_time 2 0. 0.0 10. 0.0
+bounda_dof 3 -ra 2 -ra -velx
+bounda_time 3 0. 0.0021992625 10. 0.0021992625
+bounda_dof 4 -ra 2 -ra -vely
+bounda_time 4 0. -0.018767362500000002 10. -0.018767362500000002
+bounda_dof 5 -ra 2 -ra -velz
+bounda_time 5 0. -1.2843750000000002e-05 10. -1.2843750000000002e-05
+bounda_dof 6 -ra 3 -ra -velx
+bounda_time 6 0. 0.0365478 10. 0.0365478
+bounda_dof 7 -ra 3 -ra -vely
+bounda_time 7 0. -0.0783952 10. -0.0783952
+bounda_dof 8 -ra 3 -ra -velz
+bounda_time 8 0. -0.000497 10. -0.000497
+bounda_dof 9 -ra 4 -ra -velx
+bounda_time 9 0. 0.0126890625 10. 0.0126890625
+bounda_dof 10 -ra 4 -ra -vely
+bounda_time 10 0. 0.0016079375000000002 10. 0.0016079375000000002
+bounda_dof 11 -ra 4 -ra -velz
+bounda_time 11 0. 3.7625000000000007e-05 10. 3.7625000000000007e-05
+bounda_dof 12 -ra 5 -ra -velx
+bounda_time 12 0. 0.06056240156249999 10. 0.06056240156249999
+bounda_dof 13 -ra 5 -ra -vely
+bounda_time 13 0. 0.011081240624999995 10. 0.011081240624999995
+bounda_dof 14 -ra 5 -ra -velz
+bounda_time 14 0. 0.0008096515624999999 10. 0.0008096515624999999
+bounda_dof 15 -ra 6 -ra -velx
+bounda_time 15 0. 0.055560000000000005 10. 0.055560000000000005
+bounda_dof 16 -ra 6 -ra -vely
+bounda_time 16 0. 0.025727000000000003 10. 0.025727000000000003
+bounda_dof 17 -ra 6 -ra -velz
+bounda_time 17 0. 0.0010570000000000002 10. 0.0010570000000000002
+bounda_dof 18 -ra 7 -ra -velx
+bounda_time 18 0. 0.025 10. 0.025
+bounda_dof 19 -ra 7 -ra -vely
+bounda_time 19 0. 0.0006140625000000001 10. 0.0006140625000000001
+bounda_dof 20 -ra 7 -ra -velz
+bounda_time 20 0. 0.0075 10. 0.0075
+bounda_dof 21 -ra 8 -ra -velx
+bounda_time 21 0. 0.026676632812499997 10. 0.026676632812499997
+bounda_dof 22 -ra 8 -ra -vely
+bounda_time 22 0. 0.006962765624999999 10. 0.006962765624999999
+bounda_dof 23 -ra 8 -ra -velz
+bounda_time 23 0. 0.0080483203125 10. 0.0080483203125
+bounda_dof 24 -ra 9 -ra -velx
+bounda_time 24 0. 0.038836512499999996 10. 0.038836512499999996
+bounda_dof 25 -ra 9 -ra -vely
+bounda_time 25 0. 0.004304024999999999 10. 0.004304024999999999
+bounda_dof 26 -ra 9 -ra -velz
+bounda_time 26 0. 0.009163631249999998 10. 0.009163631249999998
+bounda_dof 27 -ra 10 -ra -velx
+bounda_time 27 0. 0.1 10. 0.1
+bounda_dof 28 -ra 10 -ra -vely
+bounda_time 28 0. 0.004825000000000001 10. 0.004825000000000001
+bounda_dof 29 -ra 10 -ra -velz
+bounda_time 29 0. 0.03 10. 0.03
+bounda_dof 30 -ra 11 -ra -velx
+bounda_time 30 0. 0.24665548749999994 10. 0.24665548749999994
+bounda_dof 31 -ra 11 -ra -vely
+bounda_time 31 0. 0.05616352499999999 10. 0.05616352499999999
+bounda_dof 32 -ra 11 -ra -velz
+bounda_time 32 0. 0.04081678124999999 10. 0.04081678124999999
+bounda_dof 33 -ra 12 -ra -velx
+bounda_time 33 0. 0.2079704390625 10. 0.2079704390625
+bounda_dof 34 -ra 12 -ra -vely
+bounda_time 34 0. 0.138508803125 10. 0.138508803125
+bounda_dof 35 -ra 12 -ra -velz
+bounda_time 35 0. 0.04928412343750001 10. 0.04928412343750001
+bounda_dof 36 -ra 13 -ra -velx
+bounda_time 36 0. 0.16635697031250002 10. 0.16635697031250002
+bounda_dof 37 -ra 13 -ra -vely
+bounda_time 37 0. 0.064994028125 10. 0.064994028125
+bounda_dof 38 -ra 13 -ra -velz
+bounda_time 38 0. 0.06105083906250001 10. 0.06105083906250001
+bounda_dof 39 -ra 14 -ra -velx
+bounda_time 39 0. 0.6075842 10. 0.6075842
+bounda_dof 40 -ra 14 -ra -vely
+bounda_time 40 0. 0.30645479999999997 10. 0.30645479999999997
+bounda_dof 41 -ra 14 -ra -velz
+bounda_time 41 0. 0.17489160000000004 10. 0.17489160000000004
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+control_timestep 0 1. 1.
+target_item 0 -node_dof 14 -sigxx
+target_value 0 2.618730494450e+00 2.6e-06
+target_item 1 -node_dof 10 -sigxx
+target_value 1 -1.136613924681e-01 2.6e-06
+target_item 2 -node_dof 14 -sigyy
+target_value 2 2.133299360050e+00 2.6e-06
+end_data

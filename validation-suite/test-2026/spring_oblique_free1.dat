@@ -1,0 +1,39 @@
+( C88 {F4 T6f, 2026-10-19}: spring elongation = relative displacement projected on the spring direction {Professional 02-08-2026}.
+  Two -spring2 from {0,0} to {1,0}: k 10 along {1,-1} and k 20 along
+  {1,1}; node 2 free, loaded {1,0.5}. Analytic {= Professional}: spring
+  forces 0.3535533905933 and 1.060660171780, node 2 displacement
+  {0.0625, 0.0125} in one linear step {checks the signed tangent
+  k dir dir^T; the former |dir_i dir_j| made both springs stiff along
+  {1,1}}. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+element 1 -spring2 1 2
+element 2 -spring2 1 2
+element_group 2 1
+group_type 0 -spring
+group_spring_stiffness 0 10.
+group_spring_direction 0 1. -1.
+group_type 1 -spring
+group_spring_stiffness 1 20.
+group_spring_direction 1 1. 1.
+bounda_dof 1 1 -velx -vely
+bounda_time 1 0.
+bounda_force 2 2 -velx
+bounda_time 2 1.
+bounda_force 3 2 -vely
+bounda_time 3 0.5
+control_timestep 10 1. 1.
+target_item 20 -element_spring_force 1 0
+target_value 20 0.3535533905933 1.e-9
+target_item 21 -element_spring_force 2 0
+target_value 21 1.060660171780 1.e-9
+target_item 22 -node_dof 2 -disx
+target_value 22 0.0625 1.e-9
+target_item 23 -node_dof 2 -disy
+target_value 23 0.0125 1.e-9
+end_data

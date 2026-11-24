@@ -1,0 +1,36 @@
+( F5 T5 U2: slide_user -yes (manual 6.1044) calls the user routine
+  user_slide_friction_force (user.cc); the distributed routine is not
+  programmed and stops, like the Professional 02-08-2026.
+  EXPECTED_ERROR: Error: routine user_slide_friction_force is not programmed.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_stress
+end_initia
+start_define
+  bottom geometry_line 1
+end_define
+bottom 0. 0. 1. 0. 1.e-4
+start_define
+  top geometry_line 2
+end_define
+top 0. 1. 1. 1. 1.e-4
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+group_type 0  -materi
+group_materi_elasti_young 0  1.0
+bounda_dof     0  -top -vely
+bounda_time    0  0. -1.e-2 1.e10 -1.e-2
+bounda_dof     1  -top -velx
+bounda_time    1  0. 1. 1.e10 1.
+slide_geometry 10  -bottom
+slide_stiffness 10  1.e3 1.e3
+slide_plasti_friction 10  0.523598 0.002
+slide_user 10 -yes
+control_timestep 0  1.e-2 0.5
+end_data

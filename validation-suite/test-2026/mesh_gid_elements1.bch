@@ -1,0 +1,155 @@
+Mescape Files SaveAs -geoversion:current -- mesh_gid.gid
+Mescape Data Defaults ProblemType yes tochnog
+Mescape Utilities Variables ImportTolerance 1e-08 escape escape
+Mescape Utilities Collapse Points
+escape
+Mescape Utilities Variables CreateAlwaysNewPoint 1
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Meshing ElemType Triangle
+1
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Meshing ElemType Triangle
+2
+escape
+Mescape Utilities Variables Model(QuadraticType) 1
+2
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Meshing ElemType Quadrilateral
+3
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Meshing ElemType Quadrilateral
+4
+escape
+Mescape Utilities Variables Model(QuadraticType) 1
+4
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Meshing ElemType Quadrilateral
+5
+escape
+Mescape Utilities Variables Model(QuadraticType) 2
+5
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Utilities Variables Model(QuadraticType) 1
+7
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Meshing ElemType Quadrilateral
+8
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Meshing ElemType Quadrilateral
+9
+escape
+Mescape Utilities Variables Model(QuadraticType) 1
+9
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Meshing ElemType Quadrilateral
+10
+escape
+Mescape Utilities Variables Model(QuadraticType) 2
+10
+escape
+Mescape Geometry Create NurbsSurface
+1
+2
+3
+4
+escape
+Mescape Data Mat Assign GROUP_2 Surfaces
+11
+escape
+Mescape Meshing Structured Surfaces
+11
+escape
+2
+1
+escape
+3
+3
+escape
+escape
+Mescape Meshing Structured Surfaces Size
+11
+escape
+0.2
+1 2 3 4 
+Mescape Meshing ElemType Triangle
+11
+escape
+Mescape Data Conditions AssignCond nodes_in_points_1
+1
+2
+3
+Mescape Data Conditions AssignCond nodes_in_points_2
+7
+Mescape Data Conditions AssignCond nodes_in_lines_11
+2
+Mescape Data Conditions AssignCond nodes_in_lines_12
+5
+6
+Mescape Data Conditions AssignCond nodes_in_surfaces_21
+11
+Mescape Meshing Generate 
+0.2
+Mescape Utilities Calculate
+'Zoom Frame
+Mescape Utilities Variables CreateAlwaysNewPoint 0 escape escape
+Mescape Quit
+No

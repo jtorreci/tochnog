@@ -1,0 +1,35 @@
+(
+K04 stress_pressure_factor (2026-10-06): factor 3 (stiffer unloading/
+reloading, the typical value of manual Professional 6.655), partial
+unloading disx -2 (t 2) -> -1.5 (t 2.5) -> reloading/first loading to
+-3.2 (t 4.2), dt 0.3 (the history crossing falls inside a step). Final
+sigxx -2.8 = Professional 02-08-2026. GNU before K04: -3.4.
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+materi_stress_pressure_history
+end_initia
+
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+
+group_type 0  -materi
+group_materi_memory 0  -total_linear
+group_materi_elasti_young 0  1.0
+group_materi_elasti_stress_pressure_history_factor 0  3.0
+
+bounda_dof    0  1 -velx
+bounda_time   0  0.
+
+bounda_dof    1  2 -disx
+bounda_time   1  0. 0. 2. -2. 2.5 -1.5 102.5 -101.5
+
+control_timestep 0  0.3 4.2
+
+target_item    0  -node_dof 2 -sigxx
+target_value   0  -2.8 1.e-8
+end_data

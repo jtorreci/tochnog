@@ -23,7 +23,15 @@
 #define LENGTH_LOWANGLES 10
 #define LENGTH_WOLFERSDORFF 8
 #define MAX_DATA_LENGTH 10
-#define LENGTH_INTERGRANULARSTRAIN 5
+#define LENGTH_INTERGRANULARSTRAIN 6
+
+extern "C" __thread long int hypo_substepping_off, hypo_minimum_void_ratio_on,
+  hypo_void_ratio_exact, hypo_niemunis_on;
+extern "C" __thread double hypo_niemunis_nu, hypo_niemunis_z;
+extern "C" __thread double hypo_minimum_void_ratio;
+extern "C" int niemunis_visco_peplus( double *t, double *data,
+  double *peplus );
+extern long int step_first_of_control;
 
 extern "C" 
   int hypo_( double *stress, double *Mmat, double *new_hisv,
@@ -34,11 +42,60 @@ extern "C"
     double *old_epi, double *new_epi,
     long int *use_pres, long int *use_epi, long int *hypo_type,
     double *softvar_nonloc, double *softvar_loc,
-    int *find_local_sv, int *options_nonlocal );
+    long int *find_local_sv, long int *options_nonlocal );
+
+extern "C" 
+  void masin_umat( double *stress, double *statev, double *ddsdde,
+    double *dstran, double dtime, double *props, int nprops, int testing,
+    int *error );
+
+extern "C"
+  void masin_basic_umat( double *stress, double *statev, double *ddsdde,
+    double *dstran, double dtime, double *props, int nprops, int testing,
+    int *error );
+
+extern "C" 
+  void masin_visco_umat( double *stress, double *statev, double *ddsdde,
+    double *dstran, double dtime, double *props, int nprops, int testing,
+    int *error );
+
+extern "C" 
+  void masin_niemunis_visco_umat( double *stress, double *statev,
+    double *ddsdde, double *dstran, double dtime, double *props, int nprops,
+    int testing, int *error );
+
+extern "C" 
+  void sanisand_umat( double *stress, double *statev, double *ddsdde,
+    double *dstran, double dtime, double *props, int nprops, int testing,
+    int *error );
+
+  // Fixed number of Runge-Kutta substeps of masin_basic.c mb_integrate()
+  // (nsub there; keep both equal). Reported in hyhis1.
+#define MASIN_BASIC_NSUB 32.
+
+  // Size sqrt(Mijkl Mijkl) of a 6x6 Voigt tangent [11,22,33,12,13,23]:
+  // M_ijkl = ddsdde[ij][kl] * (kl shear ? shear_column_factor : 1); every
+  // shear row/column stands for two tensor components.
+static double hypo_masin_stiffness_size( const double ddsdde[36],
+  double shear_column_factor )
+
+{
+  long int i=0, j=0;
+  double m=0., w=0., sum=0.;
+
+  for ( i=0; i<6; i++ ) {
+    for ( j=0; j<6; j++ ) {
+      m = ddsdde[i*6+j] * ( j>=3 ? shear_column_factor : 1. );
+      w = ( i>=3 ? 2. : 1. ) * ( j>=3 ? 2. : 1. );
+      sum += w*m*m;
+    }
+  }
+  return sqrt(sum);
+}
 
 void hypoplasticity( long int element, long int gr,
   long int formulation, double old_hisv[], double new_hisv[], 
-  double old_unknowns[], double new_unknowns[], 
+  double /*old_unknowns*/[], double /*new_unknowns*/[], 
   double inc_ept[], double old_epi[], double new_epi[], 
   double rotated_old_sig[], double new_sig[], 
   double *Chypo, double softvar_nonl, double &softvar_l )
@@ -48,10 +105,11 @@ void hypoplasticity( long int element, long int gr,
 {
 
   long int i=0, j=0, k=0, l=0, ldum=0, hypo_wolfersdorff=0, hypo_lowangles=0,
+    hypo_niemunis_visco=0,
     length_lowangles=0, length_wolfersdorff=0, length_intergranularstrain=0, 
     pressure_dependent_void_ratio=0, idum[1],
     ndata[1], nhis[1], use_epi[1], use_pres[1], hypo_type[1];
-  int find_local_sv[1], options_nonlocal[1];
+  long int find_local_sv[1], options_nonlocal[1];
   double ddum[1], cohesion[1], epi_R[1], epi_mr[1], 
     epi_mt[1], epi_betar[1], epi_chi[1], time[1], dtime[1],
     softvar_nonloc[1], softvar_loc[1],
@@ -59,10 +117,41 @@ void hypoplasticity( long int element, long int gr,
     hypo_intergranularstrain[LENGTH_INTERGRANULARSTRAIN],
     Mmat[MDIM*MDIM*MDIM*MDIM];
 
+  // F5 T3 C1: substepping switch (manual 6.803 global, 6.149 per
+  // timestep index, default -yes) and minimum void ratio (6.715)
+  hypo_substepping_off = materi_apply_gate_off( MATERI_PLASTI_HYPO_SUBSTEPPING,
+    CONTROL_MATERI_PLASTI_HYPO_SUBSTEPPING );
+  hypo_minimum_void_ratio_on = db( GROUP_MATERI_PLASTI_HYPO_MINIMUM_VOID_RATIO,
+    gr, idum, &hypo_minimum_void_ratio, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // group_materi_plasti_hypo_void_ratio_linear (manual 6.722, default -yes)
+  {
+    long int void_ratio_linear=-YES;
+    db( GROUP_MATERI_PLASTI_HYPO_VOID_RATIO_LINEAR, gr, &void_ratio_linear,
+      ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    hypo_void_ratio_exact = ( void_ratio_linear==-NO );
+  }
+  // group_materi_plasti_hypo_wolffersdorff_niemunis nu z (manual 6.719)
+  {
+    double niemunis[2];
+    hypo_niemunis_on = db( GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS,
+      gr, idum, niemunis, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    if ( hypo_niemunis_on ) {
+      hypo_niemunis_nu = niemunis[0];
+      hypo_niemunis_z = niemunis[1];
+      if ( hypo_niemunis_nu<=-1. || hypo_niemunis_nu>=0.5 ) {
+        pri( "Error: nu in group_materi_plasti_hypo_wolffersdorff_niemunis "
+          "should be larger than -1 and smaller than 0.5." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
+  }
+
     if(db_active_index( GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF, gr, VERSION_NORMAL )) hypo_wolfersdorff=1; 
     else if(db_active_index( GROUP_MATERI_PLASTI_HYPO_LOWANGLES, gr, VERSION_NORMAL )) hypo_lowangles=1;
+    else if(db_active_index( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO, gr, VERSION_NORMAL )) hypo_niemunis_visco=1;
 
-  if ( hypo_wolfersdorff || hypo_lowangles ) {
+  if ( hypo_wolfersdorff || hypo_lowangles || hypo_niemunis_visco || 
+       db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, VERSION_NORMAL ) ) {
 
 #if !HYPO_USE
     pri( "Error: HYPO_USE is not set to 1 in tnhypo.h" );
@@ -74,6 +163,8 @@ void hypoplasticity( long int element, long int gr,
       pri( "Error: hypoplasticity not available for this group_materi_memory.");
       exit(TN_EXIT_STATUS);
     }
+
+    if ( hypo_wolfersdorff || hypo_lowangles || hypo_niemunis_visco ) {
 
     length_lowangles = LENGTH_LOWANGLES;
     length_wolfersdorff = LENGTH_WOLFERSDORFF;
@@ -91,6 +182,27 @@ void hypoplasticity( long int element, long int gr,
       ndata[0] = length_lowangles;
       hypo_type[0] = 1;
     }
+    else if ( hypo_niemunis_visco ) {
+        // phi nu Dr Iv ee0 pe0 lambda betaR kappa (manual 6.720)
+      long int length_visco = 9;
+      db( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO, gr, idum, data, length_visco,
+        VERSION_NORMAL, GET_AND_CHECK );
+      ndata[0] = length_visco;
+      hypo_type[0] = 2;
+      if ( data[0]<=0. || data[0]>=90. || data[1]<=-1. || data[2]<0. || data[3]<=0. || 
+           data[5]<=0. || data[6]<=0. || data[7]<=0. || data[8]<=0. ) 
+        db_error( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO, gr );
+        // manual: the b2 equation only holds for a non-negative right-hand
+        // side, which limits phi and nu (the Professional uses b2 < 0)
+      double sinphi = sin( data[0]*PIRAD/180. ),
+        a = sqrt(3.)*( 3. - sinphi )/( 2.*sqrt(2.)*sinphi ),
+        b2 = ( 1. + a*a/3. )*( 1. - 2.*data[1] )/( 1. + data[1] ) - 1.;
+      if ( b2<0. ) {
+        pri( "Error: phi and nu in group_materi_plasti_hypo_niemunis_visco "
+          "give a negative b2 = (1+a^2/3)(1-2nu)/(1+nu)-1." );
+        exit(TN_EXIT_STATUS);
+      }
+    }
     if ( materi_history_variables<4 ) {
       pri( "Error: materi_history_variables should be 4 for GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF" );
       exit(TN_EXIT_STATUS);
@@ -99,9 +211,15 @@ void hypoplasticity( long int element, long int gr,
     use_epi[0] = 0;
     epi_R[0] = epi_mr[0] = epi_mt[0] = epi_betar[0] = epi_chi[0] = 0.;
     if ( materi_strain_intergranular ) {
+      // The record is variable-length (manual 6.715 6-value form R mR mT
+      // beta_r chi theta; the Professional corpus omits theta -> 5
+      // values). GET returns the stored length in
+      // length_intergranularstrain; theta has no dedicated kernel slot
+      // (the kernel evaluates the rho^theta term with chi), so the first
+      // five values are all the consumer needs.
       db( GROUP_MATERI_PLASTI_HYPO_INTERGRANULARSTRAIN, gr, idum,
         hypo_intergranularstrain, length_intergranularstrain, 
-        VERSION_NORMAL, GET_AND_CHECK );
+        VERSION_NORMAL, GET );
       use_epi[0] = 1;
       epi_R[0] = hypo_intergranularstrain[0];
       epi_mr[0] = hypo_intergranularstrain[1];
@@ -122,6 +240,8 @@ void hypoplasticity( long int element, long int gr,
         VERSION_NORMAL, GET );
       if ( pressure_dependent_void_ratio==-YES ) use_pres[0] = 1;
     }
+      // the pressure dependent correction uses the von Wolffersdorff data
+    if ( hypo_niemunis_visco ) use_pres[0] = 0;
 
     cohesion[0] = 0.;
     db( GROUP_MATERI_PLASTI_HYPO_COHESION, gr, idum, cohesion, ldum, 
@@ -135,6 +255,27 @@ void hypoplasticity( long int element, long int gr,
     nhis[0] = materi_history_variables;
     array_move( old_hisv, new_hisv, nhis[0] );
     array_move( rotated_old_sig, stress, MDIM*MDIM );
+
+      // group_materi_plasti_hypo_niemunis_visco_ocr (manual 6.721), applied
+      // by control_materi_plasti_hypo_niemunis_visco_ocr_apply -yes (6.148)
+      // once, in the first timestep of that control index (measured on the
+      // Professional 02-08-2026): pe = OCR pe+ of the current stress and
+      // e0 = (1 + ee0) (pe/pe0)^-lambda - 1 in hyhis0
+    if ( hypo_niemunis_visco && step_first_of_control ) {
+      long int icontrol=0, ocr_apply=-NO;
+      double ocr=0., peplus=0., pe=0.;
+      db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      db( CONTROL_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR_APPLY, icontrol,
+        &ocr_apply, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+      if ( ocr_apply==-YES && db( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR, 
+          gr, idum, &ocr, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
+        if ( ocr<=0. ) db_error( GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO_OCR, gr );
+        if ( !niemunis_visco_peplus( stress, data, &peplus ) ) {
+          pe = ocr * peplus;
+          new_hisv[0] = ( 1. + data[4] ) * pow( pe/data[5], -data[6] ) - 1.;
+        }
+      }
+    }
     array_set( &Mmat[0], 0., MDIM*MDIM*MDIM*MDIM );
 
     softvar_nonloc[0]=softvar_nonl;
@@ -142,11 +283,18 @@ void hypoplasticity( long int element, long int gr,
     if(find_local_softvar) {
     	find_local_sv[0]=1;
         long int length_nei=1+npointmax*ndim+npointmax+2;
-        double nonloc_info[length_nei-2];
+        // NONLOCAL_ELEMENT_INFO is a length_nei record (database.cc and all
+        // other users: elem.cc, nonloc.cc, top.cc). Slot length_nei-2 is the
+        // "element used for nonlocal calculation" flag (top.cc resets it at
+        // step end; nonloc.cc reads it as jelem_nonloc). The local buffer
+        // must therefore hold the full record (heap, same pattern as the
+        // other NONLOCAL_ELEMENT_INFO users).
+        double *nonloc_info = get_new_dbl(length_nei);
         array_set(nonloc_info, 0., length_nei);
         db( NONLOCAL_ELEMENT_INFO, element, idum, nonloc_info, length_nei, VERSION_NORMAL, GET );		
 	nonloc_info[1+npointmax*ndim+npointmax]=1.;
         db( NONLOCAL_ELEMENT_INFO, element, idum, nonloc_info, length_nei, VERSION_NORMAL, PUT );		
+        delete[] nonloc_info;
     }
     options_nonlocal[0]=0;	
     if (scalar_dabs(options_nonlocal_softvar)>TINY) options_nonlocal[0]=1;
@@ -175,6 +323,471 @@ void hypoplasticity( long int element, long int gr,
     array_add( new_sig, stress, new_sig, MDIM*MDIM );
     array_subtract( new_sig, rotated_old_sig, new_sig, MDIM*MDIM );
 
+    }   /* end wolfersdorff / lowangles block */
+
+  }   /* end hypoplasticity dispatch */
+
+  if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, VERSION_NORMAL ) ||
+       db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, VERSION_NORMAL ) ) {
+
+      // Masin hypoplasticity.  The _clay route uses masin.c (HCEA); the
+      // five-parameter basic route uses masin_basic.c (Mašín 2005 Appendix C).
+      // ------------------------------------------------------------------
+      // Conventions:
+      //   tochnog stores 3x3 tensors row-major (sig[i*MDIM+j]); masin uses
+      //   Voigt6 [11,22,33,12,13,23]. Compression negative in both.
+      //   tochnog history hisv[] (materi_history_variables, >= 8):
+      //     hisv[0..5] = intergranular strain delta (continuum -> Voigt)
+      //     hisv[6]    = void ratio e
+      //     hisv[7]    = sensitivity s
+      //   masin statev[16] maps: [0..5]=delta, 6=e, 12=dtsub, 13=sensitivity.
+      // ------------------------------------------------------------------
+    long int mhis[8];
+    double mstress[6], mdstran[6], mstatev[16], mddsdde[36], mprops[29];
+    double ocr=0., e0=0., mdt=0.;
+    int merror=0, mtesting=0, i2, j2;
+    long int ocr_apply=-NO, hypo_masin_clay=0, hypo_masin_visco=0, diri=0, struct_active=0;
+    long int hypo_masin_visco_jm=0;
+
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, VERSION_NORMAL ) )
+      hypo_masin_clay = 1;
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO, gr, VERSION_NORMAL ) )
+      hypo_masin_visco = 1;
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM, gr, VERSION_NORMAL ) )
+      hypo_masin_visco_jm = 1;
+
+    if ( materi_history_variables<8 ) {
+      pri( "Error: materi_history_variables should be at least 8 for GROUP_MATERI_PLASTI_HYPO_MASIN(_CLAY)." );
+      pri( "   hisv[0..5] = intergranular strain, hisv[6] = void ratio e, hisv[7] = sensitivity." );
+      exit(TN_EXIT_STATUS);
+    }
+
+    if ( formulation==TOTAL ) {
+      pri( "Error: hypoplasticity not available for this group_materi_memory.");
+      exit(TN_EXIT_STATUS);
+    }
+
+      // material parameters.  The basic route receives r in props[5]; the
+      // HCEA/clay route retains its raw umat_hcea.for layout.
+      // group_materi_plasti_hypo_masin        = phi_c lambda* kappa* N r
+      // group_materi_plasti_hypo_masin_clay   = phi_c lambda* kappa* N nu_pp
+      //   -> props[0]=phi_c, props[2]=lambda*, props[3]=kappa*,
+      //      props[4]=N, props[5]=r/nu_pp
+      //   props[1]=p_t is kept 0 (no cohesion shift)
+    for ( i=0; i<29; i++ ) mprops[i] = 0.;
+    length_wolfersdorff = 5;
+    {
+      double mpar[5];
+      if ( hypo_masin_clay )
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY, gr, idum, mpar, length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+      else
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN, gr, idum, mpar, length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+      mprops[0] = mpar[0];   // phi_c [deg]
+      mprops[2] = mpar[1];   // lambda*
+      mprops[3] = mpar[2];   // kappa*
+      mprops[4] = mpar[3];   // N
+      mprops[5] = mpar[4];   // r / nu_pp
+    }
+    mprops[1] = 0.;                       // p_t (shift due to cohesion)
+    mprops[6] = 1.;                       // alpha_G (isotropic by default)
+    mprops[9] = 1.;                       // s_f (1 => no structure effect)
+    mprops[13] = 0.;                      // A_g (0 => intergranular strain off)
+    mprops[17] = 3.;                      // vertical direction (z in 3D)
+    mprops[22] = 0.;                      // ay (0 => 0.30 default in kernel)
+    mprops[23] = 0.;                      // oc (0 => 2.0 default in kernel)
+
+    if ( hypo_masin_clay ) {
+        // advanced parameters: alpha_G alpha_f ay oc
+      if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_ADVANCED_PARAMETERS, gr, VERSION_NORMAL ) ) {
+        length_intergranularstrain = 4;
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_ADVANCED_PARAMETERS, gr, idum, &mprops[6], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
+          // mprops[6]=alpha_G, [20]=alpha_f, [22]=ay, [23]=oc
+      }
+        // direction diri: 0=1D(x), 1=2D(y), 2=3D(z) -> props[17]=diri+1
+      if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_AVANCED_DIRECTION, gr, VERSION_NORMAL ) ) {
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_AVANCED_DIRECTION, gr, &diri, ddum, ldum, VERSION_NORMAL, GET_AND_CHECK );
+        if ( diri>=0 && diri<=2 ) mprops[17] = diri + 1.;
+      }
+        // structure: k A s_f
+      if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_STRUCTURE, gr, VERSION_NORMAL ) ) {
+        length_intergranularstrain = 3;
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_STRUCTURE, gr, idum, &mprops[7], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
+        }
+        if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_STRUCTURE, gr, VERSION_NORMAL ) )
+          struct_active = 1;
+    }
+    else {
+        // basic model: optional structure
+      if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, VERSION_NORMAL ) ) {
+        length_intergranularstrain = 3;
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, idum, &mprops[7], length_intergranularstrain, VERSION_NORMAL, GET_AND_CHECK );
+          // mprops[7,8,9] = k, A, s_f
+        }
+        if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_MASIN_STRUCTURE, gr, VERSION_NORMAL ) )
+          struct_active = 1;
+    }
+      // intergranular strain masin clay: R Ag ng mrat beta_r chi [theta]
+      //   -> props[10]=R, [13]=A_g(G0), [14]=n_g, [15]=m_rat,
+      //      [11]=beta_r, [12]=chi. theta has no direct slot (kernel uses chi).
+    if ( db_active_index( GROUP_MATERI_PLASTI_HYPO_STRAIN_INTERGRANULAR_MASIN_CLAY, gr, VERSION_NORMAL ) ) {
+      double mgr[7];
+      length_wolfersdorff = 7;
+      db( GROUP_MATERI_PLASTI_HYPO_STRAIN_INTERGRANULAR_MASIN_CLAY, gr, idum, mgr, length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+      mprops[10] = mgr[0];   // R
+      mprops[13] = mgr[1];   // A_g
+      mprops[14] = mgr[2];   // n_g
+      mprops[15] = mgr[3];   // m_rat
+      mprops[11] = mgr[4];   // beta_r
+      mprops[12] = mgr[5];   // chi
+    }
+      // initial void ratio / OCR: props[21] = e0, or OCR+10 if > 10.
+      // History layout (manual Professional 4.23): with the
+      // materi_plasti_hypo_history initia the 8 slots are hyhis0..7
+      // (e, substep, mobilized friction, stiffness, structure s, OCR,
+      // density index, intergranular rho); the legacy materi_history_
+      // variables layout puts e at hisv[6] and the sensitivity at
+      // hisv[7] (hisv[0..5] = intergranular strain delta).
+    {
+      long int e_slot = materi_plasti_hypo_history ? 0 : 6;
+      long int s_slot = materi_plasti_hypo_history ? 4 : 7;
+      e0 = new_hisv[e_slot];
+      if ( e0>0.001 ) mprops[21] = e0;
+      if ( hypo_masin_clay ) {
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR, gr, idum, &ocr, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        // control_materi_plasti_hypo_masin_clay_ocr_apply (manual
+        // 6.147): per-timestep switch indexed by ICONTROL; the OCR
+        // record is APPLIED by default and -no at the current control
+        // index turns it off.
+        ocr_apply = -YES;
+        if ( control_materi_gate_off( CONTROL_MATERI_PLASTI_HYPO_MASIN_CLAY_OCR_APPLY ) )
+          ocr_apply = -NO;
+      }
+      else {
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_OCR, gr, idum, &ocr, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        ocr_apply = -YES;
+        if ( control_materi_gate_off( CONTROL_MATERI_PLASTI_HYPO_MASIN_OCR_APPLY ) )
+          ocr_apply = -NO;
+      }
+      if ( ocr_apply==-YES && ocr>0. ) mprops[21] = ocr + 10.;
+
+      // visco parameters:
+      //   _clay_visco (Dr Iv)     -> props[25]=Dr, props[26]=Iv  (Niemunis law)
+      //   _clay_visco_jm (Dref)   -> props[21]=ocparam, [22]=beta_deg, [23]=ksi,
+      //                              [24]=gama_deg, [25]=Dref (Jerman-Masin)
+      //   e0/OCR goes to props[27] for the visco kernels.
+      if ( hypo_masin_visco ) {
+        double mvisco[2];
+        length_wolfersdorff = 2;
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO, gr, idum, mvisco,
+          length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+        mprops[25] = mvisco[0];   // Dr
+        mprops[26] = mvisco[1];   // Iv
+        mprops[27] = e0;
+        if ( ocr_apply==-YES && ocr>0. ) mprops[27] = ocr + 10.;
+      }
+      if ( hypo_masin_visco_jm ) {
+        double mvisco[5];
+        length_wolfersdorff = 5;
+        db( GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM, gr, idum, mvisco,
+          length_wolfersdorff, VERSION_NORMAL, GET_AND_CHECK );
+        mprops[21] = mvisco[0];   // ocparam
+        mprops[22] = mvisco[1];   // beta_deg
+        mprops[23] = mvisco[2];   // ksi
+        mprops[24] = mvisco[3];   // gama_deg
+        mprops[25] = mvisco[4];   // Dref
+        mprops[27] = e0;
+        if ( ocr_apply==-YES && ocr>0. ) mprops[27] = ocr + 10.;
+      }
+
+      // strain increment: 3x3 (row-major) -> Voigt6
+      mdstran[0] = inc_ept[0*MDIM+0];
+      mdstran[1] = inc_ept[1*MDIM+1];
+      mdstran[2] = inc_ept[2*MDIM+2];
+      mdstran[3] = inc_ept[0*MDIM+1];
+      mdstran[4] = inc_ept[0*MDIM+2];
+      mdstran[5] = inc_ept[1*MDIM+2];
+      // stress: 3x3 (row-major) -> Voigt6
+      mstress[0] = rotated_old_sig[0*MDIM+0];
+      mstress[1] = rotated_old_sig[1*MDIM+1];
+      mstress[2] = rotated_old_sig[2*MDIM+2];
+      mstress[3] = rotated_old_sig[0*MDIM+1];
+      mstress[4] = rotated_old_sig[0*MDIM+2];
+      mstress[5] = rotated_old_sig[1*MDIM+2];
+
+      // history: hisv -> statev (layout of umat_hcea.for)
+      // NOTE: the Fortran reference defines move_asv_hcea (which negates the
+      // intergranular strain) but NEVER calls it in the integration path:
+      // iniy_hcea copies asv -> y(6+i) directly. So no sign flip here.
+      for ( i=0; i<16; i++ ) mstatev[i] = 0.;
+      // intergranular strain delta for the masin kernels: statev[0..5]
+      // (Voigt6). With the hyhis layout the delta lives in the epi dof
+      // (materi_strain_intergranular), not in the history slots.
+          if ( materi_plasti_hypo_history && materi_strain_intergranular ) {
+            // hyhis layout (hyhis0..7 = e, substep, ..., structure, ...):
+            // the delta lives in the epi dof (materi_strain_intergranular).
+            if ( old_epi ) {
+              mstatev[0] = old_epi[0*MDIM+0];
+              mstatev[1] = old_epi[1*MDIM+1];
+              mstatev[2] = old_epi[2*MDIM+2];
+              mstatev[3] = old_epi[0*MDIM+1];
+              mstatev[4] = old_epi[0*MDIM+2];
+              mstatev[5] = old_epi[1*MDIM+2];
+            }
+          }
+          else if ( materi_plasti_hypo_history ) {
+            // hyhis layout without intergranular dofs: there is no delta
+            // slot (hyhis0 is the void ratio, not delta[0]); intergranular
+            // strains are off for these groups (A_g=0).
+            for ( i=0; i<6; i++ ) mstatev[i] = 0.;
+          }
+          else {
+            // legacy materi_history_variables layout: hisv[0..5] = delta,
+            // hisv[6] = e, hisv[7] = sensitivity.
+            for ( i=0; i<6; i++ ) mstatev[i] = old_hisv[i];
+          }
+          mstatev[6]  = old_hisv[e_slot];   // void ratio
+          mstatev[7]  = 0.;                 // excess pore pressure
+          mstatev[12] = 0.;                 // dtsub (suggested substep, recomputed)
+          mstatev[13] = struct_active ? old_hisv[s_slot] : 0.;   // sensitivity / structure
+          mstatev[15] = 0.;
+
+      db( DTIME, 0, idum, &mdt, ldum, VERSION_NEW, GET );
+      // stress contribution by Masin hypoplasticity
+      if ( hypo_masin_visco )
+        masin_niemunis_visco_umat( mstress, mstatev, mddsdde, mdstran, mdt,
+          mprops, 29, mtesting, &merror );
+      else if ( hypo_masin_visco_jm )
+        masin_visco_umat( mstress, mstatev, mddsdde, mdstran, mdt, mprops, 29,
+          mtesting, &merror );
+      else if ( !hypo_masin_clay )
+        masin_basic_umat( mstress, mstatev, mddsdde, mdstran, mdt, mprops, 29,
+          mtesting, &merror );
+      else
+        masin_umat( mstress, mstatev, mddsdde, mdstran, mdt, mprops, 29,
+          mtesting, &merror );
+      if ( merror==10 ) {
+        pri( "Error: severe error in Masin hypoplasticity." );
+        exit(TN_EXIT_STATUS);
+      }
+
+      // statev -> hisv (only e and s; the delta stays in the epi dof)
+      new_hisv[e_slot] = mstatev[6];
+      if ( hypo_minimum_void_ratio_on &&
+           new_hisv[e_slot]<hypo_minimum_void_ratio )
+        new_hisv[e_slot] = hypo_minimum_void_ratio;
+          if ( struct_active )
+            new_hisv[s_slot] = mstatev[13];
+          // write the integrated intergranular strain delta back to the dof
+          // the kernel input came from, so the (new-old)/dtime rate assembly
+          // and the next increment see the evolved delta (previously the
+          // kernel-returned delta was discarded and the epi dof stayed at its
+          // initial value forever).
+          if ( materi_plasti_hypo_history && materi_strain_intergranular ) {
+            // hyhis layout: write the integrated delta back to the epi dof.
+            if ( new_epi ) {
+              new_epi[0*MDIM+0] = mstatev[0];
+              new_epi[1*MDIM+1] = mstatev[1];
+              new_epi[2*MDIM+2] = mstatev[2];
+              new_epi[0*MDIM+1] = mstatev[3];
+              new_epi[1*MDIM+0] = mstatev[3];
+              new_epi[0*MDIM+2] = mstatev[4];
+              new_epi[2*MDIM+0] = mstatev[4];
+              new_epi[1*MDIM+2] = mstatev[5];
+              new_epi[2*MDIM+1] = mstatev[5];
+            }
+          }
+          else if ( !materi_plasti_hypo_history ) {
+            // legacy layout: delta lives in hisv[0..5].
+            for ( i=0; i<6; i++ ) new_hisv[i] = mstatev[i];
+          }
+          // Post-processing history slots of the hyhis layout (manual
+          // Professional 4.23, K14a): hyhis1 substep size, hyhis2
+          // mobilized friction angle, hyhis3 stiffness size
+          // sqrt(Mijkl Mijkl), hyhis5 OCR, hyhis7 intergranular rho
+          // (hyhis0 = e and hyhis4 = s are written above; hyhis6, the
+          // density index, belongs to von Wolffersdorff). None of them is
+          // read back by the kernels.
+          if ( materi_plasti_hypo_history ) {
+            if ( hypo_masin_visco || hypo_masin_visco_jm || hypo_masin_clay ) {
+                // HCEA kernels (masin.c calc_statev): statev 10 phi_mob,
+                // 11 rho, 12 suggested substep (time), 14 OCR; ddsdde is
+                // the hypoplastic L (m_R L with intergranular strains) in
+                // the engineering-shear Voigt form: M_ij12 = D[ij][3].
+              new_hisv[1] = mstatev[12];
+              new_hisv[2] = mstatev[10];
+              new_hisv[3] = hypo_masin_stiffness_size( mddsdde, 1.0 );
+              new_hisv[5] = mstatev[14];
+              new_hisv[7] = mstatev[11];
+            }
+            else {
+                // basic Masin kernel (masin_basic.c): fixed Runge-Kutta
+                // substeps, no post-processing statev. phi_mob as in
+                // masin.c calc_statev (p_t = 0) on the new state; OCR =
+                // p_e/p WITHOUT the structure factor s (the Professional
+                // 02-08-2026: hypo8 1.31766 = p_e/p; with s it would be
+                // 2.12; its HCEA clay law does include s, hypo12); the
+                // stiffness from the kernel tangent at a zero strain
+                // increment (central differences of the |D| term cancel:
+                // L of the new state). Its shear columns are per tensorial
+                // strain (both eps_12 and eps_21): M_ij12 = D[ij][3]/2.
+              double mI1=0., mI2=0., mI3=0., mx=0., msin2=0.;
+              double mstress0[6], mstatev0[16], mddsdde0[36], mdstran0[6];
+              int merror0=0;
+              mI1 = mstress[0] + mstress[1] + mstress[2];
+              mI2 = 0.5*( mstress[0]*mstress[0] + mstress[1]*mstress[1] +
+                mstress[2]*mstress[2] + 2.*( mstress[3]*mstress[3] +
+                mstress[4]*mstress[4] + mstress[5]*mstress[5] ) - mI1*mI1 );
+              mI3 = mstress[0]*( mstress[1]*mstress[2] - mstress[5]*mstress[5] ) -
+                mstress[3]*( mstress[3]*mstress[2] - mstress[5]*mstress[4] ) +
+                mstress[4]*( mstress[3]*mstress[5] - mstress[4]*mstress[1] );
+              if ( mI3!=0. ) {
+                mx = mI1*mI2/mI3;
+                if ( 1.+mx!=0. ) msin2 = ( 9.+mx )/( 1.+mx );
+              }
+              if ( msin2<0. ) msin2 = 0.;
+              if ( msin2>1. ) msin2 = 1.;
+              new_hisv[1] = mdt/MASIN_BASIC_NSUB;
+              new_hisv[2] = asin(sqrt(msin2))*180./PIRAD;
+              new_hisv[5] = ( mI1<0. ) ? -
+                exp( ( mprops[4] - log( 1.+mstatev[6] ) )/mprops[2] )/( mI1/3. ) : 0.;
+              new_hisv[7] = 0.;
+              for ( i=0; i<6; i++ ) {
+                mstress0[i] = mstress[i];
+                mdstran0[i] = 0.;
+              }
+              for ( i=0; i<16; i++ ) mstatev0[i] = mstatev[i];
+              for ( i=0; i<36; i++ ) mddsdde0[i] = 0.;
+              masin_basic_umat( mstress0, mstatev0, mddsdde0, mdstran0, mdt,
+                mprops, 29, mtesting, &merror0 );
+              new_hisv[3] = merror0 ? 0. :
+                hypo_masin_stiffness_size( mddsdde0, 0.5 );
+            }
+          }
+    }
+
+      // Voigt6 -> 3x3 (row-major), symmetric
+    for ( i2=0; i2<3; i2++ )
+      for ( j2=0; j2<3; j2++ ) {
+        if      ( i2==0 && j2==0 ) stress[0] = mstress[0];
+        else if ( i2==1 && j2==1 ) stress[4] = mstress[1];
+        else if ( i2==2 && j2==2 ) stress[8] = mstress[2];
+        else if ( (i2==0&&j2==1)||(i2==1&&j2==0) ) stress[i2*MDIM+j2] = mstress[3];
+        else if ( (i2==0&&j2==2)||(i2==2&&j2==0) ) stress[i2*MDIM+j2] = mstress[4];
+        else if ( (i2==1&&j2==2)||(i2==2&&j2==1) ) stress[i2*MDIM+j2] = mstress[5];
+      }
+
+      // tangent ddsdde (Voigt6) -> Chypo (3x3x3x3, row-major)
+    {
+      int vi[3][3];
+      vi[0][0]=0; vi[1][1]=1; vi[2][2]=2;
+      vi[0][1]=3; vi[1][0]=3; vi[0][2]=4; vi[2][0]=4; vi[1][2]=5; vi[2][1]=5;
+      for ( i=0; i<MDIM; i++ )
+        for ( j=0; j<MDIM; j++ )
+          for ( k=0; k<MDIM; k++ )
+            for ( l=0; l<MDIM; l++ )
+              Chypo[i*MDIM*MDIM*MDIM + j*MDIM*MDIM + k*MDIM + l] =
+                mddsdde[ vi[i][j]*6 + vi[k][l] ];
+    }
+
+    array_add( new_sig, stress, new_sig, MDIM*MDIM );
+    array_subtract( new_sig, rotated_old_sig, new_sig, MDIM*MDIM );
+
+
+
+    (void)mhis;
+
+    (void)mhis;
   }
-  
+
+  if ( db_active_index( GROUP_MATERI_PLASTI_SANISAND, gr, VERSION_NORMAL ) ) {
+
+      // SANISAND (Dafalias & Manzari 2004), port of the reference UMAT.
+      // ------------------------------------------------------------------
+      // Conventions: SANISAND uses SOIL mechanics (compression positive),
+      // tochnog uses Abaqus-like (tension positive). The kernel does its own
+      // sign conversion (move_sig/move_eps negate), so we pass the raw
+      // tensors. History: statev[0..35] is stored in hisv (36 slots).
+      //   hisv[0..5]  = back stress alpha
+      //   hisv[6]     = void ratio e
+      //   hisv[7..12] = fabric tensor z
+      //   hisv[14..19]= alpha at stress reversal
+      //   hisv[28..33]= pore, p', q, cos3t, dtsub, nfev
+      //   (the kernel reads/writes all 36 through the statev array)
+      // ------------------------------------------------------------------
+    double sstress[6], sstatev[36], sddsdde[36], sdstran[6], sprops[19];
+    double mdt2=0.;
+    int serror=0, stesting=0, i2b, j2b;
+
+    if ( materi_history_variables<36 ) {
+      pri( "Error: materi_history_variables should be at least 36 for GROUP_MATERI_PLASTI_SANISAND." );
+      pri( "   hisv[0..5]=alpha, hisv[6]=e, hisv[7..12]=z, hisv[14..19]=alpha_sr." );
+      exit(TN_EXIT_STATUS);
+    }
+    if ( formulation==TOTAL ) {
+      pri( "Error: hypoplasticity not available for this group_materi_memory.");
+      exit(TN_EXIT_STATUS);
+    }
+
+      // material parameters (19)
+    for ( i=0; i<19; i++ ) sprops[i] = 0.;
+    length_wolfersdorff = 19;
+    db( GROUP_MATERI_PLASTI_SANISAND, gr, idum, sprops, length_wolfersdorff,
+      VERSION_NORMAL, GET_AND_CHECK );
+
+      // state: hisv -> statev (36)
+    for ( i=0; i<36; i++ ) sstatev[i] = new_hisv[i];
+
+      // stress/strain: pass raw tensors (kernel converts sign)
+    sstress[0] = rotated_old_sig[0*MDIM+0];
+    sstress[1] = rotated_old_sig[1*MDIM+1];
+    sstress[2] = rotated_old_sig[2*MDIM+2];
+    sstress[3] = rotated_old_sig[0*MDIM+1];
+    sstress[4] = rotated_old_sig[0*MDIM+2];
+    sstress[5] = rotated_old_sig[1*MDIM+2];
+    sdstran[0] = inc_ept[0*MDIM+0];
+    sdstran[1] = inc_ept[1*MDIM+1];
+    sdstran[2] = inc_ept[2*MDIM+2];
+    sdstran[3] = inc_ept[0*MDIM+1];
+    sdstran[4] = inc_ept[0*MDIM+2];
+    sdstran[5] = inc_ept[1*MDIM+2];
+
+    db( DTIME, 0, idum, &mdt2, ldum, VERSION_NEW, GET );
+
+    sanisand_umat( sstress, sstatev, sddsdde, sdstran, mdt2, sprops, 19,
+      stesting, &serror );
+    if ( serror==10 ) {
+      pri( "Error: severe error in SANISAND." );
+      exit(TN_EXIT_STATUS);
+    }
+
+      // statev -> hisv
+    for ( i=0; i<36; i++ ) new_hisv[i] = sstatev[i];
+
+      // stress: kernel returns Abaqus-convention (tension positive) stress
+    stress[0*MDIM+0] = sstress[0];
+    stress[1*MDIM+1] = sstress[1];
+    stress[2*MDIM+2] = sstress[2];
+    stress[0*MDIM+1] = sstress[3];  stress[1*MDIM+0] = sstress[3];
+    stress[0*MDIM+2] = sstress[4];  stress[2*MDIM+0] = sstress[4];
+    stress[1*MDIM+2] = sstress[5];  stress[2*MDIM+1] = sstress[5];
+
+      // tangent: Voigt6 -> Chypo
+    {
+      int vi[3][3];
+      vi[0][0]=0; vi[1][1]=1; vi[2][2]=2;
+      vi[0][1]=3; vi[1][0]=3; vi[0][2]=4; vi[2][0]=4; vi[1][2]=5; vi[2][1]=5;
+      for ( i=0; i<MDIM; i++ )
+        for ( j=0; j<MDIM; j++ )
+          for ( k=0; k<MDIM; k++ )
+            for ( l=0; l<MDIM; l++ )
+              Chypo[i*MDIM*MDIM*MDIM + j*MDIM*MDIM + k*MDIM + l] =
+                sddsdde[ vi[i][j]*6 + vi[k][l] ];
+    }
+
+    array_add( new_sig, stress, new_sig, MDIM*MDIM );
+    array_subtract( new_sig, rotated_old_sig, new_sig, MDIM*MDIM );
+
+    (void)i2b; (void)j2b;
+  }
+
 }

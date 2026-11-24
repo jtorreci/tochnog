@@ -1,0 +1,80 @@
+# Tochnog — Project conventions
+
+## Documentation of new features (MANDATORY)
+
+Every time a feature is implemented (keyword, data record, or behavior change),
+you MUST document it in TWO places, in the same work unit as the feature:
+
+1. `ProjectDocs/manual-user/<feature>.md` — USER manual.
+   Content: what the feature does, why it is useful, input syntax, parameters
+   with their meaning, and a minimal example input.
+
+2. `ProjectDocs/manual-developer/<feature>.md` — DEVELOPER manual.
+   Content: where it was implemented (file + function), implementation details,
+   external features/libraries used, hardcoded parameters, and pending
+   refactorings (cryptic enums, hardcoded data).
+
+Also update the index files:
+- `ProjectDocs/manual-user/README.md`
+- `ProjectDocs/manual-developer/README.md`
+
+Rules:
+- Use the exact feature name as the .md filename (lowercase, snake_case).
+- Write in English.
+- Commit the documentation together with the feature implementation.
+- If a feature is only partially implemented, mark it clearly and note what
+  remains (user) and which parts are pending (developer).
+
+## Convergence tracking (MANDATORY)
+
+The project's goal is convergence with Tochnog Professional. Track every
+feature in `ProjectDocs/SEGUIMIENTO-CONVERGENCIA.md`:
+
+- When implementing a feature: update its line to `[x]` with the commit
+  hash and date, and add a row to the "registro de verificación" table.
+- When deciding NOT to implement a feature: add it to the "Descarte de
+  features" table with the reason, and mention it in the "Differences with
+  the Professional version" section of the relevant manual.
+- Every divergence with the Professional (deliberate, known or pending)
+  must also be listed in `ProjectDocs/DIVERGENCES-PROFESSIONAL.md`.
+- Verification rule: before implementing a feature, search for a usage
+  example — in the Professional manual, in its repo/Google Drive (links on
+  the Professional website), or in the sfnet test suite. Verify against
+  that example if found; otherwise build a dedicated test. Record how the
+  feature was verified.
+
+## Build notes
+
+- Only clean builds are reliable on the current filesystem (`/mnt/z`).
+  Incremental builds mix old/new enums and corrupt the binary.
+- Linking to `/tmp` and copying the binary to `build/` avoids I/O failures.
+- `tochnog.h` and `tochnog-mod.h` must stay in sync (same enum, same order).
+- When copying the source to a scratch directory for a build, exclude
+  `.codegraph/` (and `.git/`): rsync exits with code 24 on the live index
+  files and, under `set -e`, the build silently never starts.
+- On the NAS, `git merge` right after `git switch` often fails with
+  "no se pudo escribir índice / stash falló" (stale index stat data).
+  Run `git update-index --refresh` before the merge; it then succeeds.
+- The canonical build is `-O2` (F4 T13, 2026-10-11; `-O1` before).
+  Buffers given to `db()` reads, `get_group_data()`, `array_*()` and
+  `geometry()` must hold the full record / contract length (a short
+  `idum[1]`/`ddum[1]` is a latent overflow that `-O2` exposes): run
+  `scripts/audit_db_buffers.py` (exit 1 on a hit) after adding such
+  calls; contract in `ProjectDocs/manual-developer/db_buffer_contract.md`.
+- ASan / UBSan builds (`TN_EXTRA_FLAGS="-fsanitize=address,undefined
+  -fno-omit-frame-pointer -g -O1"`, `TN_MEMLIMIT_KB=unlimited`) cannot run
+  under `ulimit -v`: cap them with `ASAN_OPTIONS=hard_rss_limit_mb=4000`
+  (plus `detect_leaks=0`) instead, same job limits.
+- Running `build/tochnog` outside `scripts/build_safe.sh` needs
+  `LD_LIBRARY_PATH=external-downloads/numlib-runtime` (no system
+  `liblapack.so.3`).
+- Every tochnog run outside `scripts/build_safe.sh` (probes, corpus
+  runners, any binary, the Professional included) must use `ulimit -v
+  4000000` (4 GB) plus `timeout`, with at most 4 parallel jobs: an
+  uncapped run can grow to ~30 GB, trigger the global OOM killer and kill
+  the whole session.
+- Expensive runs (full corpus A/B, Pro sweeps) go to the "omen" machine
+  (WSL, 16 cores, 31 GB, Tailscale `100.118.34.119`, user `jtorreci`,
+  `~/tochnog-runs`) through `scripts/remote_run.sh` (bin / lib / push /
+  run / pull). `run` applies the same 4 GB `ulimit -v`; keep at most
+  `TN_REMOTE_JOBS` (6) parallel jobs. Builds stay local.

@@ -1,0 +1,30 @@
+(
+F5 W1 U6: control_input file with a comment: comments, defines, arithmetic
+ and ranges are not allowed in the control_input file (manual Professional
+ 6.139; Professional 02-08-2026: "Error for control_input detected." /
+ "Error detected near:" and the opening parenthesis). build_safe.sh runs
+ it in an isolated directory with a 1.dat that starts with a comment.
+  EXPECTED_ERROR: Error for control_input detected. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_strain_total
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -updated_linear
+bounda_dof 0 -ra 1 2 -ra -vely
+bounda_dof 1 -ra 1 3 -ra -velx
+bounda_dof 2 -ra 3 4 -ra -vely
+bounda_time 2 0 0 2 -0.02
+control_timestep 0 1 1
+control_timestep 2 1 1
+control_input 1 -yes
+end_data

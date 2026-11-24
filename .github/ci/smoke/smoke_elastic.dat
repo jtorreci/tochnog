@@ -1,0 +1,44 @@
+( CI smoke: single quad4 elastic column under compression.
+  Bottom nodes 1-2 fixed, top nodes 3-4 vely=-1e-3, one quasi-static step.
+  Exercises the CORE pipeline: parse, mesh, elastic materi, boundary
+  conditions, solve, database dump. The runner only asserts rc=0 and that
+  the .dbs was written with solved nodal dofs (no numeric target: numeric
+  checks live in the local validation-suite, which is not checked out in
+  CI). )
+
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh          -fixed_in_space -fixed_in_space
+options_convection    -no
+options_inertia       -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  1. 1.
+node 4  0. 1.
+
+element 1  -quad4 1 2 3 4
+element_group 1 0
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.e7
+group_materi_elasti_poisson 0  0.3
+group_materi_memory 0  -total_linear
+
+bounda_unknown 0  -ra 1 2 -ra -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  -ra 1 2 -ra -vely
+bounda_time    1  0. 0. 100. 0.
+bounda_unknown 2  -ra 3 4 -ra -vely
+bounda_time    2  0. -1.e-3 100. -1.e-3
+
+control_timestep 1  1. 1.0
+end_data

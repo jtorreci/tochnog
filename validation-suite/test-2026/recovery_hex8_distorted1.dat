@@ -1,0 +1,107 @@
+( C70 {F4 T6f, 2026-10-13} hex8 2x2x2 Gauss recovery on two distorted elements sharing a face: the Professional fits 1,x,y,z by least squares in PHYSICAL coordinates per element and averages the element values at a node arithmetically {GNU before: natural-coordinate fit}. Prescribed velocity at every node. Targets = Professional 02-08-2026 node_dof; GNU before: node 11 sigxx 1.12162; node 9 sigxx 1.26358; node 4 sigxx 3.71632. )
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space -fixed_in_space
+inertia_apply -no
+node 1 0.0 0.0 0.0
+node 2 1.04 0.11 -0.05
+node 3 0.13 1.0 0.07
+node 4 1.17 1.11 0.11
+node 5 0.05 0.0 1.0
+node 6 1.01 0.15 0.95
+node 7 0.18 0.94 1.07
+node 8 1.14 1.09 1.11
+node 9 2.3936 0.5324 -0.242
+node 10 2.5236 1.5324 0.026
+node 11 2.2676 0.6204 0.758
+node 12 2.3976 1.5604 1.026
+element 1 -hex8 1 2 3 4 5 6 7 8
+element 2 -hex8 2 9 4 10 6 11 8 12
+bounda_dof 0 -ra 1 -ra -velx
+bounda_time 0 0. 0.0 10. 0.0
+bounda_dof 1 -ra 1 -ra -vely
+bounda_time 1 0. 0.0 10. 0.0
+bounda_dof 2 -ra 1 -ra -velz
+bounda_time 2 0. 0.0 10. 0.0
+bounda_dof 3 -ra 2 -ra -velx
+bounda_time 3 0. 0.0365478 10. 0.0365478
+bounda_dof 4 -ra 2 -ra -vely
+bounda_time 4 0. -0.0783952 10. -0.0783952
+bounda_dof 5 -ra 2 -ra -velz
+bounda_time 5 0. -0.000497 10. -0.000497
+bounda_dof 6 -ra 3 -ra -velx
+bounda_time 6 0. 0.055560000000000005 10. 0.055560000000000005
+bounda_dof 7 -ra 3 -ra -vely
+bounda_time 7 0. 0.025727000000000003 10. 0.025727000000000003
+bounda_dof 8 -ra 3 -ra -velz
+bounda_time 8 0. 0.0010570000000000002 10. 0.0010570000000000002
+bounda_dof 9 -ra 4 -ra -velx
+bounda_time 9 0. 0.5186586999999999 10. 0.5186586999999999
+bounda_dof 10 -ra 4 -ra -vely
+bounda_time 10 0. 0.20535840000000005 10. 0.20535840000000005
+bounda_dof 11 -ra 4 -ra -velz
+bounda_time 11 0. 0.014648700000000002 10. 0.014648700000000002
+bounda_dof 12 -ra 5 -ra -velx
+bounda_time 12 0. 0.1 10. 0.1
+bounda_dof 13 -ra 5 -ra -vely
+bounda_time 13 0. 0.004825000000000001 10. 0.004825000000000001
+bounda_dof 14 -ra 5 -ra -velz
+bounda_time 14 0. 0.03 10. 0.03
+bounda_dof 15 -ra 6 -ra -velx
+bounda_time 15 0. 0.13727949999999997 10. 0.13727949999999997
+bounda_dof 16 -ra 6 -ra -vely
+bounda_time 16 0. 0.02908799999999999 10. 0.02908799999999999
+bounda_dof 17 -ra 6 -ra -velz
+bounda_time 17 0. 0.04146749999999999 10. 0.04146749999999999
+bounda_dof 18 -ra 7 -ra -velx
+bounda_time 18 0. 0.16780680000000003 10. 0.16780680000000003
+bounda_dof 19 -ra 7 -ra -vely
+bounda_time 19 0. 0.048801599999999994 10. 0.048801599999999994
+bounda_dof 20 -ra 7 -ra -velz
+bounda_time 20 0. 0.0524514 10. 0.0524514
+bounda_dof 21 -ra 8 -ra -velx
+bounda_time 21 0. 0.6075842 10. 0.6075842
+bounda_dof 22 -ra 8 -ra -vely
+bounda_time 22 0. 0.30645479999999997 10. 0.30645479999999997
+bounda_dof 23 -ra 8 -ra -velz
+bounda_time 23 0. 0.17489160000000004 10. 0.17489160000000004
+bounda_dof 24 -ra 9 -ra -velx
+bounda_time 24 0. 0.9351160317312002 10. 0.9351160317312002
+bounda_dof 25 -ra 9 -ra -vely
+bounda_time 25 0. -0.3232845180928001 10. -0.3232845180928001
+bounda_dof 26 -ra 9 -ra -velz
+bounda_time 26 0. -0.029082413887999998 10. -0.029082413887999998
+bounda_dof 27 -ra 10 -ra -velx
+bounda_time 27 0. 3.0452330936511998 10. 3.0452330936511998
+bounda_dof 28 -ra 10 -ra -vely
+bounda_time 28 0. 0.7459709916672002 10. 0.7459709916672002
+bounda_dof 29 -ra 10 -ra -velz
+bounda_time 29 0. 0.010074908064 10. 0.010074908064
+bounda_dof 30 -ra 11 -ra -velx
+bounda_time 30 0. 1.0337320645311998 10. 1.0337320645311998
+bounda_dof 31 -ra 11 -ra -vely
+bounda_time 31 0. -0.01349849671680009 10. -0.01349849671680009
+bounda_dof 32 -ra 11 -ra -velz
+bounda_time 32 0. 0.12387380323199998 10. 0.12387380323199998
+bounda_dof 33 -ra 12 -ra -velx
+bounda_time 33 0. 2.9179911619712002 10. 2.9179911619712002
+bounda_dof 34 -ra 12 -ra -vely
+bounda_time 34 0. 1.0111581464832 10. 1.0111581464832
+bounda_dof 35 -ra 12 -ra -velz
+bounda_time 35 0. 0.4154289431040001 10. 0.4154289431040001
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+control_timestep 0 1. 1.
+target_item 0 -node_dof 11 -sigxx
+target_value 0 1.307169054542e+00 5.0e-06
+target_item 1 -node_dof 9 -sigxx
+target_value 1 1.111934932217e+00 5.0e-06
+target_item 2 -node_dof 4 -sigxx
+target_value 2 3.805044791518e+00 5.0e-06
+end_data

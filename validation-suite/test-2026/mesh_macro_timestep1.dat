@@ -1,0 +1,26 @@
+( F4 T7: control_mesh_macro on the SAME index as control_timestep
+  [the Professional `mesh_activate1` with 20 steps instead of 1000].
+  The macro must be generated once per control index: 202 nodes at the
+  end [Professional 02-08-2026: 202]. Old GNU: step_start re-ran
+  macro() on every step and added a copy of the mesh per step
+  [4040 nodes after 20 steps; the 1000-step original ran out of
+  memory]. build_safe.sh also counts the nodes of the .dbs. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+geometry_line 10 0. 0. 1. 0. 1.e-4
+group_type 0  -materi
+group_materi_elasti_young   0  1.0e6
+group_materi_density   0  1.0
+bounda_dof 1  -geometry_line 10 -velx -vely
+force_gravity 0. -10.
+mesh_activate_gravity_time 10  0. 1.
+post_point 10  0.5 0.5
+control_mesh_macro 10   -rectangle 0 2 101
+control_mesh_macro_parameters 10   0.05 0.5 0.1 1.
+control_timestep  10  0.05 1.
+end_data

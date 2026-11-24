@@ -1,0 +1,76 @@
+(
+F5 T4 U8: copy of the Professional 02-08-2026 example test/other/geometry_moving1.dat {manual 6.533-6.538, 6.135}.
+A -geometry_point of radius 0.2 moves along the diagonal of the unit square from -1,-1 with velocity 1 1 {time 0 to 3} and excavates a band of the 19 x 19 quad4 mesh.
+The Professional tests the element nodes and reaches sigyy -0.3268 at the post point; the GNU tests 200 x 200 sample points per element {manual 6.538, DIVERGENCES GEOMETRY-MOVING-SAMPLING}.
+The GNU binary of F5 T4 U8 gives sigyy -0.348912581336 {35 min}, 0.022 from the Professional target -0.326823 +- 0.02; owner decision 2026-11-09: class D, the target is the GNU value. Not in build_safe.
+The Professional needs processors_maximum -no for this input {with threads it stops on element_rhside_delete allocated in a parallel loop}.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_plasti
+materi_plasti_kappa
+materi_stress
+end_initia
+
+start_define
+  bottom geometry_line 1
+end_define
+bottom 0. 0. 1. 0. 1.e-4
+
+start_define
+  top geometry_line 2
+end_define
+top 0. 1. 1. 1. 1.e-4
+
+start_define
+  left geometry_line 3
+end_define
+left 0. 0. 0. 1. 1.e-4
+
+start_define
+  right geometry_line 4
+end_define
+right 1. 0. 1. 1. 1.e-4
+
+bounda_dof 0  -bottom -velx -vely
+bounda_dof 1  -top -velx -vely
+bounda_dof 2  -left -velx -vely
+bounda_dof 3  -right -velx -vely
+
+group_type 0  -materi
+group_materi_elasti_young 0 1.e4
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0  -total_linear
+group_materi_plasti_vonmises 0  5.e-1
+
+geometry_moving 10 -geometry_point (geometical point that will move in space and excavate the mesh)
+geometry_moving_parameter 10  -1. -1. 2.e-1 (start x-coordinate of point, start y-coordinate of point, radius of point)
+geometry_moving_operat 10  -translate (translate the point in space)
+geometry_moving_operat_parameter 10  1. 1. (velocity of point in x-direction, velocity of point in y-direction)
+geometry_moving_operat_time 10  0. 3. (start time of point moving, end time of point moving)
+geometry_moving_n 10 200 200 (number of time discretision, number of space distretisation)
+
+post_point 10 0.75 0.30
+
+solver -matrix_iterative_bicg
+
+control_mesh_macro              10 -rectangle 0 20 20
+control_mesh_macro_parameters   10  0.5 0.5 1. 1.
+
+control_reset_dof               20  -sigxx -sigyy -sigzz
+control_reset_value_constant    20  -1.
+
+control_geometry_moving         25  -initialise (prepare the point for moving through the mesh)
+
+control_timestep                30  1e-3 2.0
+(
+control_print                   30  -time_current -dtime -post_node_rhside_ratio
+)
+
+control_print_gid               50  -yes
+
+target_item  0   -post_point_dof 10 -sigyy
+target_value 0   -0.348912581336 1.e-6
+end_data

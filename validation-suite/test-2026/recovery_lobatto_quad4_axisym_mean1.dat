@@ -1,0 +1,74 @@
+( C79 {F4 T6f, 2026-10-13} axisymmetric quad4 Lobatto 2x2 off the axis, four distorted elements of unequal size: per element the point value at the node, arithmetic mean over the elements {GNU before: weighted by h x 2 PI r x point volume}. Prescribed velocity at every node. Targets = Professional 02-08-2026 node_dof; GNU before: node 8 sigxx 14.4006; node 2 sigxx 8.31375; node 5 sigxx 10.1788. )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0.5 0.0
+node 2 1.5 0.0
+node 3 4.0 0.0
+node 4 0.5 1.0
+node 5 1.75 0.85
+node 6 4.0 1.0
+node 7 0.6 2.4
+node 8 1.5 2.5
+node 9 4.3 2.9
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element 3 -quad4 4 5 7 8
+element 4 -quad4 5 6 8 9
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0.5625 10. 0.5625
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0.1 10. 0.1
+bounda_dof 2 2 -velx
+bounda_time 2 0. 2.0625 10. 2.0625
+bounda_dof 3 2 -vely
+bounda_time 3 0. 0.30000000000000004 10. 0.30000000000000004
+bounda_dof 4 3 -velx
+bounda_time 4 0. 8.0 10. 8.0
+bounda_dof 5 3 -vely
+bounda_time 5 0. 0.8 10. 0.8
+bounda_dof 6 4 -velx
+bounda_time 6 0. 0.9125 10. 0.9125
+bounda_dof 7 4 -vely
+bounda_time 7 0. 0.37500000000000006 10. 0.37500000000000006
+bounda_dof 8 5 -velx
+bounda_time 8 0. 3.331625 10. 3.331625
+bounda_dof 9 5 -vely
+bounda_time 9 0. 0.8291875 10. 0.8291875
+bounda_dof 10 6 -velx
+bounda_time 10 0. 10.1 10. 10.1
+bounda_dof 11 6 -vely
+bounda_time 11 0. 2.6500000000000004 10. 2.6500000000000004
+bounda_dof 12 7 -velx
+bounda_time 12 0. 1.9859999999999998 10. 1.9859999999999998
+bounda_dof 13 7 -vely
+bounda_time 13 0. 0.6384000000000001 10. 0.6384000000000001
+bounda_dof 14 8 -velx
+bounda_time 14 0. 4.5625 10. 4.5625
+bounda_dof 15 8 -vely
+bounda_time 15 0. 1.3000000000000003 10. 1.3000000000000003
+bounda_dof 16 9 -velx
+bounda_time 16 0. 15.998499999999998 10. 15.998499999999998
+bounda_dof 17 9 -vely
+bounda_time 17 0. 6.671600000000001 10. 6.671600000000001
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_density 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_integration_method 0 -lobatto
+group_axisymmetric 0 -yes
+control_timestep 10 1. 1.
+target_item 0 -node_dof 8 -sigxx
+target_value 0 1.345961040685e+01 4.0e-06
+target_item 1 -node_dof 2 -sigxx
+target_value 1 7.751250000000e+00 4.0e-06
+target_item 2 -node_dof 5 -sigxx
+target_value 2 9.814285980840e+00 4.0e-06
+end_data

@@ -1,0 +1,36 @@
+( mpc_geometry without mpc_geometry_dof: the Professional 02-08-2026 stops
+  with "Error detected for data item : mpc_geometry_dof", the GNU too.
+  EXPECTED_ERROR: mpc_geometry_dof
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+node 7 0 2
+node 8 1 2
+node 9 2 2
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element 3 -quad4 4 5 7 8
+element 4 -quad4 5 6 8 9
+geometry_line 10 0 0 0 2 1.e-6
+geometry_line 20 2 0 2 2 1.e-6
+geometry_line 30 1 0 1 2 1.e-6
+geometry_point 40 0.5 0.5 0.6
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1.
+bounda_dof 1 -geometry_line 10 -velx -vely
+bounda_time 1 0. 0. 100. 0.
+mpc_geometry 10 -geometry_line 10 -geometry_line 20
+mpc_geometry_switch 10 -no -yes
+control_timestep 0 1. 1.
+end_data

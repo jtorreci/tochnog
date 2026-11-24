@@ -23,42 +23,88 @@
 void area_element_group( long int version )
 
 {
-  long int element=0, max_element=0, inol=0, nnol=0, inod=0, 
-    any=0, all=0, length=0, itmp=0, iarea=0, 
-    max_area_element_group=0, area_element_group[3], 
-    element_group=0, method=0, ldum=0, *el=NULL, *nodes=NULL;
+  long int element=0, max_element=0, inol=0, nnol=0, inod=0,
+    any=0, all=0, length=0, itmp=0, iarea=0, count_in=0,
+    max_area_element_group=0, area_element_group[3],
+    element_group=0, method=0, ldum=0, el_name=0, use_node_list=0,
+    length_nodes_list=0, *el=NULL, *nodes=NULL,
+    *nodes_list=NULL;
   double rdum=0., ddum[MDIM];
 
   db_max_index( AREA_ELEMENT_GROUP, max_area_element_group, VERSION_NORMAL, GET );
   if ( max_area_element_group>=0 ) {
     el = get_new_int(MNOL+1);
     nodes = get_new_int(MNOL);
+    nodes_list = get_new_int(DATA_ITEM_SIZE);
     db_max_index( ELEMENT, max_element, version, GET );
     for ( iarea=0; iarea<=max_area_element_group; iarea++ ) {
       if ( db_active_index( AREA_ELEMENT_GROUP, iarea, VERSION_NORMAL ) ) {
-        db( AREA_ELEMENT_GROUP, iarea, area_element_group, ddum, 
+        db( AREA_ELEMENT_GROUP, iarea, area_element_group, ddum,
           ldum, VERSION_NORMAL, GET );
         method = -ALL;
-        db( AREA_ELEMENT_GROUP_METHOD, iarea, &method, ddum, 
+        db( AREA_ELEMENT_GROUP_METHOD, iarea, &method, ddum,
           ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        // area_element_group_element: only elements with this element
+        // name (manual 6.2); default all elements
+        el_name = -ALL;
+        db( AREA_ELEMENT_GROUP_ELEMENT, iarea, &el_name, ddum,
+          ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        // area_element_group_node: direct global node numbers instead of
+        // a geometry (manual 6.5); the last value of the master record is
+        // the element group
+        use_node_list = 0;
+        if ( db_active_index( AREA_ELEMENT_GROUP_NODE, iarea,
+            VERSION_NORMAL ) ) {
+          db( AREA_ELEMENT_GROUP_NODE, iarea, nodes_list, ddum,
+            length_nodes_list, VERSION_NORMAL, GET );
+          use_node_list = 1;
+        }
+        // area_element_group_time -yes: evaluate at all times, not only
+        // at the start (manual 6.6). The caller re-runs this routine per
+        // step when any record asks for it (top.cc step_start).
         for ( element=0; element<=max_element; element++ ) {
           if ( db_active_index( ELEMENT, element, version ) ) {
             db( ELEMENT, element, el, ddum, length, version, GET );
             nnol = length - 1; array_move( &el[1], nodes, nnol );
+            if ( el_name!=-ALL && el[0]!=el_name ) continue;
+            // area_element_group_interface -no (the only legal value,
+            // manual 6.3): interface elements are excluded from the
+            // re-grouping (their group keeps GROUP_INTERFACE parameters)
+            {
+              long int grp_now = -1, interface_switch = -NO;
+              db( ELEMENT_GROUP, element, &grp_now, ddum, ldum, version,
+                GET_IF_EXISTS );
+              if ( grp_now>=0 &&
+                   db_active_index( GROUP_INTERFACE, grp_now, VERSION_NORMAL ) ) {
+                db( AREA_ELEMENT_GROUP_INTERFACE, iarea, &interface_switch,
+                  ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+                if ( interface_switch!=-YES ) continue;
+              }
+            }
             all = 1;
             any = 0;
+            count_in = 0;
             for ( inol=0; inol<nnol; inol++ ) {
               inod = nodes[inol];
-              geometry( inod, ddum, area_element_group, itmp, rdum, ddum, rdum,
-                ddum, NODE_START_REFINED, PROJECT_EXACT, version );
+              if ( use_node_list ) {
+                itmp = array_member( nodes_list, inod,
+                  length_nodes_list, ldum );
+              }
+              else {
+                geometry( inod, ddum, area_element_group, itmp, rdum, ddum, rdum,
+                  ddum, NODE_START_REFINED, PROJECT_EXACT, version );
+              }
               if ( !itmp ) all = 0;
-              if ( itmp ) any = 1;
+              if ( itmp ) { any = 1; count_in++; }
             }
-            if ( ( method==-ALL && all ) || ( method==-ANY && any ) ) {
+            if ( ( method==-ALL && all ) ||
+                 ( method==-ANY && any ) ||
+                 ( method==-ANY_BUT_NOT_ALL && any && !all ) ||
+                 ( method>=0 && count_in>=method ) ) {
               element_group = area_element_group[2];
-              length = 1; db( ELEMENT_GROUP, element, &element_group, ddum, 
+              length = 1; db( ELEMENT_GROUP, element, &element_group, ddum,
                 length, version, PUT );
-              length = 1; db( ELEMENT_GROUP_AREA_ELEMENT_GROUP, 
+              length = 1; db( ELEMENT_GROUP_AREA_ELEMENT_GROUP,
                 element, &iarea, ddum, length, VERSION_NORMAL, PUT );
             }
           }
@@ -67,14 +113,156 @@ void area_element_group( long int version )
     }
     delete[] el;
     delete[] nodes;
+    delete[] nodes_list;
   }
 
+}
+
+// does any area_element_group record ask for evaluation at all times?
+// (area_element_group_time -yes, manual 6.6)
+long int area_element_group_time_active( void )
+{
+  long int iarea=0, max_area=0, swit=0, ldum=0;
+  double ddum[1];
+  db_max_index( AREA_ELEMENT_GROUP_TIME, max_area, VERSION_NORMAL, GET );
+  for ( iarea=0; iarea<=max_area; iarea++ ) {
+    if ( db_active_index( AREA_ELEMENT_GROUP_TIME, iarea, VERSION_NORMAL ) ) {
+      db( AREA_ELEMENT_GROUP_TIME, iarea, &swit, ddum, ldum,
+        VERSION_NORMAL, GET );
+      if ( swit==-YES ) return 1;
+    }
+  }
+  return 0;
+}
+
+// group_time (manual 6.769): are the elements of element_group active at
+// time_total? Without a group_time record they always are. The birth time
+// itself is excluded and the death time included; at time 0 a group born
+// at 0 is active. Shared by elem() and bounda().
+long int group_time_alive( long int element_group, double time_total )
+{
+  long int ldum=0, idum[1];
+  double group_time[2];
+
+  if ( !db( GROUP_TIME, element_group, idum, group_time, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    // group_time_fill (manual 6.770): alive from birth_empty to death
+    double group_time_fill[3];
+    if ( !db( GROUP_TIME_FILL, element_group, idum, group_time_fill, ldum,
+        VERSION_NORMAL, GET_IF_EXISTS ) ) return 1;
+    group_time[0] = group_time_fill[0];
+    group_time[1] = group_time_fill[2];
+  }
+  if ( time_total==0. && group_time[0]==0. ) return 1;
+  if ( time_total>group_time[0] && time_total<=group_time[1] ) return 1;
+  return 0;
+}
+
+// group_time_fill (manual 6.770): filling factor of element_group at the
+// end of the current step, 0 at birth_empty rising linearly to 1 at
+// birth_filled; 1 without the record. Measured on the Professional
+// 02-08-2026 (birth_empty 0.5, birth_filled 2.5, steps of 0.5): the
+// density factor is 0, 0.25, 0.5, 0.75, 1 at t = 0.5 .. 2.5, i.e. it is
+// evaluated at time_current + dtime.
+double group_time_fill_factor( long int element_group )
+{
+  long int ldum=0, idum[1];
+  double group_time_fill[3], time_current=0., dtime=0., time_total=0.;
+
+  if ( !db( GROUP_TIME_FILL, element_group, idum, group_time_fill, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) return 1.;
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET_IF_EXISTS );
+  time_total = time_current + dtime;
+  if ( time_total>=group_time_fill[1] ) return 1.;
+  if ( time_total<=group_time_fill[0] ) return 0.;
+  return ( time_total - group_time_fill[0] ) /
+    ( group_time_fill[1] - group_time_fill[0] );
+}
+
+// mesh_element_group_apply (manual Professional 6.817) and
+// control_mesh_element_group_apply (6.178): are the elements of
+// element_group evaluated in the current control index? The control
+// record of the current index overrules the global records (the groups
+// of every mesh_element_group_apply record are united); without records
+// every group is evaluated. A group that is not evaluated is treated as a
+// group_time group that is not alive (elem() skips it, bounda() makes its
+// own nodes dormant).
+long int element_group_applied( long int element_group )
+{
+  long int icontrol=0, length=0, irec=0, max_rec=-1, ldum=0,
+    groups[DATA_ITEM_SIZE];
+  double ddum[1];
+
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( db_active_index( CONTROL_MESH_ELEMENT_GROUP_APPLY, icontrol,
+       VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_ELEMENT_GROUP_APPLY, icontrol, groups, ddum, length,
+      VERSION_NORMAL, GET );
+    return array_member( groups, element_group, length, ldum );
+  }
+  db_max_index( MESH_ELEMENT_GROUP_APPLY, max_rec, VERSION_NORMAL, GET );
+  if ( max_rec<0 ) return 1;
+  for ( irec=0; irec<=max_rec; irec++ ) {
+    if ( !db_active_index( MESH_ELEMENT_GROUP_APPLY, irec, VERSION_NORMAL ) )
+      continue;
+    db( MESH_ELEMENT_GROUP_APPLY, irec, groups, ddum, length,
+      VERSION_NORMAL, GET );
+    if ( array_member( groups, element_group, length, ldum ) ) return 1;
+  }
+  return 0;
+}
+
+// does any mesh_element_group_apply / control_mesh_element_group_apply
+// record exist?
+long int element_group_apply_active( void )
+{
+  long int max_mesh=-1, max_control=-1;
+
+  db_max_index( MESH_ELEMENT_GROUP_APPLY, max_mesh, VERSION_NORMAL, GET );
+  db_max_index( CONTROL_MESH_ELEMENT_GROUP_APPLY, max_control,
+    VERSION_NORMAL, GET );
+  return max_mesh>=0 || max_control>=0;
+}
+
+// control_element_group_apply index number (manual Professional 6.134,
+// 6.429): at the start of control index icontrol every element with an
+// element_group_apply record gets the group at position number of that
+// record (= Professional 02-08-2026; the group is kept afterwards).
+// control_element_group index -yes (6.133): the area_element_group records
+// are evaluated at the start of the index (the Professional 02-08-2026
+// rejects the record; the GNU follows the manual).
+void control_element_group_apply( long int icontrol )
+{
+  long int number=-1, element=0, max_element=-1, length=0, ldum=0,
+    control_element_group=-NO, groups[DATA_ITEM_SIZE];
+  double ddum[1];
+
+  if ( db( CONTROL_ELEMENT_GROUP_APPLY, icontrol, &number, ddum, ldum,
+       VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    if ( number<0 ) db_error( CONTROL_ELEMENT_GROUP_APPLY, icontrol );
+    db_max_index( ELEMENT_GROUP_APPLY, max_element, VERSION_NORMAL, GET );
+    for ( element=0; element<=max_element; element++ ) {
+      if ( !db_active_index( ELEMENT_GROUP_APPLY, element, VERSION_NORMAL ) ||
+           !db_active_index( ELEMENT, element, VERSION_NORMAL ) )
+        continue;
+      db( ELEMENT_GROUP_APPLY, element, groups, ddum, length,
+        VERSION_NORMAL, GET );
+      if ( number>=length ) db_error( ELEMENT_GROUP_APPLY, element );
+      length = 1;
+      db( ELEMENT_GROUP, element, &groups[number], ddum, length,
+        VERSION_NORMAL, PUT );
+    }
+  }
+  db( CONTROL_ELEMENT_GROUP, icontrol, &control_element_group, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( control_element_group==-YES ) area_element_group( VERSION_NORMAL );
 }
 
 void area_element_group_sequence( void )
 
 {
-  long int element=0, max_element=0, itime=0, inol=0, nnol=0, 
+  long int element=0, max_element=0, itime=0, inol=0, nnol=0, count_in=0,
     inod=0, ok=0, length=0, name=0, length_elementgroup=0,
     itmp=0, all=0, any=0, method=0, found=0, iarea=0, max_area_element_group=0, 
     length_area_element_group_sequence=0,
@@ -87,7 +275,30 @@ void area_element_group_sequence( void )
   double time=0., time_total=0., rdum=0., 
     ddum[MDIM], area_element_group_sequence_time[DATA_ITEM_SIZE];
 
-  db_max_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP, 
+  // area_element_group_sequence_element_group (with underscores) is the
+  // Professional manual name of the legacy GNU keyword
+  // area_element_group_sequence_elementgroup (without). Copy the record
+  // when only the Professional name is used (safe PUT: this routine runs
+  // in step_close, not in a parallel loop). This runs BEFORE the
+  // max_index query of the legacy item.
+  {
+    long int ialias=0, max_alias=0, length_alias=0,
+      alias_groups[DATA_ITEM_SIZE];
+    db_max_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP, max_alias,
+      VERSION_NORMAL, GET );
+    for ( ialias=0; ialias<=max_alias; ialias++ ) {
+      if ( db_active_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP,
+           ialias, VERSION_NORMAL ) &&
+           !db_active_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP,
+           ialias, VERSION_NORMAL ) ) {
+        db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT_GROUP, ialias,
+          alias_groups, ddum, length_alias, VERSION_NORMAL, GET );
+        db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP, ialias,
+          alias_groups, ddum, length_alias, VERSION_NORMAL, PUT );
+      }
+    }
+  }
+  db_max_index( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP,
     max_area_element_group, VERSION_NORMAL, GET );
   if ( max_area_element_group>=0 ) {
     el = get_new_int(MNOL+1);
@@ -115,18 +326,30 @@ void area_element_group_sequence( void )
           length_area_element_group_sequence = db_len( AREA_ELEMENT_GROUP_SEQUENCE,
             iarea, VERSION_NORMAL );
         }
-        if ( !use_geometry && !use_element ) {
-          pri( "Error: AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY or AREA_ELEMENT_GROUP_SEQUENCE should be specified." );
-          exit(TN_EXIT_STATUS);
-        }
+        // manual Professional 6.9: as a completely separate option, NEITHER
+        // geometry NOR the element list is used - then the elements of the
+        // PREVIOUS group number group_(i-1) get the new group number
+        // group_i at time_i (the previous group selects the elements).
+        // The old GNU code required one of the selectors and errored out
+        // (dam_building only uses _element_group + _time).
         area_element_group_sequence_element[0] = -ALL;
         db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENT, iarea, 
           area_element_group_sequence_element, ddum, 
           ldum, VERSION_NORMAL, GET_IF_EXISTS );
         method = -ALL;
-        db( AREA_ELEMENT_GROUP_SEQUENCE_METHOD, iarea, 
+        db( AREA_ELEMENT_GROUP_SEQUENCE_METHOD, iarea,
           &method, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
-        db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP, iarea, 
+        // area_element_group_sequence_geometry_method (manual 6.11): the
+        // -all/-any selection of the geometry, kept separate from
+        // AREA_ELEMENT_GROUP_SEQUENCE_METHOD for Professional parity;
+        // it wins for the geometry test when both are given
+        {
+          long int geometry_method = 0;
+          if ( db( AREA_ELEMENT_GROUP_SEQUENCE_GEOMETRY_METHOD, iarea,
+              &geometry_method, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) )
+            method = geometry_method;
+        }
+        db( AREA_ELEMENT_GROUP_SEQUENCE_ELEMENTGROUP, iarea,
           area_element_group_sequence_elementgroup, ddum, 
           length_elementgroup, VERSION_NORMAL, GET );
         db( AREA_ELEMENT_GROUP_SEQUENCE_TIME, iarea, 
@@ -141,15 +364,19 @@ void area_element_group_sequence( void )
               name = el[0];
               all = 1;
               any = 0;
+              count_in = 0;
               for ( inol=0; inol<nnol; inol++ ) {
                 inod = nodes[inol];
-                geometry( inod, ddum, area_element_group_sequence_geometry, 
-                  itmp, rdum, ddum, rdum, ddum, NODE_START_REFINED, 
+                geometry( inod, ddum, area_element_group_sequence_geometry,
+                  itmp, rdum, ddum, rdum, ddum, NODE_START_REFINED,
                   PROJECT_EXACT, VERSION_NORMAL );
                 if ( !itmp ) all = 0;
-                if ( itmp ) any = 1;
+                if ( itmp ) { any = 1; count_in++; }
               }
-              if ( ( method==-ALL && all ) || ( method==-ANY && any ) ) {
+              if ( ( method==-ALL && all ) ||
+                   ( method==-ANY && any ) ||
+                   ( method==-ANY_BUT_NOT_ALL && any && !all ) ||
+                   ( method>=0 && count_in>=method ) ) {
                 ok = 1;
               }
               if ( area_element_group_sequence_element[0]!=-ALL ) {
@@ -159,6 +386,47 @@ void area_element_group_sequence( void )
             if ( use_element ) {
               if ( array_member( area_element_group_sequence, element,
                 length_area_element_group_sequence, ldum ) ) ok = 1;
+            }
+            // area_element_group_sequence_interface -no (the only legal
+            // value, manual 6.12): interface elements are excluded
+            if ( ok ) {
+              long int grp_now = -1, interface_switch = -NO;
+              db( ELEMENT_GROUP, element, &grp_now, ddum, ldum,
+                VERSION_NORMAL, GET_IF_EXISTS );
+              if ( grp_now>=0 &&
+                   db_active_index( GROUP_INTERFACE, grp_now, VERSION_NORMAL ) ) {
+                db( AREA_ELEMENT_GROUP_SEQUENCE_INTERFACE, iarea,
+                  &interface_switch, ddum, ldum, VERSION_NORMAL,
+                  GET_IF_EXISTS );
+                if ( interface_switch!=-YES ) ok = 0;
+              }
+            }
+            if ( ok ) {
+              // mode without geometry/element selectors: the element must
+              // currently have the PREVIOUS group in the sequence (the
+              // i-th time point maps group_(i-1) -> group_i)
+              if ( !use_geometry && !use_element ) {
+                long int grp_now2 = -1;
+                db( ELEMENT_GROUP, element, &grp_now2, ddum, ldum,
+                  VERSION_NORMAL, GET_IF_EXISTS );
+                if ( grp_now2>=0 ) {
+                  long int prev_grp = -1;
+                  for ( long int it2=0; it2<length_elementgroup; it2++ ) {
+                    double tt2 = area_element_group_sequence_time[it2];
+                    if ( time_total>=(tt2-EPS_SMALL) )
+                      prev_grp = area_element_group_sequence_elementgroup[it2];
+                  }
+                  // find the group BEFORE the current time window
+                  long int prev2 = -1;
+                  for ( long int it2=0; it2<length_elementgroup; it2++ ) {
+                    double tt2 = area_element_group_sequence_time[it2];
+                    if ( time_total < (tt2-EPS_SMALL) ) break;
+                    prev2 = area_element_group_sequence_elementgroup[it2];
+                  }
+                  if ( prev2<0 ) prev2 = prev_grp;
+                  if ( grp_now2!=prev2 ) ok = 0;
+                }
+              }
             }
             if ( ok ) {
               found = 0;
@@ -186,18 +454,116 @@ void area_element_group_sequence( void )
 
 }
 
+// time at which the -time_current dependencies are evaluated outside the
+// element loop (element_print_group_data_values_calculate sets it to the
+// end of the step that starts, the time the element loop of that step
+// uses); unset inside the element loop.
+static int dependency_time_set = 0;
+static double dependency_time = 0.;
+
+// value of row irow of a dependency_diagram (n dof values first) at the
+// dof value tmp: multi linear, constant outside the dof range.
+static double dependency_interpolate( double dependency_diagram[], long int n,
+  long int irow, double tmp, long int idep )
+
+{
+  long int i=0;
+  double value=0., time_left=0., time_right=0., val_left=0., val_right=0.;
+
+  if      ( tmp<dependency_diagram[0] )
+    value = dependency_diagram[n+irow*n+0];
+  else if ( tmp>dependency_diagram[n-1] )
+    value = dependency_diagram[n+irow*n+n-1];
+  else {
+    for( i=0; i<n-1; i++ ) {
+      time_left = dependency_diagram[i];
+      time_right = dependency_diagram[i+1];
+      val_left = dependency_diagram[n+irow*n+i];
+      val_right = dependency_diagram[n+irow*n+i+1];
+      if ( time_right<=time_left ) db_error( DEPENDENCY_DIAGRAM, idep );
+      if ( tmp>=time_left && tmp<=time_right ) {
+        value = val_left + (tmp-dependency_diagram[i])*
+          (val_right-val_left) / (time_right-time_left);
+      }
+    }
+  }
+  return value;
+}
+
+// dependency_method / dependency_type (manual Professional 6.406): -use
+// takes the diagram value d, -multiply multiplies the original value o
+// with d; with a type the cosinus/sinus/tangent of o is multiplied and
+// the arc-function of the result is used (also of d itself with -use).
+static double dependency_combine( double d, double o, long int method,
+  long int dependency_type, long int idep )
+
+{
+  double x=d;
+
+  if ( method==-MULTIPLY ) {
+    if      ( dependency_type==-TANGENT ) x = d * tan( o );
+    else if ( dependency_type==-SINUS )   x = d * sin( o );
+    else if ( dependency_type==-COSINUS ) x = d * cos( o );
+    else                                  x = d * o;
+  }
+  if      ( dependency_type==-TANGENT ) x = atan( x );
+  else if ( dependency_type==-SINUS ||  dependency_type==-COSINUS ) {
+    if ( x<-1. || x>1. ) db_error( DEPENDENCY_TYPE, idep );
+    x = ( dependency_type==-SINUS ? asin( x ) : acos( x ) );
+  }
+  return x;
+}
+
+// dependency_geometry (manual Professional 6.405): the dependency is
+// used only for an element inside the geometry. Default: all its nodes
+// inside (the element_geometry_present rule, measured on the Professional
+// 02-08-2026 with geometry_point radii around one element);
+// geometry_method (6.532) of that geometry selects -any / -average
+// (measured on the Professional 02-08-2026, F5 T4 U4).
+static long int dependency_geometry_contains( long int idep, long int element )
+
+{
+  long int ldum=0, dependency_geometry[2];
+  double ddum[MDIM];
+
+  if ( !db( DEPENDENCY_GEOMETRY, idep, dependency_geometry, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS ) ) return 1;
+  if ( element<0 || !db_active_index( ELEMENT, element, VERSION_NORMAL ) )
+    return 0;
+  return element_in_geometry( element, dependency_geometry,
+    geometry_method_get( dependency_geometry ), NODE_START_REFINED,
+    PROJECT_EXACT, NULL, VERSION_NORMAL );
+}
+
 long int get_group_data( long int idat, long int gr, long int element,
   double new_unknowns[], double values[], long int &nvalue, long int task )
 
 {
-  long int i=0, n=0, idep=0, max_dep=0, found=0, go_ahead=0,
+  long int n=0, idep=0, max_dep=0, found=0, go_ahead=0,
     iuknwn=0, ival=0, nval=0, length=0,
     data_item_name=0, data_item_number=0, 
     idistribute=0, ndistribute=0, ldum=0, 
     idum[1], element_distribute[DATA_ITEM_SIZE], dof_label[MUKNWN], *dependency_item=NULL;
-  double tmp=0., time_current=0., dtime=0., time_left=0., time_right=0,
-    val_left=0., val_right=0., ddum[1], element_distribute_values[DATA_ITEM_SIZE], 
-    *dependency_diagram=NULL;
+  double tmp=0., time_current=0., dtime=0.,
+    ddum[1], element_distribute_values[DATA_ITEM_SIZE], 
+    *dependency_diagram=NULL, *node_dof=NULL, *coord=NULL;
+
+  // dependency_apply (manual Professional 6.125, global) and
+  // control_dependency_apply (manual Professional 6.126, per timestep
+  // index): when the switch is -no the dependency_item/dependency_diagram
+  // machinery is disabled. Precedence: control_* (same index as the
+  // current timestep) overrides the global record; default -yes.
+  {
+    long int icontrol=0, dependency_apply=-YES;
+    db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+    db( DEPENDENCY_APPLY, 0, &dependency_apply, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    db( CONTROL_DEPENDENCY_APPLY, icontrol, &dependency_apply, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( dependency_apply==-NO ) {
+      return db( idat, gr, idum, values, nvalue, VERSION_NORMAL, task );
+    }
+  }
 
   db_max_index( DEPENDENCY_ITEM, max_dep, VERSION_NORMAL, GET );
   if ( max_dep>=0 ) {
@@ -207,13 +573,67 @@ long int get_group_data( long int idat, long int gr, long int element,
         dependency_item = db_int( DEPENDENCY_ITEM, idep, VERSION_NORMAL );
         n = dependency_item[3];
         if ( n<2 ) db_error( DEPENDENCY_ITEM, idep );
-        if ( labs(dependency_item[0])==idat && dependency_item[1]==gr ) {
+        if ( labs(dependency_item[0])==idat &&
+            ( dependency_item[1]==gr || dependency_item[1]==-ALL ) ) {
+          // element_group -all (manual 6.406): every group that has the
+          // record itself
+          if ( dependency_item[1]==-ALL &&
+               !db_active_index( idat, gr, VERSION_NORMAL ) ) continue;
+          if ( !dependency_geometry_contains( idep, element ) ) continue;
           if ( dependency_item[2]==-TIME_CURRENT ) {
-            db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
-            db( TIME_CURRENT, 0, idum, &time_current, 
-              ldum, VERSION_NORMAL, GET_IF_EXISTS );
+            if ( dependency_time_set )
+              tmp = dependency_time;
+            else {
+              db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
+              db( TIME_CURRENT, 0, idum, &time_current,
+                ldum, VERSION_NORMAL, GET_IF_EXISTS );
+              tmp = time_current + dtime;
+            }
             go_ahead = 1;
-            tmp = time_current + dtime;
+          }
+          else if ( groundflow_pressure &&
+              ( labs(dependency_item[2])==TO_PRES ||
+                labs(dependency_item[2])==ST_PRES ||
+                labs(dependency_item[2])==DY_PRES ) ) {
+            // The dependency monitors a GROUNDFLOW PRESSURE POST item
+            // (-to_pres/-st_pres/-dy_pres, the post_calcul_label names of
+            // the groundflow_pressure -total_pressure/-static_pressure/
+            // -dynamic_pressure operators): the pressure convention of
+            // groundflow_phreatic_coord (total = pres_dof + the static of
+            // the phreatic level that covers the point), averaged over the
+            // element nodes. manual Professional 6.406: the dependency dof
+            // can be a dof_label name OR a post_calcul_label name - the
+            // corpus groundflow tests (ground11_nonsaturated) make the
+            // permeability k depend on the total pressure to model the
+            // non-saturated zone (k collapses above the phreatic surface).
+            // The GNU dof_label list has no entry for the post items, so
+            // the old code raised db_error(DEPENDENCY_ITEM) here.
+            long int length_el_dep = 0, inol_dep = 0, inod_dep = 0,
+              el_dep[MNOL+1], nnol_dep = 0;
+            double total_dep = 0., static_dep = 0., location_dep = 0.,
+              coord_dep[MDIM], sum_dep = 0.;
+            db( ELEMENT, element, el_dep, ddum, length_el_dep,
+              VERSION_NORMAL, GET_IF_EXISTS );
+            nnol_dep = length_el_dep - 1;
+            if ( nnol_dep<1 ) db_error( DEPENDENCY_ITEM, idep );
+            for ( inol_dep=0; inol_dep<nnol_dep; inol_dep++ ) {
+              inod_dep = el_dep[inol_dep+1];
+              node_dof = db_dbl( NODE_DOF, inod_dep, VERSION_NEW );
+              coord = db_dbl( NODE, inod_dep, VERSION_NORMAL );
+              for ( long int idim_dep=0; idim_dep<ndim; idim_dep++ )
+                coord_dep[idim_dep] = coord[idim_dep];
+              total_dep = static_dep = location_dep = 0.;
+              groundflow_phreatic_coord( inod_dep, coord_dep, node_dof,
+                total_dep, static_dep, location_dep, NULL );
+              if      ( labs(dependency_item[2])==TO_PRES )
+                sum_dep += total_dep;
+              else if ( labs(dependency_item[2])==ST_PRES )
+                sum_dep += static_dep;
+              else
+                sum_dep += total_dep - static_dep;
+            }
+            tmp = sum_dep / (double)nnol_dep;
+            go_ahead = 1;
           }
           else {
             array_member(dof_label,dependency_item[2],nuknwn,iuknwn);
@@ -225,31 +645,65 @@ long int get_group_data( long int idat, long int gr, long int element,
               db_error( DEPENDENCY_ITEM, idep );
           }
           if ( go_ahead ) {
+            long int nrow=0, irow=0, norig=0, have_orig=0,
+              method=-USE, dependency_type=0, number=-ALL;
+            double orig[DATA_ITEM_SIZE];
             found = 1;
             dependency_diagram = db_dbl( DEPENDENCY_DIAGRAM, idep, VERSION_NORMAL );
             length = db_len( DEPENDENCY_DIAGRAM, idep, VERSION_NORMAL );
             if ( length%n!=0 ) db_error( DEPENDENCY_DIAGRAM, idep );
-            if ( db_fixed_length( idat ) )
+            nrow = ( length - n ) / n;
+            if ( nrow<1 ) db_error( DEPENDENCY_DIAGRAM, idep );
+            db( DEPENDENCY_METHOD, idep, &method, ddum, ldum,
+              VERSION_NORMAL, GET_IF_EXISTS );
+            db( DEPENDENCY_TYPE, idep, &dependency_type, ddum, ldum,
+              VERSION_NORMAL, GET_IF_EXISTS );
+            db( DEPENDENCY_NUMBER, idep, &number, ddum, ldum,
+              VERSION_NORMAL, GET_IF_EXISTS );
+            if ( method!=-USE && method!=-MULTIPLY )
+              db_error( DEPENDENCY_METHOD, idep );
+            if ( dependency_type!=0 && dependency_type!=-COSINUS &&
+                 dependency_type!=-SINUS && dependency_type!=-TANGENT )
+              db_error( DEPENDENCY_TYPE, idep );
+            if ( number<0 && number!=-ALL )
+              db_error( DEPENDENCY_NUMBER, idep );
+            // the record values themselves (manual 6.406: the dependent
+            // record needs to be specified itself also)
+            // (element_distribute is free here: full-length int buffer)
+            if ( db_type( idat )==DOUBLE_PRECISION )
+              have_orig = db( idat, gr, element_distribute, orig, norig,
+                VERSION_NORMAL, GET_IF_EXISTS );
+            if ( have_orig ) {
+              // one diagram row for all values, or one row per value
+              // (the Professional 02-08-2026 stops on another count)
+              if ( nrow>1 && number==-ALL && nrow!=norig )
+                db_error( DEPENDENCY_DIAGRAM, idep );
+              nval = norig;
+              for ( ival=0; ival<nval; ival++ ) values[ival] = orig[ival];
+            }
+            else if ( method==-MULTIPLY )
+              db_error( DEPENDENCY_METHOD, idep );
+            else if ( db_fixed_length( idat ) )
               nval = db_data_length( idat );
             else
-              nval = ( length -  n ) / n;
-            for ( ival=0; ival<nval; ival++ ) {
-              if      ( tmp<dependency_diagram[0] ) 
-                values[ival] = dependency_diagram[n+ival*n+0];
-              else if ( tmp>dependency_diagram[n-1] ) 
-                values[ival] = dependency_diagram[n+ival*n+n-1];
-              else {
-                for( i=0; i<n-1; i++ ) {
-                  time_left = dependency_diagram[i];
-                  time_right = dependency_diagram[i+1];
-                  val_left = dependency_diagram[n+ival*n+i];
-                  val_right = dependency_diagram[n+ival*n+i+1];
-                  if ( time_right<=time_left ) db_error( DEPENDENCY_DIAGRAM, idep );
-                  if ( tmp>=time_left && tmp<=time_right ) {
-                    values[ival] = val_left + (tmp-dependency_diagram[i])*
-                      (val_right-val_left) / (time_right-time_left);
-                  }
-                }
+              nval = nrow;
+            if ( number!=-ALL ) {
+              // only value 'number'; its row is 'number' when the
+              // diagram has a row per value (measured on the Professional)
+              if ( number>=nval ) db_error( DEPENDENCY_NUMBER, idep );
+              irow = ( nrow==1 ? 0 : number );
+              if ( irow>=nrow ) db_error( DEPENDENCY_DIAGRAM, idep );
+              values[number] = dependency_combine(
+                dependency_interpolate( dependency_diagram, n, irow, tmp, idep ),
+                values[number], method, dependency_type, idep );
+            }
+            else {
+              for ( ival=0; ival<nval; ival++ ) {
+                irow = ( nrow==1 ? 0 : ival );
+                if ( irow>=nrow ) break;
+                values[ival] = dependency_combine(
+                  dependency_interpolate( dependency_diagram, n, irow, tmp, idep ),
+                  have_orig ? values[ival] : 0., method, dependency_type, idep );
               }
             }
           }
@@ -308,7 +762,168 @@ void group_materi_plasti_boundary_evaluate( long int nodes[], long int nnol,
          if ( array_member( group_materi_plasti_boundary, gr, length, ldum ) )
            plasti_on_boundary = 1;
        }
+       // group_materi_plasti_bounda (manual Professional 6.231): the
+       // listed values are the indices of the bounda_dof records that put
+       // the element on a wall ("an element is on a wall when at least
+       // one of the velocities of the elements is prescribed via
+       // bounda_dof"). When a listed value matches an ACTIVE bounda_dof
+       // record the element is on the wall when one of its nodes is
+       // bounded (node_bounded) on the velocity or displacement parts.
+       if ( !plasti_on_boundary ) {
+         long int ib=0;
+         for ( ib=0; ib<length && !plasti_on_boundary; ib++ ) {
+           long int iboun = group_materi_plasti_boundary[ib];
+           if ( iboun>=0 && db_active_index( BOUNDA_DOF, iboun,
+               VERSION_NORMAL ) ) {
+             long int ip=0, *node_bounded=NULL;
+             if ( !db_active_index( NODE_BOUNDED, inod, VERSION_NORMAL ) )
+               continue;
+             node_bounded = db_int( NODE_BOUNDED, inod, VERSION_NORMAL );
+             // velocity/displacement parts (nder = 1 in the current
+             // formulation: one value per dof part)
+             for ( ip=0; ip<npuknwn && !plasti_on_boundary; ip++ ) {
+               if ( node_bounded[ip] &&
+                    ( ( vel_indx>=0 && ip>=vel_indx && ip<vel_indx+ndim ) ||
+                      ( dis_indx>=0 && ip>=dis_indx && ip<dis_indx+ndim ) ) )
+                 plasti_on_boundary = 1;
+             }
+           }
+         }
+       }
      }
    }
 
+   // group_materi_plasti_mpc -yes (manual Professional 6.733): the
+   // element is on a wall when one of its nodes is in an mpc record
+   // (a node is a positive entry of mpc_node_number). The value 2 makes
+   // plasti.cc / stress.cc use group_materi_plasti_mpc_factor; a wall
+   // found through group_materi_plasti_bounda keeps the value 1 and its
+   // own factor (Professional 02-08-2026: the bounda factor wins).
+   if ( !plasti_on_boundary ) {
+     long int mpc_switch=-NO, max_mpc=-1, impc=0, i=0;
+     db( GROUP_MATERI_PLASTI_MPC, element_group, &mpc_switch, ddum, ldum,
+       VERSION_NORMAL, GET_IF_EXISTS );
+     if ( mpc_switch==-YES ) {
+       db_max_index( MPC_NODE_NUMBER, max_mpc, VERSION_NORMAL, GET );
+       for ( impc=0; impc<=max_mpc && !plasti_on_boundary; impc++ ) {
+         if ( !db_active_index( MPC_NODE_NUMBER, impc, VERSION_NORMAL ) )
+           continue;
+         long int length_mpc = db_len( MPC_NODE_NUMBER, impc, VERSION_NORMAL );
+         long int *mpc = db_int( MPC_NODE_NUMBER, impc, VERSION_NORMAL );
+         for ( i=0; i<length_mpc && !plasti_on_boundary; i++ ) {
+           if ( mpc[i]>0 && array_member( nodes, mpc[i], nnol, ldum ) )
+             plasti_on_boundary = 2;
+         }
+       }
+     }
+   }
+
+}
+
+long int node_attached_element_groups( long int inod, long int groups[],
+  long int &n )
+
+// Fills groups[0..n) with the distinct element groups of the elements
+// the node belongs to (unsorted). Returns 1 when the node is a node of
+// at least one active element, 0 otherwise. Used by the
+// geometry_element_group filter (geometry.cc) and by the region/group
+// restriction of post_calcul_static_pressure_height (groundfl.cc).
+
+{
+  long int ielem=0, max_element=0, inol=0, length=0, igroup=0, k=0,
+    ldum=0;
+  double ddum[1];
+  long int *el=NULL;
+
+  n = 0;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  for ( ielem=0; ielem<=max_element; ielem++ ) {
+    if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+    el = db_int( ELEMENT, ielem, VERSION_NORMAL );
+    length = db_len( ELEMENT, ielem, VERSION_NORMAL );
+    for ( inol=0; inol+1<length; inol++ ) {
+      if ( el[inol+1]==inod ) {
+        igroup = 0;
+        db( ELEMENT_GROUP, ielem, &igroup, ddum, ldum,
+          VERSION_NORMAL, GET_IF_EXISTS );
+        for ( k=0; k<n; k++ )
+          if ( groups[k]==igroup ) break;
+        if ( k==n ) groups[n++] = igroup;
+        break;
+      }
+    }
+  }
+  return ( n>0 );
+}
+
+void element_print_group_data_values_calculate( double time_current )
+
+{
+  // element_print_group_data_values (manual Professional 6.446): per
+  // element the values of the group records listed in print_group_data
+  // (6.991) for the group of the element, the values of the first record
+  // first. Measured on the Professional 02-08-2026: print_group_data
+  // -group_materi_elasti_young -group_materi_elasti_poisson gives
+  // `element_print_group_data_value 1 1000 0.3` (the Professional writes
+  // the singular name; the GNU writes the manual name and reads both).
+  // A group without the record gives 0 for it. Filled at the start of
+  // every step (hook in step_start, top.cc).
+  // Real records go through get_group_data, so the values include the
+  // dependency_item diagrams (manual 6.406: "You can use print_group_data
+  // to get the result for the calculated values using the dependency
+  // diagram"): -time_current at time_current, the end of the step that
+  // starts (the time the element loop of that step uses), a dof at the
+  // average of the element node values.
+  long int element=0, max_element=0, element_group=0, nitem=0, iitem=0,
+    idat=0, nvalue=0, length=0, ldum=0, i=0,
+    items[DATA_ITEM_SIZE], ivalues[DATA_ITEM_SIZE];
+  double ddum[1], dvalues[DATA_ITEM_SIZE], values[DATA_ITEM_SIZE];
+
+  if ( !db( PRINT_GROUP_DATA, 0, items, ddum, nitem, VERSION_NORMAL,
+      GET_IF_EXISTS ) ) return;
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  for ( element=0; element<=max_element; element++ ) {
+    if ( !db_active_index( ELEMENT, element, VERSION_NORMAL ) ) continue;
+    element_group = 0;
+    db( ELEMENT_GROUP, element, &element_group, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    nvalue = 0;
+    for ( iitem=0; iitem<nitem; iitem++ ) {
+      idat = labs( items[iitem] );
+      length = 0;
+      if ( idat>0 && idat<MDAT && !strncmp( db_name(idat), "group_", 6 ) ) {
+        if ( db_type(idat)==INTEGER ) {
+          db( idat, element_group, ivalues, ddum, length, VERSION_NORMAL,
+            GET_IF_EXISTS );
+          for ( i=0; i<length; i++ ) dvalues[i] = (double) ivalues[i];
+        }
+        else {
+          long int el[1+MNOL], nnol=0, inol=0, iuknwn=0;
+          double *node_dof=NULL, unknowns[MUKNWN];
+          array_set( unknowns, 0., MUKNWN );
+          db( ELEMENT, element, el, ddum, nnol, VERSION_NORMAL, GET );
+          for ( inol=1; inol<nnol; inol++ ) {
+            node_dof = db_dbl( NODE_DOF, el[inol], VERSION_NORMAL );
+            for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ )
+              unknowns[iuknwn] += node_dof[iuknwn] / (double) (nnol-1);
+          }
+          dependency_time_set = 1;
+          dependency_time = time_current;
+          if ( !get_group_data( idat, element_group, element, unknowns,
+              dvalues, length, GET_IF_EXISTS ) ) length = 0;
+          dependency_time_set = 0;
+        }
+      }
+      if ( length==0 ) {
+        dvalues[0] = 0.;
+        length = 1;
+      }
+      if ( nvalue+length>DATA_ITEM_SIZE )
+        db_error( ELEMENT_PRINT_GROUP_DATA_VALUES, element );
+      for ( i=0; i<length; i++ ) values[nvalue++] = dvalues[i];
+    }
+    if ( nvalue>0 )
+      db( ELEMENT_PRINT_GROUP_DATA_VALUES, element, ivalues, values, nvalue,
+        VERSION_NORMAL, PUT );
+  }
 }

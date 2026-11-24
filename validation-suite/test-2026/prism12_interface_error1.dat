@@ -1,0 +1,32 @@
+( F5 T4 U9c: the -prism12 is a continuum element in the GNU. Manual 6.624
+  also lists it as an interface {group_interface -yes}; the interface
+  -prism12 {two tria6 sides} is not implemented yet and is refused
+  [DIVERGENCES PRISM12-INTERFACE].
+  EXPECTED_ERROR: Error: an interface -prism12 is not available yet )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 0 0 0
+node 8 0.5 0 0
+node 9 1 0 0
+node 10 0 0.5 0
+node 11 0.5 0.5 0
+node 12 0 1 0
+element 1 -prism12 1 2 3 4 5 6 7 8 9 10 11 12
+element_group 1 1
+group_type 1 -materi
+group_interface 1 -yes
+group_interface_materi_elasti_stiffness 1 1.e6 1.e6 1.e6
+bounda_dof 10 -ra 1 2 3 4 5 6 -ra -velx -vely -velz
+bounda_time 10 0.
+control_timestep 10 0.5 1.0
+end_data

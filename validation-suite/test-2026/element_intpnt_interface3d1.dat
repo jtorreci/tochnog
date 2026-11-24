@@ -1,0 +1,57 @@
+(F5 T2 V4b: element_intpnt_* records of the 3D interface elements:
+ 1 hex8 {4 pairs}, 2 prism6 {3 pairs}, 3 hex18 {9 pairs}. Expected, =
+ Professional 02-08-2026: method -lobatto 0 -lobatto, npoint 4 3 9,
+ iso_coord hex8 -1 -1 0 / 1 -1 0 / -1 1 0 / 1 1 0, prism6 1 0 0 / 0 1 0 /
+ 0 0 0, hex18 the 3x3 Lobatto points {-1,0,1} xi fastest with zeta 0;
+ element_intpnt_h 1/2 on the two nodes of each facing pair {i, i+ns1}, 0
+ elsewhere. Tolerance 1e-9.)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+node 3 0 1 0
+node 4 1 1 0
+node 5 0 0 0
+node 6 1 0 0
+node 7 0 1 0
+node 8 1 1 0
+element 1 -hex8 1 2 3 4 5 6 7 8
+element_group 1 0
+node 9 2 0 0
+node 10 3 0 0
+node 11 2 1 0
+node 12 2 0 0
+node 13 3 0 0
+node 14 2 1 0
+element 2 -prism6 9 10 11 12 13 14
+element_group 2 0
+node 15 4 0 0
+node 16 4.5 0 0
+node 17 5 0 0
+node 18 4 0.5 0
+node 19 4.5 0.5 0
+node 20 5 0.5 0
+node 21 4 1 0
+node 22 4.5 1 0
+node 23 5 1 0
+node 24 4 0 0
+node 25 4.5 0 0
+node 26 5 0 0
+node 27 4 0.5 0
+node 28 4.5 0.5 0
+node 29 5 0.5 0
+node 30 4 1 0
+node 31 4.5 1 0
+node 32 5 1 0
+element 3 -hex18 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+element_group 3 0
+group_type 0 -materi
+group_interface 0 -yes
+group_interface_materi_elasti_stiffness 0 1.e3 1.e3 1.e3
+bounda_dof 0 -ra 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 -ra -velx -vely -velz
+control_timestep 0 1. 1.
+end_data

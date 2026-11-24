@@ -1,0 +1,147 @@
+(F5 T6 U3: circle grid of middles and radii: middles 3 x 3 on x 3..3.6,
+ y 2.5..3.5 (x fastest), radii 0.6 and 1.1 (outer loop), 12 points per circle,
+ 18 surfaces. 4x4 quad4 mesh on [0,4]x[0,4], uniform strain: sigxx = sigyy = -1,
+ sigxy = 0.5, Mohr-Coulomb c 1, phi 30 deg (elastic). Point at angle t on a
+ circle (outward normal): sigma_n = -1 + 0.5 sin 2t, |tau| = 0.5 |cos 2t|;
+ points outside the mesh do not count. The circles near the right edge lose different arcs, so
+ Fs differ: surface 0 (3,2.5) r 0.6 4.7320508076, surface 8 (3.6,3.5) r 0.6
+ 4.7320508076, surface 17 (3.6,3.5) r 1.1 3.8729340512; critical surface
+ 17: middle (3.6, 3.5), r 1.1, Fs 3.8729340512.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 3 0
+node 5 4 0
+node 6 0 1
+node 7 1 1
+node 8 2 1
+node 9 3 1
+node 10 4 1
+node 11 0 2
+node 12 1 2
+node 13 2 2
+node 14 3 2
+node 15 4 2
+node 16 0 3
+node 17 1 3
+node 18 2 3
+node 19 3 3
+node 20 4 3
+node 21 0 4
+node 22 1 4
+node 23 2 4
+node 24 3 4
+node 25 4 4
+element 1 -quad4 1 2 6 7
+element 2 -quad4 2 3 7 8
+element 3 -quad4 3 4 8 9
+element 4 -quad4 4 5 9 10
+element 5 -quad4 6 7 11 12
+element 6 -quad4 7 8 12 13
+element 7 -quad4 8 9 13 14
+element 8 -quad4 9 10 14 15
+element 9 -quad4 11 12 16 17
+element 10 -quad4 12 13 17 18
+element 11 -quad4 13 14 18 19
+element 12 -quad4 14 15 19 20
+element 13 -quad4 16 17 21 22
+element 14 -quad4 17 18 22 23
+element 15 -quad4 18 19 23 24
+element 16 -quad4 19 20 24 25
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.
+group_materi_plasti_mohr_coul 0 0.5235987756 1.0 0.
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0. 1. 0 2. 0
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0. 1. -0 2. -0
+bounda_dof 2 2 -velx
+bounda_time 2 0. 0. 1. -0.001 2. -0.001
+bounda_dof 3 2 -vely
+bounda_time 3 0. 0. 1. -0 2. -0
+bounda_dof 4 3 -velx
+bounda_time 4 0. 0. 1. -0.002 2. -0.002
+bounda_dof 5 3 -vely
+bounda_time 5 0. 0. 1. -0 2. -0
+bounda_dof 6 4 -velx
+bounda_time 6 0. 0. 1. -0.003 2. -0.003
+bounda_dof 7 4 -vely
+bounda_time 7 0. 0. 1. -0 2. -0
+bounda_dof 8 5 -velx
+bounda_time 8 0. 0. 1. -0.004 2. -0.004
+bounda_dof 9 5 -vely
+bounda_time 9 0. 0. 1. -0 2. -0
+bounda_dof 10 6 -velx
+bounda_time 10 0. 0. 1. 0.001 2. 0.001
+bounda_dof 11 6 -vely
+bounda_time 11 0. 0. 1. -0.001 2. -0.001
+bounda_dof 12 10 -velx
+bounda_time 12 0. 0. 1. -0.003 2. -0.003
+bounda_dof 13 10 -vely
+bounda_time 13 0. 0. 1. -0.001 2. -0.001
+bounda_dof 14 11 -velx
+bounda_time 14 0. 0. 1. 0.002 2. 0.002
+bounda_dof 15 11 -vely
+bounda_time 15 0. 0. 1. -0.002 2. -0.002
+bounda_dof 16 15 -velx
+bounda_time 16 0. 0. 1. -0.002 2. -0.002
+bounda_dof 17 15 -vely
+bounda_time 17 0. 0. 1. -0.002 2. -0.002
+bounda_dof 18 16 -velx
+bounda_time 18 0. 0. 1. 0.003 2. 0.003
+bounda_dof 19 16 -vely
+bounda_time 19 0. 0. 1. -0.003 2. -0.003
+bounda_dof 20 20 -velx
+bounda_time 20 0. 0. 1. -0.001 2. -0.001
+bounda_dof 21 20 -vely
+bounda_time 21 0. 0. 1. -0.003 2. -0.003
+bounda_dof 22 21 -velx
+bounda_time 22 0. 0. 1. 0.004 2. 0.004
+bounda_dof 23 21 -vely
+bounda_time 23 0. 0. 1. -0.004 2. -0.004
+bounda_dof 24 22 -velx
+bounda_time 24 0. 0. 1. 0.003 2. 0.003
+bounda_dof 25 22 -vely
+bounda_time 25 0. 0. 1. -0.004 2. -0.004
+bounda_dof 26 23 -velx
+bounda_time 26 0. 0. 1. 0.002 2. 0.002
+bounda_dof 27 23 -vely
+bounda_time 27 0. 0. 1. -0.004 2. -0.004
+bounda_dof 28 24 -velx
+bounda_time 28 0. 0. 1. 0.001 2. 0.001
+bounda_dof 29 24 -vely
+bounda_time 29 0. 0. 1. -0.004 2. -0.004
+bounda_dof 30 25 -velx
+bounda_time 30 0. 0. 1. 0 2. 0
+bounda_dof 31 25 -vely
+bounda_time 31 0. 0. 1. -0.004 2. -0.004
+control_timestep 10 1. 1.
+control_safety_slip 10 -yes
+safety_slip_circle_grid_middle 0 3. 2.5 3.6 3.5
+safety_slip_circle_grid_middle_n 0 3
+safety_slip_circle_grid_radius 0 0.6 1.1
+safety_slip_circle_grid_radius_n 0 2
+safety_slip_circle_grid_segment_n 0 12
+target_item 0 -safety_slip_circle_grid_result 0 3
+target_value 0 3.8729340512 1.e-7
+target_item 1 -safety_slip_circle_grid_result 0 0
+target_value 1 3.6 1.e-12
+target_item 2 -safety_slip_circle_grid_result 0 1
+target_value 2 3.5 1.e-12
+target_item 3 -safety_slip_circle_grid_result 0 2
+target_value 3 1.1 1.e-12
+target_item 4 -safety_slip_surface_factor 0 0
+target_value 4 4.7320508076 1.e-7
+target_item 5 -safety_slip_surface_factor 8 0
+target_value 5 4.7320508076 1.e-7
+target_item 6 -safety_slip_surface_factor 17 0
+target_value 6 3.8729340512 1.e-7
+end_data

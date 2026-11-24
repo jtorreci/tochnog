@@ -1,0 +1,50 @@
+(F5 T2 V7 / C108: materi_strain_total_kappa / _compression_kappa /
+ _shear_kappa / _tension_kappa (manual Professional 4.45-4.48). One quad4
+ with a prescribed homogeneous strain: step 1 eps_xx 0.004, eps_yy -0.01
+ (eps_zz 0, plane strain), step 2 unloads to half. History values of the
+ peak strain: kappa = sqrt(0.5 eps:eps) = sqrt(5.8e-5) = 0.00761577,
+ compression = -0.01 (signed, as the Professional), shear =
+ sqrt(0.5 dev:dev) = sqrt(5.2e-5) = 0.00721110, tension = 0.004.
+ Professional 02-08-2026 on this input: step 1 kapto 0.00761577,
+ strtocokap -0.01, strtoshkap 0.00721110; after unloading it keeps kapto
+ but gives the current -0.005 / 0.00360555, and strtotekap is 0 alone
+ (DIVERGENCES STRAIN-KAPPA-HISTORY).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+materi_strain_total_kappa
+materi_strain_total_compression_kappa
+materi_strain_total_shear_kappa
+materi_strain_total_tension_kappa
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0 1. 0 1.000001 0 10. 0
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0 1. 0 1.000001 0 10. 0
+bounda_dof 2 2 -velx
+bounda_time 2 0. 0.004 1. 0.004 1.000001 -0.002 10. -0.002
+bounda_dof 3 2 -vely
+bounda_time 3 0. 0 1. 0 1.000001 0 10. 0
+bounda_dof 4 3 -velx
+bounda_time 4 0. 0 1. 0 1.000001 0 10. 0
+bounda_dof 5 3 -vely
+bounda_time 5 0. -0.01 1. -0.01 1.000001 0.005 10. 0.005
+bounda_dof 6 4 -velx
+bounda_time 6 0. 0.004 1. 0.004 1.000001 -0.002 10. -0.002
+bounda_dof 7 4 -vely
+bounda_time 7 0. -0.01 1. -0.01 1.000001 0.005 10. 0.005
+group_type 0 -materi
+group_materi_elasti_young 0 1.e3
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0 -total_linear
+control_timestep 0 1. 2.
+control_print 0 -node_dof
+end_data

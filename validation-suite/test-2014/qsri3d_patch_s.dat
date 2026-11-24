@@ -1,0 +1,159 @@
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 8
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_time  1  0 0 100 0
+bounda_time  2  0 0 100 0
+bounda_time  3  0 0 100 0
+bounda_time  4  0 0 100 0
+bounda_time  5  0 0 100 0
+bounda_time  6  0 0 100 0
+bounda_time  7  0 0 100 0
+bounda_time  8  0 0.01 100 0.01
+bounda_time  9  0 0 100 0
+bounda_time  10  0 0.01 100 0.01
+bounda_time  11  0 0 100 0
+bounda_time  12  0 0.01 100 0.01
+bounda_time  13  0 0 100 0
+bounda_time  14  0 0.01 100 0.01
+bounda_time  15  0 0 100 0
+bounda_time  16  0 0.02 100 0.02
+bounda_time  17  0 0 100 0
+bounda_time  18  0 0.02 100 0.02
+bounda_time  19  0 0 100 0
+bounda_time  20  0 0.02 100 0.02
+bounda_time  21  0 0 100 0
+bounda_time  22  0 0.02 100 0.02
+bounda_time  23  0 0 100 0
+bounda_time  24  0 0.03 100 0.03
+bounda_time  25  0 0 100 0
+bounda_time  26  0 0.03 100 0.03
+bounda_time  27  0 0 100 0
+bounda_time  28  0 0.03 100 0.03
+bounda_time  29  0 0 100 0
+bounda_time  30  0 0.03 100 0.03
+bounda_time  31  0 0 100 0
+bounda_time  32  0 0.04 100 0.04
+bounda_time  33  0 0 100 0
+bounda_time  34  0 0.04 100 0.04
+bounda_time  35  0 0 100 0
+bounda_time  36  0 0.04 100 0.04
+bounda_time  37  0 0 100 0
+bounda_time  38  0 0.04 100 0.04
+bounda_time  39  0 0 100 0
+bounda_unknown  0  1 -velx
+bounda_unknown  1  1 -vely -velz
+bounda_unknown  2  2 -velx
+bounda_unknown  3  2 -vely -velz
+bounda_unknown  4  3 -velx
+bounda_unknown  5  3 -vely -velz
+bounda_unknown  6  4 -velx
+bounda_unknown  7  4 -vely -velz
+bounda_unknown  8  5 -velx
+bounda_unknown  9  5 -vely -velz
+bounda_unknown  10  6 -velx
+bounda_unknown  11  6 -vely -velz
+bounda_unknown  12  7 -velx
+bounda_unknown  13  7 -vely -velz
+bounda_unknown  14  8 -velx
+bounda_unknown  15  8 -vely -velz
+bounda_unknown  16  9 -velx
+bounda_unknown  17  9 -vely -velz
+bounda_unknown  18  10 -velx
+bounda_unknown  19  10 -vely -velz
+bounda_unknown  20  11 -velx
+bounda_unknown  21  11 -vely -velz
+bounda_unknown  22  12 -velx
+bounda_unknown  23  12 -vely -velz
+bounda_unknown  24  13 -velx
+bounda_unknown  25  13 -vely -velz
+bounda_unknown  26  14 -velx
+bounda_unknown  27  14 -vely -velz
+bounda_unknown  28  15 -velx
+bounda_unknown  29  15 -vely -velz
+bounda_unknown  30  16 -velx
+bounda_unknown  31  16 -vely -velz
+bounda_unknown  32  17 -velx
+bounda_unknown  33  17 -vely -velz
+bounda_unknown  34  18 -velx
+bounda_unknown  35  18 -vely -velz
+bounda_unknown  36  19 -velx
+bounda_unknown  37  19 -vely -velz
+bounda_unknown  38  20 -velx
+bounda_unknown  39  20 -vely -velz
+control_print_materi_stress_force  700  -all
+control_print_materi_stress_force  701  -primary
+control_timestep  1  0.1 0.1
+element  1  -hex8 1 2 5 6 3 4 7 8
+element  2  -hex8 5 6 9 10 7 8 11 12
+element  3  -hex8 9 10 13 14 11 12 15 16
+element  4  -hex8 13 14 17 18 15 16 19 20
+element_group  1  0
+element_group  2  0
+element_group  3  0
+element_group  4  0
+group_element_selective_reduced_integration  0  -yes
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -updated_without_rotation
+group_type  0  -materi
+node  1  0 0 0
+node  2  1 0 0
+node  3  0 0 1
+node  4  1 0 1
+node  5  0 1 0
+node  6  1 1 0
+node  7  0 1 1
+node  8  1 1 1
+node  9  0 2 0
+node  10  1 2 0
+node  11  0 2 1
+node  12  1 2 1
+node  13  0 3 0
+node  14  1 3 0
+node  15  0 3 1
+node  16  1 3 1
+node  17  0 4 0
+node  18  1 4 0
+node  19  0 4 1
+node  20  1 4 1
+options_convection   -no
+options_inertia   -no
+options_mesh   -fixed_in_space -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_calcul   -materi_stress -force
+post_calcul_materi_stress_force_direction_include   0 1 0
+post_calcul_materi_stress_force_element_group   0
+post_calcul_materi_stress_force_reference_point   1000 2 1
+target_item  0  -node_dof 20 -velx
+target_value  0  0.04 0.0001
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  5  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  6  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  7  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  8  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  9  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  10  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  11  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  12  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  13  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  14  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  15  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  16  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  17  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  18  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  19  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  20  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

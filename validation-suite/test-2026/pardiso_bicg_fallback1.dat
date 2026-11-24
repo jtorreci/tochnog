@@ -1,0 +1,66 @@
+( F4 T9 / C43: -matrix_pardiso falls back to the iterative Bi-CG when the
+  SuperLU factorization fails. Same block as pardiso_superlu1, refined to
+  24 x 12 x 12 hex8 [25 x 13 x 13 nodes; SuperLU needs ~130 MB for L and U].
+  build_safe.sh runs it with TN_PARDISO_SUPERLU_MB=4: the memory guard of
+  so.cc lowers the address-space limit to 4 MB above the current size, so
+  dgssv runs out of memory [info > n], and the solve falls back to the
+  Bi-CG ["falling back to the iterative Bi-CG solver"]. Same analytic
+  targets as pardiso_superlu1 [sigxx = 1000, disx = 0.012,
+  disy = disz = -1.2e-3]: the Bi-CG result equals the SuperLU result
+  within the Bi-CG tolerance. Without the environment variable SuperLU
+  solves it. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+solver -matrix_pardiso
+
+start_define
+  x_start geometry_quadrilateral 1
+end_define
+x_start  0. 0. 0.   0. 6. 0.   0. 0. 6.   0. 6. 6.  1.e-4
+start_define
+  y_start geometry_quadrilateral 2
+end_define
+y_start  0. 0. 0.   12. 0. 0.   0. 0. 6.   12. 0. 6.  1.e-4
+start_define
+  z_start geometry_quadrilateral 3
+end_define
+z_start  0. 0. 0.   12. 0. 0.   0. 6. 0.   12. 6. 0.  1.e-4
+start_define
+  x_end geometry_quadrilateral 4
+end_define
+x_end  12. 0. 0.   12. 6. 0.   12. 0. 6.   12. 6. 6.  1.e-4
+
+bounda_dof  1  -x_start -velx
+bounda_time 1  0. 0. 100. 0.
+bounda_dof  2  -y_start -vely
+bounda_time 2  0. 0. 100. 0.
+bounda_dof  3  -z_start -velz
+bounda_time 3  0. 0. 100. 0.
+bounda_dof  4  -x_end -velx
+bounda_time 4  0. 0.012 100. 0.012
+
+group_type 0  -materi
+group_materi_elasti_young   0  1.e6
+group_materi_elasti_poisson 0  0.2
+group_materi_memory 0  -total_linear
+
+post_point 1  6. 3. 3.
+post_point 2  12. 6. 6.
+
+control_mesh_macro 0  -brick 0 25 13 13
+control_mesh_macro_parameters 0  6. 3. 3. 12. 6. 6.
+control_timestep 0  1. 1.
+target_item 1  -post_point_dof 1 -sigxx
+target_value 1  1000.0 1.e-3
+target_item 2  -post_point_dof 2 -disx
+target_value 2  0.012 1.e-8
+target_item 3  -post_point_dof 2 -disy
+target_value 3  -1.2e-3 1.e-8
+target_item 4  -post_point_dof 2 -disz
+target_value 4  -1.2e-3 1.e-8
+end_data

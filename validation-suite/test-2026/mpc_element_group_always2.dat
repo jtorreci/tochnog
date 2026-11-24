@@ -1,0 +1,48 @@
+(
+mpc_element_group_always -no [manual 6.859]: node 4 is a member of the node
+list of an element_group_1 element [the groups are connected there], so it
+gets no mpc; only node 15 is tied. The Professional 02-08-2026 ignores -no
+and also ties node 4 [DIVERGENCES MPC-ELEMENT-GROUP-ALWAYS].
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+node 1 0.0 0.0
+node 2 0.0 1.0
+node 3 1.0 0.0
+node 4 1.0 1.0
+element 1 -quad4 1 2 3 4
+node 11 0.0 1.0
+node 12 0.0 2.0
+node 13 1.0 1.0
+node 14 1.0 2.0
+element 4 -quad4 11 12 13 14
+element_group 4 1
+node 15 1.0 2.0
+node 16 2.0 1.0
+node 17 2.0 2.0
+node 8 3 0
+node 9 3 1
+node 10 3 2
+element 2 -quad4 4 15 16 17
+element 3 -quad4 16 9 17 10
+element_group 1 1
+element_group 2 2
+element_group 3 2
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+mpc_element_group 10 2 1
+mpc_element_group_dof 10 -velx -vely
+bounda_dof 30 -ra 11 12 16 17 -ra -velx -vely
+mpc_element_group_always 10 -no
+bounda_dof  10  -ra 1 2 -ra -velx -vely
+bounda_dof  20  -ra 8 9 10 -ra -velx -vely
+control_reset_dof 10  -sigxx
+control_reset_value_constant 10  1.
+control_timestep  20  1. 1.0
+control_print     20  -time_current -node_dof
+end_data

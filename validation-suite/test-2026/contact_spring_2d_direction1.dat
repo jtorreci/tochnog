@@ -1,0 +1,45 @@
+( Contact spring direction in 2D: conspr7 with group_contact_spring_direction
+  0 2 0 instead of the automatic one. The direction is normalised and turned
+  to point from the side of the first node to the side of the second one.
+  Professional 02-08-2026: element_contact_spring_direction 3 0 -1 0 1 0 0 0
+  0 1, force 1 0. Checked in scripts/build_safe.sh. )
+( Test contact spring.
+  The total load on the top is 2,
+  so the force per contact spring should become 1.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+node 1  0.0 0
+node 2  1.0 0
+node 3  0.0 1
+node 4  1.0 1
+node 5  0.0 1
+node 6  1.0 1
+node 7  0.0 2
+node 8  1.0 2
+element 1  -quad4 1 2 3 4
+element 2  -quad4 5 6 7 8
+element 3  -contact_spring2 5 3
+element_group 3 1
+element 4  -contact_spring2 6 4
+element_group 4 1
+group_type 0  -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young  0  1.
+group_type 1  -contact_spring
+group_contact_spring_stiffness 1 1.e6 1.
+group_contact_spring_direction 1 0. 2. 0.
+bounda_dof     10  -ra 1 2 -ra -velx -vely
+bounda_time    10  0. 0. 100. 0.
+bounda_force   20  -ra 7 8 -ra -vely
+bounda_time    20  1.
+control_timestep 0  1. 1.
+(
+control_print    0  -time_current -node_dof -element_contact_spring_strain -element_contact_spring_force
+)
+end_data

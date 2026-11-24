@@ -1,0 +1,27 @@
+(
+F5 W1 U6: mrange 3 with the index range -ra -from 1 -to 4 -ra (4 words,
+ 4 numbers): an error as in the Professional 02-08-2026 (mrange 4 needed).
+  EXPECTED_ERROR: Error: mrange exceeded. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+mrange 3
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.
+bounda_dof 0 -ra -from 1 -to 4 -ra -velx
+bounda_dof 1 -ra 1 2 -ra -vely
+bounda_dof 2 -ra 3 4 -ra -vely
+bounda_time 2 0 0 1 -0.01
+control_timestep 0 1 1
+target_item 0 -node_dof 4 -sigyy
+target_value 0 -10. 1.e-8
+end_data

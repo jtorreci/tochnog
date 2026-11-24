@@ -1,0 +1,52 @@
+(F5 T2 C107: the per-model plastic strain dofs of hardsoil / cap /
+ compression / diprisco / druckprag are filled only in the element groups
+ that use the model and follow the recovery of materi_strain_plasti.
+ Simple shear of a Drucker-Prager square split in two tria3 (source
+ mstrain_druckprag): eppdr* equals epp* at every node, eppca* and
+ eppha* are 0. Professional 02-08-2026 on this input: the same values
+ (eppxy = eppdrxy = 0.959984, eppcaxy = epphaxy = 0) and labels.)
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_strain_plasti
+materi_strain_plasti_cap
+materi_strain_plasti_druckprag
+materi_strain_plasti_hardsoil
+materi_stress
+end_initia
+
+bounda_dof 0 1 -velx
+bounda_time 0 0. -1. 100. -1.
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0. 100. 0.
+bounda_dof 2 2 -velx
+bounda_time 2 0. -1. 100. -1.
+bounda_dof 3 2 -vely
+bounda_time 3 0. 0. 100. 0.
+bounda_dof 4 3 -velx
+bounda_time 4 0. 1. 100. 1.
+bounda_dof 5 3 -vely
+bounda_time 5 0. 0. 100. 0.
+bounda_dof 6 4 -velx
+bounda_time 6 0. 1. 100. 1.
+bounda_dof 7 4 -vely
+bounda_time 7 0. 0. 100. 0.
+control_timestep  0  0.05 1
+element  1  -tria3 1 2 4
+element  2  -tria3 1 4 3
+element_group 1 0
+element_group 2 0
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -updated
+group_materi_plasti_druck_prag  0  0 30 0
+group_type  0  -materi
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+end_data

@@ -1,0 +1,48 @@
+(C14: tension_direct 0 with its own normal [0,1] + MC plane: sig_n on the
+tension plane capped [syy = 0], sxx untouched. Closed form = Professional
+[probe c16]. Passes before and after C14 [non-regression].)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.0
+group_materi_plasti_mohr_coul_direct 0 0 0.01 0.0
+group_materi_plasti_mohr_coul_direct_normal 0 0. 1.
+group_materi_plasti_tension_direct 0 0.0
+group_materi_plasti_tension_direct_normal 0 0. 1.
+bounda_dof 0 1 -velx
+bounda_time 0 0
+bounda_dof 1 1 -vely
+bounda_time 1 0
+bounda_dof 2 2 -velx
+bounda_time 2 0.0003
+bounda_dof 3 2 -vely
+bounda_time 3 0
+bounda_dof 4 3 -velx
+bounda_time 4 0
+bounda_dof 5 3 -vely
+bounda_time 5 0.0002
+bounda_dof 6 4 -velx
+bounda_time 6 0.0003
+bounda_dof 7 4 -vely
+bounda_time 7 0.0002
+control_timestep 0 1. 1.
+target_item 0 -node_dof 4 -sigxx
+target_value 0 3.000000e-04 1e-08
+target_item 1 -node_dof 4 -sigxy
+target_value 1 0.000000e+00 1e-08
+target_item 2 -node_dof 4 -sigyy
+target_value 2 0.000000e+00 1e-08
+target_item 3 -node_dof 4 -sigzz
+target_value 3 0.000000e+00 1e-08
+end_data

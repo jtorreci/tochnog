@@ -35,6 +35,8 @@ long int check( long int idat, long int task )
     return 0;
   if ( data_number==TET10 )
     return 0;
+  if ( data_number==PRISM15 )
+    return 0;
   if ( data_number==QUAD4 )
     return 0;
   if ( data_number==QUAD9 )
@@ -86,7 +88,14 @@ long int check( long int idat, long int task )
     ok = check_unknown( "condif_temperature", YES, task );
     ok = ok && check_unknown( "wave_scalar", NO, task );
   }
-  if ( data_number==CONDIF_CONVECTION ) {
+  if ( data_number==CONDIF_CONVECTION ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_GROUP ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_NODE ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_ELEMENT_SIDE ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_GEOMETRY ||
+       data_number==CONDIF_CONVECTION_EDGE_NORMAL_NODE ) {
     ok = check_ndim( 2, 3, task );
     ok = ok && check_unknown( "condif_temperature", YES, task );
   }
@@ -94,8 +103,46 @@ long int check( long int idat, long int task )
     ok = check_ndim( 2, 3, task );
     ok = ok && check_unknown( "condif_temperature", YES, task );
   }
-  if ( data_number==CONDIF_RADIATION ) {
+  if ( data_number==CONDIF_RADIATION ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_ELEMENT ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_GROUP ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_NODE ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_ELEMENT_SIDE ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_GEOMETRY ||
+       data_number==CONDIF_RADIATION_EDGE_NORMAL_NODE ) {
     ok = check_ndim( 2, 3, task );
+    ok = ok && check_unknown( "condif_temperature", YES, task );
+  }
+  if ( data_number==NODE_FORCE || data_number==NODE_INERTIA )
+    ok = check_unknown( "materi_velocity", YES, task );
+  if ( data_number==NODE_STATIC_PRESSURE || data_number==NODE_DYNAMIC_PRESSURE ||
+       data_number==NODE_TOTAL_PRESSURE )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+
+  if ( data_number==GROUP_INTERFACE_CONDIF_CONDUCTIVITY ||
+       data_number==GROUP_INTERFACE_MATERI_EXPANSION_NORMAL )
+    ok = check_unknown( "condif_temperature", YES, task );
+
+  if ( data_number==CONDIF_HEAT_EDGE_NORMAL ||       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_GROUP ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_NODE ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_NODE_FACTOR ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_ELEMENT_SIDE ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_FACTOR ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_GEOMETRY ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_NODE ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_SINE ||
+       data_number==CONDIF_HEAT_EDGE_NORMAL_TIME ||
+       data_number==CONDIF_HEAT_VOLUME ||
+       data_number==CONDIF_HEAT_VOLUME_ELEMENT ||
+       data_number==CONDIF_HEAT_VOLUME_ELEMENT_GROUP ||
+       data_number==CONDIF_HEAT_VOLUME_FACTOR ||
+       data_number==CONDIF_HEAT_VOLUME_GEOMETRY ||
+       data_number==CONDIF_HEAT_VOLUME_SINE ||
+       data_number==CONDIF_HEAT_VOLUME_TIME ||
+       data_number==CONDIF_HEAT_VOLUME_USER ||
+       data_number==CONDIF_HEAT_VOLUME_USER_PARAMETERS ) {
     ok = check_unknown( "condif_temperature", YES, task );
   }
   if ( data_number==CONDIF_RADIATION_GEOMETRY ) {
@@ -161,6 +208,8 @@ long int check( long int idat, long int task )
     ok = ok && check_ndim( 2, 3, task );
   }
   if ( data_number==CONTROL_MESH_GENERATE_TRUSS_BEAM_LOOSE )
+    ok = check_unknown( "materi_velocity", YES, task );
+  if ( data_number==CONTROL_MESH_GENERATE_TRUSS_BEAM_SEPARATE )
     ok = check_unknown( "materi_velocity", YES, task );
   if ( data_number==CONTROL_MESH_GENERATE_TRUSS_BEAM_MACRO )
     ok = check_unknown( "materi_velocity", YES, task );
@@ -293,6 +342,13 @@ long int check( long int idat, long int task )
     ok = check_ndim( 3, 3, task );
   if ( data_number==GEOMETRY_CYLINDER_SEGMENT )
     ok = check_ndim( 3, 3, task );
+  if ( data_number==GEOMETRY_CIRCLE_PART )
+    ok = check_ndim( 2, 2, task );
+  if ( data_number==GEOMETRY_CYLINDER_PART ||
+       data_number==GEOMETRY_CYLINDER_PART_START_VECTOR ||
+       data_number==GEOMETRY_HEXAHEDRAL ||
+       data_number==GEOMETRY_TETRAHEDRAL )
+    ok = check_ndim( 3, 3, task );
   if ( data_number==GEOMETRY_POLYNOMIAL )
     ok = check_ndim( 2, 3, task );
   if ( data_number==GEOMETRY_QUADRILATERAL )
@@ -304,10 +360,44 @@ long int check( long int idat, long int task )
   if ( data_number==GEOMETRY_TRIANGLE )
     ok = check_ndim( 2, 3, task );
   if ( data_number==GROUNDFLOW ) {
-    ok = check_unknown( "groundflow_pressure", YES, task );
+    // -groundflow in group_type marks the flow elements of a
+    // groundflow_pressure analysis, OR the elements that receive the
+    // static groundflow pressure of a mechanics-only model
+    // (groundflow_phreatic_level_static, manual Professional 6.573:
+    // "In the group_type for elements which should get the static
+    // groundflow pressure you need to add -groundflow"; corpus
+    // excavate1/ground18 run without initialising groundflow_pressure).
+    // Demanding the pressure unknown rejected those static models.
+    ok = check_unknown_atleastone( "materi_stress",
+      "groundflow_pressure", task );
     ok = check_unknown( "wave_scalar", NO, task );
   }
+  // groundflow_density is also consumed by the mechanics-only
+  // force_edge_water -yes hydrostatic edge load (manual Professional
+  // 6.489: density of the water; models without a groundflow pressure
+  // unknown, e.g. force5/excavate1, must parse) - the flow routines
+  // that need the pressure unknown gate on it themselves.
   if ( data_number==GROUNDFLOW_DENSITY )
+    ok = check_unknown_atleastone( "materi_stress",
+      "groundflow_pressure", task );
+  if ( data_number==GROUNDFLOW_CONSOLIDATION_APPLY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  // per-timestep gates (manual Professional 6.105/6.136/6.141 area):
+  // they require a groundflow pressure analysis like their global
+  // (no_index) counterparts. The former data_required=GROUNDFLOW
+  // pairing was broken (group-type marker records are never stored at
+  // the control index) and rejected every legitimate per-step usage.
+  if ( data_number==CONTROL_GROUNDFLOW_CONSOLIDATION_APPLY ||
+       data_number==CONTROL_GROUNDFLOW_NONSATURATED_APPLY ||
+       data_number==CONTROL_GROUNDFLOW_SEEPAGE_APPLY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_FLUX_EDGE_NORMAL ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_ndim( 2, 3, task );
+  }
+  if ( data_number==GROUNDFLOW_FLUX_EDGE_NORMAL_GEOMETRY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_NONSATURATED_APPLY )
     ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUNDFLOW_PHREATICLEVEL )
     ok = check_unknown_atleastone( "materi_stress", 
@@ -318,9 +408,32 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUNDFLOW_PHREATICLEVEL_BOUNDA )
     ok = check_unknown( "groundflow_pressure", YES, task );
-  if ( data_number==GROUNDFLOW_PRESSURE )
+  if ( data_number==GROUNDFLOW_PHREATICLEVEL_MULTIPLE )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_PHREATICLEVEL_MULTIPLE_N ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_ndim( 3, 3, task );
+  }
+  if ( data_number==GROUNDFLOW_PRESSURE ) {
+    // the name appears as the source dof of post_calcul monitors
+    // (post_calcul -groundflow_pressure -total_pressure) and in
+    // bounda_dof -pres/-topres. In the mechanics-only static models
+    // (ground18 of the corpus: groundflow_phreatic_level_static -yes
+    // without a pressure unknown) the post monitor evaluates the
+    // static total pressure of the level, so the unknown itself is
+    // not required there.
+    ok = check_unknown_atleastone( "materi_stress",
+      "groundflow_pressure", task );
+  }
+  if ( data_number==GROUNDFLOW_SATURATION )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_SEEPAGE_GEOMETRY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_SEEPAGE_NODE )
     ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUNDFLOW_PRESSURE_ATMOSPHERIC )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUNDFLOW_TOTAL_PRESSURE_LIMIT )
     ok = check_unknown( "groundflow_pressure", YES, task );
   if ( data_number==GROUP_BEAM_INERTIA ) {
     ok = check_unknown_atleastone( "materi_velocity_integrated", 
@@ -330,6 +443,16 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_BEAM_MEMORY ) {
     ok = check_unknown_atleastone( "materi_velocity_integrated", 
+      "materi_displacement", task );
+    ok = ok && check_unknown( "beam_rotation", YES, task );
+    ok = ok && check_ndim( 2, 3, task );
+  }
+  if ( data_number==GROUP_BEAM_DIRECTION_Z ||
+       data_number==GROUP_BEAM_DIRECTION_Z_REFERENCE_POINT ||
+       data_number==ELEMENT_BEAM_DIRECTION_Z ||
+       data_number==ELEMENT_BEAM_FORCE_MOMENT ) {
+    // F5 T2 V4c: local beam axes and beam forces/moments (beam.cc)
+    ok = check_unknown_atleastone( "materi_velocity_integrated",
       "materi_displacement", task );
     ok = ok && check_unknown( "beam_rotation", YES, task );
     ok = ok && check_ndim( 2, 3, task );
@@ -394,14 +517,38 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_GROUNDFLOW_CAPACITY )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUP_GROUNDFLOW_CONSOLIDATION_APPLY ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
   if ( data_number==GROUP_GROUNDFLOW_MATERIDIVERGENCE ) {
     ok = check_unknown( "groundflow_pressure", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
   }
   if ( data_number==GROUP_GROUNDFLOW_PERMEABILITY )
     ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUP_GROUNDFLOW_NONSATURATED_EPS_PERMEABILITY )
+    ok = check_unknown( "groundflow_pressure", YES, task );
+  if ( data_number==GROUP_GROUNDFLOW_NONSATURATED_VANGENUCHTEN ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_unknown( "groundflow_saturation", YES, task );
+  }
+  if ( data_number==GROUP_GROUNDFLOW_PERMEABILITY_VERTICAL_STRESS ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_unknown( "materi_stress", YES, task );
+  }
+  if ( data_number==GROUP_GROUNDFLOW_TOTAL_PRESSURE_TENSION ) {
+    ok = check_unknown( "groundflow_pressure", YES, task );
+    ok = ok && check_unknown( "materi_strain_plasti", YES, task );
+  }
   if ( data_number==GROUP_INTEGRATION_POINTS )
     ok = check_unknowns_are_specified( task );
+  if ( data_number==GROUP_ELEMENT_SELECTIVE_REDUCED_INTEGRATION ) {
+    // selective reduced integration only makes sense in the mixed
+    // stress formulation (it modifies the B^T*D*B stiffness block)
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
   if ( data_number==GROUP_MATERI_DAMAGE_MAZARS )
     ok = check_unknown( "materi_damage", YES, task );
   if ( data_number==GROUP_MATERI_DAMPING )
@@ -410,15 +557,32 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_velocity", YES, task );
   if ( data_number==GROUP_MATERI_DENSITY_GROUNDFLOW ) {
     ok = check_unknown( "materi_velocity", YES, task );
-    ok = ok && check_unknown( "groundflow_pressure", YES, task );
+    // the wet/dry density pair also feeds the mechanics-only static
+    // groundflow models (ground18 of the corpus: group_type -groundflow
+    // + groundflow_phreatic_level_static without a pressure unknown,
+    // manual Professional 6.641) - the pressure unknown is not required
+    // there
+    ok = ok && check_unknown_atleastone( "materi_stress",
+      "groundflow_pressure", task );
   }
   if ( data_number==GROUP_MATERI_ELASTI_CAMCLAY_G ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    // the camclay histories can be declared with the legacy
+    // materi_history_variables or with materi_plasti_camclay_history
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_camclay_history", task );
   }
   if ( data_number==GROUP_MATERI_ELASTI_CAMCLAY_POISSON ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_camclay_history", task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_CAMCLAY_PRESSURE_MIN ) {
+    // manual Professional 6.647: modifier of the camclay bulk modulus
+    // (needs the same state as the camclay elastic records)
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_camclay_history", task );
   }
   if ( data_number==GROUP_MATERI_ELASTI_COMPRESSIBILITY ) {
     ok = check_unknown( "materi_stress", YES, task );
@@ -430,6 +594,11 @@ long int check( long int idat, long int task )
     ok = ok && check_unknown( "materi_strain_total", YES, task );
   }
   if ( data_number==GROUP_MATERI_ELASTI_POISSON ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_C ||
+       data_number==GROUP_MATERI_ELASTI_C_DIRECTION ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
   }
@@ -451,6 +620,32 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_velocity", YES, task );
     ok = ok && check_unknown( "materi_strain_total", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_POISSON_POWER ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_SHEAR_FACTOR ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_K0 ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_STRESS_PRESSURE_HISTORY_FACTOR ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+    ok = ok && check_unknown( "materi_stress_pressure_history", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_HARDSOIL ) {
+    // manual Professional 6.649 + theory HS: the elastic law needs the
+    // maximum |p| history (materi_plasti_hardsoil_history, manual
+    // 4.22) to switch between E50 (first loading) and Eur
+    // (unloading/reloading); without it the law silently stays on E50.
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+    ok = ok && check_unknown( "materi_plasti_hardsoil_history", YES, task );
   }
   if ( data_number==GROUP_MATERI_EXPANSION_LINEAR ) {
     ok = check_unknown( "condif_temperature", YES, task );
@@ -515,12 +710,37 @@ long int check( long int idat, long int task )
     ok = check_unknown( "materi_stress", YES, task );
   if ( data_number==GROUP_MATERI_PLASTI_CAMCLAY ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_camclay_history", task );
+    ok = ok && check_unknown( "materi_strain_plasti", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_GENCAM_BONDED ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown(
+      "materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history", YES, task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_CAP ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_CAP1 ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_strain_plasti", YES, task );
+    ok = ok && check_unknown( "materi_plasti_cap1_history", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_HARDSOIL ) {
+    // manual Professional 6.703 + theory HS: the yield function needs
+    // the elastic group (E50/Eur), the hardening gamma_p (here the
+    // materi_plasti_kappa dof, the equivalent plastic strain size),
+    // the maximum |p| history (materi_plasti_hardsoil_history) and
+    // the hardsoil plastic strain dof (materi_strain_plasti_hardsoil,
+    // manual 4.40 prescribes both initializations).
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_velocity", YES, task );
+    ok = ok && check_unknown( "materi_plasti_kappa", YES, task );
+    ok = ok && check_unknown( "materi_strain_plasti_hardsoil", YES, task );
+    ok = ok && check_unknown( "materi_plasti_hardsoil_history", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_COMPRESSION ) {
     ok = check_unknown( "materi_stress", YES, task );
@@ -528,12 +748,20 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_MATERI_PLASTI_DIPRISCO ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_diprisco_history", task );
+    ok = ok && check_unknown( "materi_strain_plasti", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_DIPRISCO_DENSITY ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_diprisco_history", task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_DIPRISCO_RT ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_diprisco_history", task );
     ok = ok && check_unknown( "materi_strain_plasti", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_DRUCKPRAG ) {
@@ -565,9 +793,53 @@ long int check( long int idat, long int task )
   }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_PRESSUREDEPENDENTVOIDRATIO ) {
     ok = check_unknown( "materi_stress", YES, task );
-    ok = ok && check_unknown( "materi_history_variables", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+  }
+  if ( data_number==GROUP_MATERI_STRESS_NULL ) {
+    ok = check_unknown( "materi_stress", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_ELASTI_BORJA_TAMAGNINI ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown( "materi_strain_elasti", YES, task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_HYPO_WOLFFERSDORFF_NIEMUNIS ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_HYPO_NIEMUNIS_VISCO ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+    ok = ok && check_unknown( "materi_strain_intergranular", YES, task );
   }
   if ( data_number==GROUP_MATERI_PLASTI_HYPO_WOLFERSDORFF ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_HYPO_MASIN ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_HYPO_MASIN_CLAY_VISCO_JM ) {
+    ok = check_unknown( "materi_stress", YES, task );
+    ok = ok && check_unknown_atleastone( "materi_history_variables",
+      "materi_plasti_hypo_history", task );
+  }
+  if ( data_number==GROUP_MATERI_PLASTI_SANISAND ) {
     ok = check_unknown( "materi_stress", YES, task );
     ok = ok && check_unknown( "materi_history_variables", YES, task );
   }
@@ -727,6 +999,12 @@ long int check( long int idat, long int task )
   if ( data_number==GROUP_TRUSS_YOUNG )
     ok = check_unknown_atleastone( "materi_velocity_integrated", 
       "materi_displacement", task );
+  if ( data_number==GROUP_TRUSS_EXPANSION )
+    ok = check_unknown_atleastone( "materi_velocity_integrated", 
+      "materi_displacement", task );
+  if ( data_number==GROUP_TRUSS_INITIAL_FORCE )
+    ok = check_unknown_atleastone( "materi_velocity_integrated", 
+      "materi_displacement", task );
   if ( data_number==GROUP_TYPE )
     ok = check_unknowns_are_specified( task );
   if ( data_number==GROUP_USER_DATA )
@@ -741,13 +1019,53 @@ long int check( long int idat, long int task )
     ok = ok && check_unknown( "wave_scalar", NO, task );
   if ( data_number==MATERI_STRAINENERGY )
     ok = check_unknown( "materi_strainenergy", YES, task );
+  if ( data_number==MATERI_PLASTI_PHIMOB )
+    ok = check_unknown( "materi_plasti_phimob", YES, task );
   if ( data_number==MATERI_STRAIN_ELASTI )
     ok = check_unknown( "materi_strain_elasti", YES, task );
   if ( data_number==MATERI_STRAIN_PLASTI )
     ok = check_unknown( "materi_strain_plasti", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_CAP )
+    ok = check_unknown( "materi_strain_plasti_cap", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_COMPRESSION )
+    ok = check_unknown( "materi_strain_plasti_compression", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_DIPRISCO )
+    ok = check_unknown( "materi_strain_plasti_diprisco", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_DRUCKPRAG )
+    ok = check_unknown( "materi_strain_plasti_druckprag", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_HARDSOIL )
+    ok = check_unknown( "materi_strain_plasti_hardsoil", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_CAMCLAY )
+    ok = check_unknown( "materi_strain_plasti_camclay", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_GENCAM_BONDED )
+    ok = check_unknown(
+      "materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_MOHR_COUL )
+    ok = check_unknown( "materi_strain_plasti_mohr_coul", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_TENSION )
+    ok = check_unknown( "materi_strain_plasti_tension", YES, task );
+  if ( data_number==MATERI_STRAIN_PLASTI_VONMISES )
+    ok = check_unknown( "materi_strain_plasti_vonmises", YES, task );
+  if ( data_number==MATERI_STRAIN_TOTAL_KAPPA )
+    ok = check_unknown( "materi_strain_total_kappa", YES, task );
+  if ( data_number==MATERI_STRAIN_TOTAL_COMPRESSION_KAPPA )
+    ok = check_unknown( "materi_strain_total_compression_kappa", YES, task );
+  if ( data_number==MATERI_STRAIN_TOTAL_SHEAR_KAPPA )
+    ok = check_unknown( "materi_strain_total_shear_kappa", YES, task );
+  if ( data_number==MATERI_STRAIN_TOTAL_TENSION_KAPPA )
+    ok = check_unknown( "materi_strain_total_tension_kappa", YES, task );
   if ( data_number==MATERI_STRAIN_TOTAL )
     ok = check_unknown( "materi_strain_total", YES, task );
   if ( data_number==MATERI_STRESS )
+    ok = check_unknown( "materi_stress", YES, task );
+  if ( data_number==MATERI_STRESS_PRESSURE_HISTORY )
+    ok = check_unknown( "materi_stress", YES, task );
+  if ( data_number==MATERI_PLASTI_HARDSOIL_HISTORY )
+    // the shared sph dof is updated from the stress dofs (dof.cc)
+    ok = check_unknown( "materi_stress", YES, task );
+  if ( data_number==MATERI_PLASTI_DIPRISCO_HISTORY )
+    // alias of materi_history_variables (manual Professional 4.18):
+    // the history dof is updated inside the stress law (set_stress)
     ok = check_unknown( "materi_stress", YES, task );
   if ( data_number==MATERI_VELOCITY )
     ok = check_unknown( "materi_velocity", YES, task );
@@ -880,6 +1198,13 @@ long int check( long int idat, long int task )
   if ( data_number==ROTATION_Z_AXIS ) {
     ok = check_unknown( "materi_velocity", YES, task );
     ok = ok && check_ndim( 2, 3, task );
+  }
+  if ( data_number==VELN ) {
+    // bounda_dof ... -veln (manual Professional 6.22): the normal
+    // velocity to a plane is prescribed 0 with generated mpc records.
+    // The constraint lives on the velocity dofs, so materi_velocity
+    // must be active.
+    ok = check_unknown( "materi_velocity", YES, task );
   }
   if ( data_number==SLIDE_GEOMETRY )
     ok = check_unknown( "materi_velocity", YES, task );
@@ -1063,4 +1388,62 @@ long int check_unknowns_are_specified( long int task )
   }
 
   return ok;
+}
+
+void check_element_node( long int check_element_node_switch )
+
+{
+  // check that elements do not have duplicate nodes
+  long int ielem=0, max_elem=0, inol=0, jnol=0, nnol=0, length=0,
+    *el=NULL;
+  double ddum[1];
+
+  if ( check_element_node_switch==-NO ) return;
+
+  db_max_index( ELEMENT, max_elem, VERSION_NORMAL, GET );
+  if ( max_elem<0 ) return;
+
+  el = get_new_int(1+MNOL);
+  for ( ielem=0; ielem<=max_elem; ielem++ ) {
+    if ( db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) {
+      db( ELEMENT, ielem, el, ddum, length, VERSION_NORMAL, GET );
+      nnol = length - 1;
+      for ( inol=0; inol<nnol; inol++ ) {
+        for ( jnol=inol+1; jnol<nnol; jnol++ ) {
+          if ( el[1+inol]==el[1+jnol] ) {
+            cout << "Error: element " << ielem << " has duplicate nodes.\n";
+            exit(TN_EXIT_STATUS);
+          }
+        }
+      }
+    }
+  }
+  delete[] el;
+}
+
+void check_nan_results( long int check_nan_switch )
+
+{
+  // check node_dof for NAN values
+  long int inod=0, max_node=0, iuknwn=0;
+  double *node_dof=NULL;
+
+  if ( check_nan_switch==-NO ) return;
+
+  db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+  if ( max_node<0 ) return;
+
+  for ( inod=0; inod<=max_node; inod++ ) {
+    if ( db_active_index( NODE_DOF, inod, VERSION_NORMAL ) ) {
+      node_dof = db_dbl( NODE_DOF, inod, VERSION_NORMAL );
+      for ( iuknwn=0; iuknwn<nuknwn; iuknwn++ ) {
+        if ( node_dof[iuknwn]!=node_dof[iuknwn] ) {
+          cout << "Error: NAN detected in node_dof of node " << inod
+               << " dof " << iuknwn << ".\n";
+          cout << "The solution may have diverged.\n";
+          exit(TN_EXIT_STATUS);
+        }
+      }
+    }
+  }
 }

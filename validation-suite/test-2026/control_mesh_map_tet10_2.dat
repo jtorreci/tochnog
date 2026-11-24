@@ -1,0 +1,34 @@
+( control_mesh_map (6.210): one -tet10 under self-weight on a fixed base, mapped
+  to linear at 10, solved at 20, mapped back at 40: every mid node gets the
+  mean of the dofs of its two edge corners (linear interpolation; the
+  Professional maps the tet10 to wrong corners, so no Professional values). )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 0 0 0.5
+node 8 0.5 0 0.5
+node 9 0 0.5 0.5
+node 10 0 0 1
+element 1 -tet10 1 2 3 4 5 6 7 8 9 10
+group_type 0 -materi
+group_materi_elasti_young 0 1000
+group_materi_elasti_poisson 0 0.2
+geometry_quadrilateral 1 -1 -1 0 2 -1 0 -1 2 0 2 2 0 0.01
+bounda_dof 1 -geometry_quadrilateral 1 -velx -vely -velz
+force_gravity 0 0 -10
+group_materi_memory 0 -total_linear
+group_materi_density 0 1
+control_mesh_map 10 -yes
+control_timestep 20 1.0 1.0
+control_mesh_map 40 -yes
+control_print_database 45 -yes
+end_data

@@ -1,0 +1,27 @@
+( F4 T8 C46a: order of the one-shot mesh records on ONE control index.
+  control_mesh_copy, _switch and _mirror on index 1 with a two-step
+  control_timestep. The Professional 02-08-2026 applies copy, then
+  switch, then mirror [pairwise probes; the record order in the input is
+  irrelevant]: node 10 at 0 7, node 25 at -1 5. Old GNU: switch, mirror,
+  copy. build_safe.sh checks the .dbs. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+geometry_brick 1  0. 0. 0. 400. 400. 400. 1.e-4
+bounda_dof 1 -geometry_brick 1 -velx -vely
+group_type 0  -materi
+group_materi_elasti_young   0  1.0e6
+group_materi_elasti_poisson 0  0.2
+group_materi_density   0  1.0
+control_mesh_macro 0   -rectangle 0 3 2
+control_mesh_macro_parameters 0   1. 0.5 2. 1.
+control_timestep 0 0.1 0.1
+control_mesh_copy 1 5. 0.
+control_mesh_mirror 1 -x
+control_mesh_switch 1 -y -x
+control_timestep 1 0.1 0.2
+end_data

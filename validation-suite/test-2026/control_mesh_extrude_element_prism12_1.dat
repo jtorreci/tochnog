@@ -1,0 +1,30 @@
+( F5 T4 U9c: control_mesh_extrude_element 10 -prism12 {manual 6.181}: two
+  -tria6 extruded to -prism12 {base and top planes in the tria6 order, no
+  mid planes}, z 0 1 3 with control_mesh_extrude_n 2 1 1: 6 elements, 4
+  planes of 9 nodes {element l*2+e, node p*9+n}. Mesh = Professional
+  02-08-2026 on this file. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 1 0.5 0
+node 8 1 1 0
+node 9 0.5 1 0
+element 1 -tria6 1 2 3 4 5 6
+element 2 -tria6 3 7 8 5 9 6
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 0.
+control_mesh_extrude 10 0. 1. 3.
+control_mesh_extrude_n 10 2 1 1
+control_mesh_extrude_element 10 -prism12
+end_data

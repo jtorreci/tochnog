@@ -26,6 +26,89 @@
 #define NTYPE 3
 #define EPS_PRI 1.e-12
 
+// Mechanics-only static groundflow (corpus ground18/excavate1, manual
+// Professional 6.573): a groundflow_phreatic_level_static switch (or a
+// groundflow_phreatic_level_multiple_static -yes level) materializes the
+// phreatic total pressure without a pressure unknown. The post_calcul
+// pressure monitors (-total_pressure/-static_pressure/-dynamic_pressure)
+// are then meaningful without groundflow_pressure; registration below and
+// the per-post-point coordinate lookup use this flag.
+long int groundflow_static_pressure_active( void )
+
+{
+  long int ldum=0, switch_value=-NO, imult=0, max_multiple=0;
+  double ddum[1];
+
+  if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_STATIC, 0, VERSION_NORMAL ) ) {
+    db( GROUNDFLOW_PHREATICLEVEL_STATIC, 0, &switch_value, ddum, ldum,
+      VERSION_NORMAL, GET );
+    if ( switch_value==-YES ) return 1;
+  }
+  db_max_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE, max_multiple, VERSION_NORMAL,
+    GET );
+  for ( imult=0; imult<=max_multiple; imult++ ) {
+    if ( db_active_index( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult,
+         VERSION_NORMAL ) ) {
+      db( GROUNDFLOW_PHREATICLEVEL_MULTIPLE_STATIC, imult, &switch_value,
+        ddum, ldum, VERSION_NORMAL, GET );
+      if ( switch_value==-YES ) return 1;
+    }
+  }
+  return 0;
+}
+
+// F5 T2 V8: post_calcul_multiply (6.916), post_calcul_limit (6.905) and
+// post_calcul_absolute (6.902) of the post_calcul item being calculated.
+// calculate() sets them per dof/operat item before the node and
+// post-point loops; the parallel node loop only reads them.
+static long int calcul_modify_multiply=0, calcul_modify_limit=0,
+  calcul_modify_absolute=0;
+static double calcul_modify_factor=1., calcul_modify_lower=0.,
+  calcul_modify_upper=0.;
+
+// Apply the modifiers to the results of one item, in the order of the
+// Professional 02-08-2026 (measured, probes v8pro p6/q1/q4/q6): multiply,
+// then limit, then absolute value. All values of a multi-valued item
+// (eg -prival) share the factor and the limits of the item.
+static void calculate_modify( double result[], long int length_result )
+
+{
+  long int i=0;
+
+  for ( i=0; i<length_result; i++ ) {
+    if ( calcul_modify_multiply ) result[i] *= calcul_modify_factor;
+    if ( calcul_modify_limit ) {
+      if ( result[i]<calcul_modify_lower ) result[i] = calcul_modify_lower;
+      if ( result[i]>calcul_modify_upper ) result[i] = calcul_modify_upper;
+    }
+    if ( calcul_modify_absolute ) result[i] = fabs( result[i] );
+  }
+}
+
+// groundflow_phreatic_coord() with post_calcul_static_pressure (6.920):
+// when the record is set its value is the static pressure of the
+// complete domain in postprocessing. It replaces the static pressure of
+// the phreatic level (or of post_calcul_static_pressure_height) in the
+// -static_pressure and -dynamic_pressure results and in the p_dynamic of
+// -safety_piping, as the Professional 02-08-2026 (probe v8pro s2 on
+// ground14). The calculation itself keeps groundflow_phreatic_coord().
+static long int calcul_phreatic_coord( long int inod, double coord[],
+  double dof[], double &total_pres, double &static_pres, double &location )
+
+{
+  long int found=0, ldum=0, idum[1];
+  double static_value=0.;
+
+  found = groundflow_phreatic_coord( inod, coord, dof, total_pres,
+    static_pres, location, NULL );
+  if ( db( POST_CALCUL_STATIC_PRESSURE, 0, idum, &static_value, ldum,
+       VERSION_NORMAL, GET_IF_EXISTS ) ) {
+    static_pres = static_value;
+    found = 1;
+  }
+  return found;
+}
+
 void calculate( void )
 
 {
@@ -47,6 +130,10 @@ void calculate( void )
     db_delete( POST_POINT_DOF_CALCUL, VERSION_NORMAL );
     db_delete( POST_LINE_DOF_CALCUL, VERSION_NORMAL );
     db_delete( POST_QUADRILATERAL_DOF_CALCUL, VERSION_NORMAL );
+    // per-node averaged flag of post_calcul -materi_stress -force
+    // (calcul_force.cc, consumed by the -primary print): refreshed
+    // every calculate() like NODE_DOF_CALCUL.
+    db_delete( POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE, VERSION_NORMAL );
 
     type_post_dof[0] = POST_LINE_DOF;
     type_post_dof_calcul[0] = POST_LINE_DOF_CALCUL;
@@ -58,7 +145,36 @@ void calculate( void )
     db( POST_CALCUL, 0, calcul, ddum, length, VERSION_NORMAL, GET );
     if ( (length%2)!=0 ) db_error( POST_CALCUL, 0 );
     nmat = length / 2; 
+
+      // post_calcul_multiply / post_calcul_limit: one factor / one
+      // lower-upper pair per dof/operat item (the Professional rejects a
+      // shorter record and ignores extra values)
+    double multiply_factor[DATA_ITEM_SIZE], limit_value[DATA_ITEM_SIZE];
+    long int multiply_length=0, limit_length=0, absolute_switch=-NO;
+    long int has_multiply = db( POST_CALCUL_MULTIPLY, 0, idum,
+      multiply_factor, multiply_length, VERSION_NORMAL, GET_IF_EXISTS );
+    long int has_limit = db( POST_CALCUL_LIMIT, 0, idum,
+      limit_value, limit_length, VERSION_NORMAL, GET_IF_EXISTS );
+    db( POST_CALCUL_ABSOLUTE, 0, &absolute_switch, ddum, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    if ( has_multiply && multiply_length<nmat ) {
+      pri( "Error: post_calcul_multiply needs a factor for each item "
+        "of post_calcul." );
+      db_error( POST_CALCUL_MULTIPLY, 0 );
+    }
+    if ( has_limit && limit_length<2*nmat ) {
+      pri( "Error: post_calcul_limit needs a lower and an upper value "
+        "for each item of post_calcul." );
+      db_error( POST_CALCUL_LIMIT, 0 );
+    }
+
     for ( icalcul=0; icalcul<nmat; icalcul++ ) {
+      calcul_modify_multiply = has_multiply;
+      calcul_modify_factor = has_multiply ? multiply_factor[icalcul] : 1.;
+      calcul_modify_limit = has_limit;
+      calcul_modify_lower = has_limit ? limit_value[icalcul*2+0] : 0.;
+      calcul_modify_upper = has_limit ? limit_value[icalcul*2+1] : 0.;
+      calcul_modify_absolute = ( absolute_switch==-YES );
       unknown = calcul[icalcul*2+0];
       calcul_matrix = calcul_vector = calcul_ecomplex = 0;
       if       ( unknown==-CONDIF_TEMPERATURE ) {
@@ -128,6 +244,28 @@ void calculate( void )
       }
       calcul_operat = calcul[icalcul*2+1];
 
+      // post_calcul -materi_stress -force (manual Professional 6.913):
+      // the family is NODAL - reject the POST_LINE_DOF/POST_POINT_DOF/
+      // POST_QUADRILATERAL_DOF records (there is no element behind them
+      // to integrate over) and validate the configuration records once
+      // per record (calcul_force.cc).
+      if ( unknown==-MATERI_STRESS && labs(calcul_operat)==FORCE ) {
+        for ( itype=0; itype<NTYPE; itype++ ) {
+          db_max_index( type_post_dof[itype], max_type_post,
+            VERSION_NORMAL, GET );
+          for ( ipost=0; ipost<=max_type_post; ipost++ ) {
+            if ( db_active_index( type_post_dof[itype], ipost,
+                 VERSION_NORMAL ) ) {
+              pri( "Error: post_calcul -materi_stress -force is a NODAL "
+                   "calculation; POST_LINE_DOF/POST_POINT_DOF/"
+                   "POST_QUADRILATERAL_DOF records are not supported" );
+              exit(TN_EXIT_STATUS);
+            }
+          }
+        }
+        post_calcul_materi_stress_force_validate();
+      }
+
       if ( calcul_matrix ) {
         if ( dof_amount[calcul_mat_indx]==MDIM*MDIM ) {
           pri( "Error: POST_CALCUL is not available for non-symmetric matrices" );
@@ -138,6 +276,8 @@ void calculate( void )
         // to prevent memory problems in parallel comp.
       db_max_index( NODE, max_node, VERSION_NORMAL, GET );
       db_allocate( -NODE_DOF_CALCUL, max_node, VERSION_NORMAL, MINIMAL );
+      db_allocate( -POST_CALCUL_MATERI_STRESS_FORCE_AVERAGED_NODE,
+        max_node, VERSION_NORMAL, MINIMAL );
       parallel_sys_routine( &parallel_calcul_node );
 
       for ( itype=0; itype<NTYPE; itype++ ) {
@@ -152,6 +292,13 @@ void calculate( void )
                 pri( "Not available for groundflow analysis: ", -type_post_dof[itype] );
                 exit(TN_EXIT_STATUS);
               }
+            }
+            else if ( groundflow_static_pressure_active() &&
+                      type_post_dof[itype]==POST_POINT_DOF ) {
+              // mechanics-only static groundflow (ground18 of the
+              // corpus): the pressure monitors evaluate the phreatic
+              // level at the post point coordinates
+              coord = db_dbl( POST_POINT, ipost, VERSION_NORMAL );
             }
             else
               coord = ddum;
@@ -174,8 +321,10 @@ void calculate( void )
               }
             }
             else
-              unknown_values[0] = post_dof[calcul_scalar_indx];
+              unknown_values[0] = ( calcul_scalar_indx>=0 ?
+                post_dof[calcul_scalar_indx] : 0. );
             calculate_operat( unknown_values, -1, coord, post_dof, result, length_result );
+            calculate_modify( result, length_result );
             db( type_post_dof_calcul[itype], ipost, idum, dof_calcul, 
               length, VERSION_NORMAL, GET_IF_EXISTS );
             if ( length+length_result>DATA_ITEM_SIZE ) 
@@ -343,8 +492,10 @@ void calculate( void )
         }
       }
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==TOTAL &&
-                groundflow_pressure ) {
-        strcpy( outname, "to" );
+                ( groundflow_pressure || groundflow_static_pressure_active() ) ) {
+        // manual Professional 6.913 area: the item label is -to_pres
+        // (post_calcul_label -to_pres in the .dbs of the Professional)
+        strcpy( outname, "to_" );
         strcat( outname, unknown_name );
         ncalcul++;
         strcpy( post_calcul_names[ncalcul-1], outname );
@@ -354,8 +505,9 @@ void calculate( void )
         post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
       }             
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==STATIC &&
-                groundflow_pressure ) {
-        strcpy( outname, "st" );
+                ( groundflow_pressure || groundflow_static_pressure_active() ) ) {
+        // item label -st_pres (Professional post_calcul_label naming)
+        strcpy( outname, "st_" );
         strcat( outname, unknown_name );
         ncalcul++;
         strcpy( post_calcul_names[ncalcul-1], outname );
@@ -365,8 +517,9 @@ void calculate( void )
         post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
       }                
       else if ( unknown==-GROUNDFLOW_PRESSURE && labs(calcul_operat)==DYNAMIC &&
-                groundflow_pressure ) {
-        strcpy( outname, "dy" );
+                ( groundflow_pressure || groundflow_static_pressure_active() ) ) {
+        // item label -dy_pres (Professional post_calcul_label naming)
+        strcpy( outname, "dy_" );
         strcat( outname, unknown_name );
         ncalcul++;
         strcpy( post_calcul_names[ncalcul-1], outname );
@@ -374,6 +527,146 @@ void calculate( void )
         post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
         post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
         post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;           
+      }
+      else if ( unknown==-MATERI_STRESS && groundflow_pressure &&
+                ( labs(calcul_operat)==SAFETY_PIPING ||
+                  labs(calcul_operat)==SAFETY_LIFTING ) ) {
+        // post_calcul -materi_stress -safety_piping/-safety_lifting
+        // (manual Professional 6.919): hydraulic piping/lifting safety
+        // factors. The generated item names follow the
+        // post_calcul_safety_method: -vertical (default) one value with
+        // the plain name safety_piping/safety_lifting, -prival three
+        // values safety_*_prival_0..2 and -global three values
+        // safety_*_global_x/y/z (post_calcul_label naming measured on
+        // the Professional .dbs of ground15/16).
+        long int safety_method=-VERTICAL;
+        double sm_ddum[1];
+        long int sm_ldum=0;
+        db( POST_CALCUL_SAFETY_METHOD, 0, &safety_method, sm_ddum,
+          sm_ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        char safety_stem[MCHAR];
+        strcpy( safety_stem,
+          ( labs(calcul_operat)==SAFETY_PIPING ) ?
+          "safety_piping" : "safety_lifting" );
+        if ( safety_method==-PRIVAL ) {
+          for ( idim=0; idim<MDIM; idim++ ) {
+            strcpy( outname, safety_stem );
+            strcat( outname, "_prival_" );
+            long_to_a( idim, str );
+            strcat( outname, str );
+            ncalcul++;
+            strcpy( post_calcul_names[ncalcul-1], outname );
+            strcpy( post_calcul_names_without_extension[ncalcul-1], outname );
+            post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+            post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+            post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+          }
+        }
+        else if ( safety_method==-GLOBAL ) {
+          for ( idim=0; idim<MDIM; idim++ ) {
+            strcpy( outname, safety_stem );
+            strcat( outname, "_global_" );
+            if      ( idim==0 ) strcat( outname, "x" );
+            else if ( idim==1 ) strcat( outname, "y" );
+            else                strcat( outname, "z" );
+            ncalcul++;
+            strcpy( post_calcul_names[ncalcul-1], outname );
+            strcpy( post_calcul_names_without_extension[ncalcul-1], outname );
+            post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+            post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+            post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+          }
+        }
+        else {
+          assert( safety_method==-VERTICAL );
+          ncalcul++;
+          strcpy( post_calcul_names[ncalcul-1], safety_stem );
+          strcpy( post_calcul_names_without_extension[ncalcul-1],
+            safety_stem );
+          post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+          post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+          post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+        }
+      }
+      else if ( unknown==-MATERI_STRESS &&
+                ( labs(calcul_operat)==YOUNG_APPARENT ||
+                  labs(calcul_operat)==POISSON_APPARENT ) ) {
+        // post_calcul -materi_stress -young_apparent/-poisson_apparent
+        // (manual Professional 6.903): apparent Young modulus and
+        // Poisson ratio from the INCREMENTAL strains and INCREMENTAL
+        // stresses of the last time step. One scalar value per node with
+        // the plain operator name (the .dbs post_calcul_label of the
+        // Professional is "-young_apparent -poisson_apparent", measured
+        // on ground17). The value itself is computed in
+        // calculate_operat() from the node dofs and the internal
+        // node_dof_previous_step snapshot.
+        ncalcul++;
+        strcpy( post_calcul_names[ncalcul-1],
+          ( labs(calcul_operat)==YOUNG_APPARENT ) ?
+          "young_apparent" : "poisson_apparent" );
+        strcpy( post_calcul_names_without_extension[ncalcul-1],
+          post_calcul_names[ncalcul-1] );
+        post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+        post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+        post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+      }
+      else if ( unknown==-MATERI_STRESS && labs(calcul_operat)==K0 ) {
+        // post_calcul -materi_stress -k0 (manual Professional 6.901):
+        // the ratio of the average horizontal stress over the vertical
+        // one (the earth-pressure coefficient at rest of the resolved
+        // state). One scalar per node/point; the .dbs post_calcul_label
+        // of the Professional is "-k0_sig" (measured on k0.dat).
+        ncalcul++;
+        strcpy( post_calcul_names[ncalcul-1], "k0_sig" );
+        strcpy( post_calcul_names_without_extension[ncalcul-1],
+          post_calcul_names[ncalcul-1] );
+        post_calcul_scal_vec_mat[ncalcul-1] = -SCALAR;
+        post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+        post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+      }
+      else if ( unknown==-MATERI_STRESS && labs(calcul_operat)==FORCE ) {
+        long int iforce=0, icomp=0, nforce_stems=0, nforce_comp=0;
+        char force_stem[MCHAR], force_comp[MCHAR];
+        // post_calcul -materi_stress -force (manual Professional 6.913):
+        // normal force, shear force and moment(s) per node. The items are
+        // GLOBAL PLOT vectors (components in the structure thickness
+        // direction; only the SIZE is the physical value):
+        //   2D (9 items):  norx nory nors | shex shey shes | momx momy moms
+        //   3D (16 items): norx nory norz nors | shex shey shez shes |
+        //                  mom1x mom1y mom1z mom1s | mom2x mom2y mom2z mom2s
+        // The flat NODE_DOF_CALCUL layout is ONE slot per item (the
+        // SCALARS section of print_vt.cc reads them one by one); the
+        // -VECTOR marks group the item with its ndim component siblings
+        // (print_vt.cc advances nval=MDIM for -VECTOR entries). Both
+        // layouts fit in MCALCUL=20 (9 and 16); the 3D block leaves only
+        // 4 slots for other post_calcul items (documented limitation).
+        if ( ndim==2 ) { nforce_stems = 3; nforce_comp = 3; }
+        else           { nforce_stems = 4; nforce_comp = 4; }
+        for ( iforce=0; iforce<nforce_stems; iforce++ ) {
+          if      ( iforce==0 ) strcpy( force_stem, "nor" );
+          else if ( iforce==1 ) strcpy( force_stem, "she" );
+          else if ( ndim==2 )   strcpy( force_stem, "mom" );
+          else if ( iforce==2 ) strcpy( force_stem, "mom1" );
+          else                  strcpy( force_stem, "mom2" );
+          for ( icomp=0; icomp<nforce_comp; icomp++ ) {
+            if      ( icomp==0 ) strcpy( force_comp, "x" );
+            else if ( icomp==1 ) strcpy( force_comp, "y" );
+            else if ( ndim==2 )  strcpy( force_comp, "s" );
+            else if ( icomp==2 ) strcpy( force_comp, "z" );
+            else                 strcpy( force_comp, "s" );
+            strcpy( outname, force_stem );
+            strcat( outname, force_comp );
+            strcat( outname, "_" );
+            strcat( outname, unknown_name );
+            ncalcul++;
+            strcpy( post_calcul_names[ncalcul-1], outname );
+            strcpy( post_calcul_names_without_extension[ncalcul-1], outname );
+            post_calcul_scal_vec_mat[ncalcul-1] =
+              ( icomp==nforce_comp-1 ) ? -SCALAR : -VECTOR;
+            post_calcul_unknown_operat[(ncalcul-1)*2+0] = unknown;
+            post_calcul_unknown_operat[(ncalcul-1)*2+1] = calcul_operat;
+          }
+        }
       }
       else
         db_error( POST_CALCUL, 0 );
@@ -431,8 +724,10 @@ void parallel_calcul_node( void )
           }
         }
         else
-           unknown_values[0] = node_dof[calcul_scalar_indx];
+           unknown_values[0] = ( calcul_scalar_indx>=0 ?
+             node_dof[calcul_scalar_indx] : 0. );
         calculate_operat( unknown_values, inod, coord, node_dof, result, length_result );
+        calculate_modify( result, length_result );
         db( NODE_DOF_CALCUL, inod, idum, dof_calcul, length, 
           VERSION_NORMAL, GET_IF_EXISTS );
         if ( (length+length_result)>MCALCUL ) {
@@ -455,7 +750,7 @@ void calculate_operat( double unknown_values[], long int inod,
 
 {
 
-  long int idim=0, jdim=0, indx=0, n=0, idum[1];
+  long int idim=0, jdim=0, indx=0, n=0, ldum=0, idum[1];
   double average=0., phim=0., d__1=0., d__2=0., tmax=0., tmin=0., 
     cohesion=0., tmp1=0., tmp2=0., a=0., b=0., c=0., x1=0., x2=0.,
     pres=0., static_pres=0., total_pres=0., location=0.,
@@ -534,11 +829,14 @@ void calculate_operat( double unknown_values[], long int inod,
     length_result = MDIM * MDIM;
   }
   else if ( labs(calcul_operat)==SIZETOT ) {
+      // sqrt(Aij Aij) / sqrt(Ai Ai) (manual Professional "post_calcul",
+      // = Professional 02-08-2026 calcul1: strain 1 -> 1); the factor 0.5
+      // used before gave 1/sqrt(2) of it.
     if ( calcul_matrix )
-      result[0] = sqrt( 0.5 * array_inproduct( unknown_values, 
+      result[0] = sqrt( array_inproduct( unknown_values, 
         unknown_values, MDIM*MDIM ) );
     else
-      result[0] = sqrt( 0.5 * array_inproduct( unknown_values, 
+      result[0] = sqrt( array_inproduct( unknown_values, 
         unknown_values, ndim ) );
     length_result = 1;
   }
@@ -551,7 +849,9 @@ void calculate_operat( double unknown_values[], long int inod,
         if ( idim==jdim ) dev_mat[indx] -= average;
       }
     }
-    result[0] = sqrt( .5 * array_inproduct( dev_mat, 
+      // sqrt(Bij Bij), B the deviatoric part (manual Professional
+      // "post_calcul", = Professional 02-08-2026 calcul1: 0.816497).
+    result[0] = sqrt( array_inproduct( dev_mat, 
       dev_mat, MDIM*MDIM ) );
     length_result = 1;
   }
@@ -600,9 +900,13 @@ void calculate_operat( double unknown_values[], long int inod,
     length_result = 1;
   }
   else if ( labs(calcul_operat)==TOTAL ) {
-    groundflow_phreatic_coord( inod, coord, dof, total_pres, 
-       static_pres, location );
+    groundflow_phreatic_coord( inod, coord, dof, total_pres,
+       static_pres, location, NULL );
     pres = total_pres;
+    // node_total_pressure: user override of the calculated total pressure
+    // (manual Professional 6.898)
+    db( NODE_TOTAL_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
     if ( calcul_matrix ) {
       result[0] = unknown_values[0] + pres;
       result[1] = unknown_values[1];
@@ -619,19 +923,214 @@ void calculate_operat( double unknown_values[], long int inod,
   }                        
   else if ( labs(calcul_operat)==STATIC ) {
     pres = 0.;
-    if ( groundflow_phreatic_coord( inod, coord, dof, total_pres, 
+    if ( calcul_phreatic_coord( inod, coord, dof, total_pres,
         static_pres, location ) )
       pres = static_pres;
+    // node_static_pressure: user override (manual Professional 6.894)
+    db( NODE_STATIC_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
     result[0] = pres;
     length_result = 1;
   }
   else if ( labs(calcul_operat)==DYNAMIC ) {
-    pres = dof[pres_indx];
-    if ( groundflow_phreatic_coord( inod, coord, dof, total_pres, 
-        static_pres, location ) ) 
+    pres = ( groundflow_pressure ? dof[pres_indx] : 0. );
+    if ( calcul_phreatic_coord( inod, coord, dof, total_pres,
+        static_pres, location ) )
       pres = total_pres - static_pres;
+    // node_dynamic_pressure: user override (manual Professional 6.886)
+    db( NODE_DYNAMIC_PRESSURE, inod, idum, &pres, ldum, VERSION_NORMAL,
+      GET_IF_EXISTS );
     result[0] = pres;
-    length_result = 1;                 
+    length_result = 1;
+  }
+  else if ( groundflow_pressure && calcul_matrix &&
+            ( labs(calcul_operat)==SAFETY_PIPING ||
+              labs(calcul_operat)==SAFETY_LIFTING ) ) {
+    // post_calcul -materi_stress -safety_piping/-safety_lifting
+    // (manual Professional 6.919): hydraulic safety factors
+    //   safety_piping  = (sigma_i + p_dynamic)/p_dynamic
+    //   safety_lifting = (sigma_i + p_total)/p_total
+    // evaluated for the stress of the method of
+    // post_calcul_safety_method (-vertical: the vertical normal stress,
+    // one value; -prival: the three principal stresses; -global: the
+    // three global normal stresses). p_dynamic = p_total - p_static with
+    // p_total/p_static from groundflow_phreatic_coord(). Measured
+    // against the Professional on ground15/16: the principal values are
+    // listed from the MOST compressive (prival_0 = the minimum), while
+    // the GNU prival sort is descending, hence the reversed indexing;
+    // when the pressure denominator is zero the factor is set to 0
+    // (post_calcul_safety_default eps very small, value 0; the record
+    // sets both, F5 T2 V8, Professional probe v8pro s1 on ground14).
+    long int safety_method=-VERTICAL, ipipe=0, nres=1;
+    double sm_ddum[1], safety_pipe=0., p_div=0., safety_max=0.,
+      safety_default[2];
+    long int sm_ldum=0, safety_maximum_set=0, res_idum[1];
+    db( POST_CALCUL_SAFETY_METHOD, 0, &safety_method, sm_ddum,
+      sm_ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    safety_maximum_set = db( POST_CALCUL_SAFETY_MAXIMUM, 0, res_idum,
+      &safety_max, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+    safety_default[0] = TINY;
+    safety_default[1] = 0.;
+    db( POST_CALCUL_SAFETY_DEFAULT, 0, res_idum, safety_default, ldum,
+      VERSION_NORMAL, GET_IF_EXISTS );
+    calcul_phreatic_coord( inod, coord, dof, total_pres,
+      static_pres, location );
+    if ( labs(calcul_operat)==SAFETY_PIPING )
+      p_div = total_pres - static_pres;   // p_dynamic
+    else
+      p_div = total_pres;                  // p_total
+    if ( safety_method==-PRIVAL ) nres = MDIM;
+    else if ( safety_method==-GLOBAL ) nres = MDIM;
+    else assert( safety_method==-VERTICAL );
+    for ( ipipe=0; ipipe<nres; ipipe++ ) {
+      if ( safety_method==-VERTICAL ) {
+        // vertical normal stress: 1D sigma_xx, 2D sigma_yy, 3D sigma_zz
+        indx = (ndim-1)*MDIM + (ndim-1);
+        safety_pipe = unknown_values[indx];
+      }
+      else if ( safety_method==-PRIVAL ) {
+        // principal stresses, most compressive first (the GNU prival
+        // is sorted descending, reversed here)
+        safety_pipe = prival[MDIM-1-ipipe];
+      }
+      else {
+        // global normal stresses sigma_xx/sigma_yy/sigma_zz
+        assert( safety_method==-GLOBAL );
+        indx = ipipe*MDIM + ipipe;
+        safety_pipe = unknown_values[indx];
+      }
+      if ( scalar_dabs(p_div)<safety_default[0] )
+        result[ipipe] = safety_default[1];
+      else {
+        result[ipipe] = ( safety_pipe + p_div ) / p_div;
+        if ( safety_maximum_set && result[ipipe]>safety_max )
+          result[ipipe] = safety_max;
+      }
+    }
+    length_result = nres;
+  }
+  else if ( labs(calcul_operat)==FORCE ) {
+    // post_calcul -materi_stress -force (manual Professional 6.913):
+    // per-node normal/shear force and moment(s); the values come from
+    // the stub in calcul_force.cc (lot 1: zero-filled layout, the
+    // numerical integration lands in L2/L3).
+    post_calcul_materi_stress_force( unknown_values, inod, coord, dof,
+      result, length_result );
+  }
+  else if ( labs(calcul_operat)==YOUNG_APPARENT ||
+            labs(calcul_operat)==POISSON_APPARENT ) {
+    // post_calcul -materi_stress -young_apparent/-poisson_apparent
+    // (manual Professional 6.903): apparent Young modulus and Poisson
+    // ratio determined from the INCREMENTAL strains and INCREMENTAL
+    // stresses of the last time step (0 when the determination is not
+    // possible, e.g. almost zero incremental strains). The increment is
+    // the difference between the converged node dofs and the internal
+    // node_dof_previous_step snapshot (captured by top() at the start
+    // of the step). K = dp/deps_v and G = dq/(3*deps_q) from the mean
+    // and deviatoric parts; E = 9KG/(3K+G), nu = (3K-2G)/(2(3K+G)).
+    // Verified against the Professional .dbs of ground17 (E = 1e7,
+    // nu = 0 EXACT from the incremental uniaxial compression).
+    if ( calcul_matrix ) {
+      double d_sig[MDIM*MDIM], d_ept[MDIM*MDIM];
+      double d_p=0., d_vol=0.;
+      double dev_s[MDIM*MDIM], dev_e[MDIM*MDIM];
+      double q=0., e_q=0., K_app=0., G_app=0.;
+      long int have_prev=0, prev_idum[1], prev_len=0;
+      double prev_dof[MUKNWN];
+      long int ept_present = ( ept_indx>=0 );
+      array_set( d_sig, 0., MDIM*MDIM );
+      array_set( d_ept, 0., MDIM*MDIM );
+      // post_calcul_apparent_total -yes (6.903): the total strains and
+      // total stresses instead of the increments (previous state 0;
+      // Professional probe v8pro a1 on ground17: E 1.333e7, nu 1/3)
+      long int apparent_total=-NO, at_ldum=0;
+      double at_ddum[1];
+      db( POST_CALCUL_APPARENT_TOTAL, 0, &apparent_total, at_ddum, at_ldum,
+        VERSION_NORMAL, GET_IF_EXISTS );
+      if ( apparent_total==-YES ) {
+        array_set( prev_dof, 0., MUKNWN );
+        have_prev = 1;
+      }
+      else if ( db( NODE_DOF_PREVIOUS_STEP, inod, prev_idum, prev_dof,
+          prev_len, VERSION_NORMAL, GET_IF_EXISTS ) && prev_len>0 )
+        have_prev = 1;
+      if ( have_prev && ept_present ) {
+        for ( idim=0; idim<MDIM; idim++ ) {
+          for ( jdim=0; jdim<MDIM; jdim++ ) {
+            indx = idim*MDIM + jdim;
+            long int sidx = stress_indx(idim,jdim);
+            d_sig[indx] = unknown_values[indx] -
+              prev_dof[stres_indx + sidx*nder];
+            d_ept[indx] = dof[ept_indx + sidx*nder] -
+              prev_dof[ept_indx + sidx*nder];
+          }
+        }
+        d_p = ( d_sig[0] + d_sig[4] + d_sig[8] ) / 3.;
+        d_vol = d_ept[0] + d_ept[4] + d_ept[8];
+        for ( idim=0; idim<MDIM; idim++ ) {
+          for ( jdim=0; jdim<MDIM; jdim++ ) {
+            indx = idim*MDIM + jdim;
+            dev_s[indx] = d_sig[indx];
+            dev_e[indx] = d_ept[indx];
+            if ( idim==jdim ) {
+              dev_s[indx] -= d_p;
+              dev_e[indx] -= d_vol/3.;
+            }
+          }
+        }
+        // incremental bulk and shear modulus (q = sqrt(1.5 s:s),
+        // eps_q = sqrt(2/3 e:e), G = dq/(3*deps_q))
+        q = sqrt( 1.5 * array_inproduct( dev_s, dev_s, MDIM*MDIM ) );
+        e_q = sqrt( (2./3.) * array_inproduct( dev_e, dev_e,
+          MDIM*MDIM ) );
+        K_app = ( scalar_dabs(d_vol)>TINY ) ? d_p/d_vol : 0.;
+        G_app = ( q>1.e-20 && e_q>1.e-20 ) ? q/(3.*e_q) : 0.;
+        if ( K_app==0. || G_app==0. ) {
+          result[0] = 0.;
+        }
+        else if ( labs(calcul_operat)==YOUNG_APPARENT ) {
+          // E = 9KG/(3K+G)
+          result[0] = 9.*K_app*G_app/( 3.*K_app + G_app );
+        }
+        else {
+          // nu = (3K-2G)/(2(3K+G))
+          result[0] = ( 3.*K_app - 2.*G_app ) /
+            ( 2.*( 3.*K_app + G_app ) );
+        }
+      }
+      else {
+        result[0] = 0.;
+      }
+      length_result = 1;
+    }
+    else
+      db_error( POST_CALCUL, 0 );
+  }
+  else if ( labs(calcul_operat)==K0 ) {
+    // post_calcul -materi_stress -k0 (manual Professional 6.901): the
+    // ratio of the average horizontal stress over the vertical one,
+    // 0.5*(sigxx+sigzz)/sigyy in 2D and 0.5*(sigxx+sigyy)/sigzz in 3D.
+    // Verified against the Professional .dbs of k0.dat (0.1111111111 =
+    // nu/(1-nu) of the laterally confined column at every node).
+    if ( calcul_matrix ) {
+      double sig_h = 0., sig_v = 0.;
+      if ( ndim==2 ) {
+        sig_h = 0.5 * ( unknown_values[0] + unknown_values[8] );
+        sig_v = unknown_values[4];
+      }
+      else if ( ndim==3 ) {
+        sig_h = 0.5 * ( unknown_values[0] + unknown_values[4] );
+        sig_v = unknown_values[8];
+      }
+      else {
+        sig_h = 0.5 * ( unknown_values[4] + unknown_values[8] );
+        sig_v = unknown_values[0];
+      }
+      result[0] = ( scalar_dabs(sig_v)>TINY ) ? sig_h/sig_v : 0.;
+      length_result = 1;
+    }
+    else
+      db_error( POST_CALCUL, 0 );
   }
   else
     db_error( POST_CALCUL, 0 );

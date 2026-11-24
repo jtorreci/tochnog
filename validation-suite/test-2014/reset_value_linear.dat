@@ -1,0 +1,41 @@
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_displacement
+materi_strain_total
+materi_stress
+number_of_integration_points 4
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_time  1  0 0 100 0
+bounda_time  2  0 2 100 2
+bounda_unknown  0  -ra 1 4 -ra -velx -vely
+bounda_unknown  1  -ra 2 3 -ra -vely
+bounda_unknown  2  -ra 2 3 -ra -velx
+control_reset_dof  0  -disx
+control_reset_value_linear  0  1 0 0
+control_timestep  0  0.1 1
+element  1  -quad4 1 2 3 4
+element_group  1  0
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -total_linear
+group_type  0  -materi
+node  1  0 0
+node  2  1 0
+node  3  1 1
+node  4  0 1
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+target_item  1  -node_dof 3 -disx
+target_value  1  1.2 0.02
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

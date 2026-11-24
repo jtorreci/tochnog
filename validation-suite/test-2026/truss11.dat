@@ -1,0 +1,48 @@
+( Copy of the Professional 02-08-2026 example test/other/truss11.dat:
+  _element_group_truss 2 selects no truss, nothing is distributed; target
+  = Professional. )
+( Thermal force in automatically distributed trusses.
+  At time=2 the temperature T is 2 and the truss force should be -E*alpha*A*T )
+
+echo -no
+number_of_space_dimensions 1
+condif_temperature
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node 1   0
+node 2  10
+node 3  20
+node 4   5
+node 5  25
+
+element 1  -bar2 1 2
+element 2  -bar2 2 3
+element 3  -truss 4 5
+element_group 3 1
+
+group_type 0  -materi
+group_materi_memory 0  -total
+
+group_type 1  -truss
+group_truss_area 1  1.
+group_truss_memory 1  -total_linear
+group_truss_elasti_young 1  1.
+group_truss_expansion 1  1.
+
+bounda_dof   0  -all -temp
+bounda_time  0  0.0 0. 100. 100.
+bounda_dof   1  -all -velx
+bounda_time  1  0.0 0. 100. 0.
+
+control_mesh_truss_distribute_mpc 10 -yes
+control_mesh_truss_distribute_mpc_element_group_truss 10 2
+
+control_timestep 20  1. 2.
+
+target_item  1 -element_truss_force 3  0
+target_value 1 -2 1.e-10
+end_data

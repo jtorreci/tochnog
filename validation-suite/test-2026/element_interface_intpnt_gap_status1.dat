@@ -1,0 +1,43 @@
+(F5 T2 V4: element_interface_intpnt_gap_status (manual Professional 6.431):
+ -closed when the accumulated normal strain <= gap, -opened otherwise.
+ Element 1 (group 0, group_interface_gap -1e-4) opens by 1e-3: -opened
+ -opened. Element 2 (group 1, default gap 0) is compressed by 1e-3:
+ -closed -closed. The Professional 02-08-2026 does not write this record;
+ its element_interface_intpnt_materi_tension_status gives the same
+ statuses on this input (probe g2).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 0
+node 4 1 0
+node 5 0 2
+node 6 1 2
+node 7 0 2
+node 8 1 2
+element 1 -quad4 1 2 3 4
+element 2 -quad4 5 6 7 8
+element_group 2 1
+group_type 0 -materi
+group_interface 0 -yes
+group_interface_materi_memory 0 -total_linear
+group_interface_materi_elasti_stiffness 0 1.e3 1.e3
+group_interface_gap 0 -1.e-4
+group_type 1 -materi
+group_interface 1 -yes
+group_interface_materi_memory 1 -total_linear
+group_interface_materi_elasti_stiffness 1 1.e3 1.e3
+bounda_dof 10 -ra 1 2 5 6 -ra -velx -vely
+bounda_time 10 0.
+bounda_dof 20 -ra 3 4 7 8 -ra -velx
+bounda_time 20 0.
+bounda_dof 21 -ra 3 4 -ra -vely
+bounda_time 21 1.e-3
+bounda_dof 22 -ra 7 8 -ra -vely
+bounda_time 22 -1.e-3
+control_timestep 10 0.1 1.0
+end_data

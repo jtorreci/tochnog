@@ -1,0 +1,145 @@
+( K21 {F4 T6f, 2026-10-12} axisymmetric quad4 2x2 Gauss recovery {Professional tube1}: elements with a node exactly on the axis r=0 use sum_g h_n{g} sig_g / sum_g h_n{g} per element, the others the physical linear least-squares fit, arithmetic mean over elements. Targets = Professional 02-08-2026 node_dof {GNU before: node 3 sigxx -66.40}. )
+
+( 
+  Nearly inc. Navier Stokes.
+  Laminar air flow in a long tube.
+  Dipl.-Ing. Frank Jordan <f.jordan@uni-duisburg.de>
+
+  At a long distance from the inlet the flow velocity should be analyticaly:
+
+  Vy{r}=2 * Q/A * { 1 - {r/R}^2 }
+  
+  Q = flow volume 
+  A = cross-section area of the tube A = PI * R^2
+
+  Distances are given in millimeter [ mm ] 
+  Velocities are given in millimeter per second [ mm / s ] 
+  Masses are given in milligram [ mg ]
+  Times are given in seconds [ s ]
+  
+  R =   5 [mm]     Radius of tube
+  L = 100 [mm]     Length of tube 
+  V = 500 [mm / s] Mean velocity in y-direction { V = Q / A }
+ 
+  vis   = 1.81e-2 [ mg / { mm * s } ] Viscosity of Air
+  dens  = 1.2e-3  [ mg / mm^3 ]       Density of Air
+  co    = 1.0e-8  [ s^2 mm / mg ]     Compressibility of Air
+  
+  Air is an ideal gas ->  co = 1 / P0
+  P0 = Atmospheric pressure at normal conditiones
+     = 10^5 Pa                                     
+
+  Re = 2 * R * dens * V / vis       Reynoldsnumber  
+  Re = 333.15                       should be laminar for Re < 2300 
+
+  For a fully developed flow profile the pressure drop p(L) versus 
+  length of tube should be:
+
+  p{L} = 8 * vis * { Q / A } * L / R^2 
+       = 8 * vis * Q * L / { PI * R^4 }
+
+  Here:
+  p{ L=100mm } = 289.6 [ mg / { s^2 mm } ]
+)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+
+mesh -fixed_in_space -fixed_in_space
+
+(# if convection_apply is set to -no it disables rho * v * grad(v) )
+convection_apply -no
+
+(# if inertia_apply is to -no it disables rho * dv/dt )
+(# used for stationary processes )
+inertia_apply -no
+
+start_define
+  symmetrie_line        geometry_line 1
+end_define
+start_define
+  in_flow               geometry_line 2
+end_define
+start_define
+  wall                  geometry_line 3
+end_define
+start_define
+  out_flow              geometry_line 4
+end_define
+start_define
+  length                100.
+end_define
+
+node  0  0.0     0.0
+node  1  5.0     0.0
+node  2  0.0    length
+node  3  5.0    length
+
+element 1  -quad4  0  1  2  3
+
+symmetrie_line    0.0   0.0   0.0   length 0.01
+in_flow           0.0   0.0   5.0     0.0  0.01
+out_flow          0.0  length 5.0   length 0.01
+wall              5.0   0.0   5.0   length 0.01
+
+(# parabolic flow profile at the inlet )
+geometry_factor 2  2. 1.5 0.0
+
+bounda_dof 0  -symmetrie_line -velx
+bounda_time    0  0.
+
+bounda_dof 1  -in_flow -vely
+bounda_time    1  0. 0. 1.e-5 500. 1.e6 500.
+
+bounda_dof 2  -out_flow -velx
+bounda_time    2  0.
+
+bounda_dof 3  -wall -velx -vely
+bounda_time    3  0.
+
+bounda_dof 4  -in_flow -velx
+bounda_time    4  0.
+
+
+group_type 0  -materi
+group_materi_viscosity 0  1.81e-2
+group_materi_density 0  1.2e-3
+group_materi_elasti_compressibility 0 1.e-8
+group_materi_memory 0  -updated_linear
+group_axisymmetric 0 -yes
+
+post_point 1   0.0 25.
+print_filter 1 -post_point_dof 1 -vely
+
+(# used for printing out the normal force to volume elements )
+(# ->  - pressure )
+post_calcul -materi_stress -average
+
+(# only linear elements are used to get the correct pressure )
+(# on the boundaries )
+control_mesh_refine_globally          10  -h_refinement
+control_mesh_refine_globally          12  -h_refinement
+control_mesh_refine_globally          14  -h_refinement -no -yes
+control_mesh_refine_globally          15  -h_refinement -no -yes
+
+(# very small timesteps in order to get a convergating solution )
+control_timestep                      30  1.e-6 3.e-5 
+(
+control_print                         30  -time_current -post_point_dof 
+control_print_history                 30  -post_point_dof 0  -sigyy -post_point_dof 1 -vely
+)
+
+target_item 0  -post_point_dof 1 -vely
+target_value 0   1000. 100.0
+target_item 1 -node_dof 3 -sigxx
+target_value 1 -1.595805149398e+02 2.0e-04
+target_item 2 -node_dof 2 -sigxx
+target_value 2 -3.248261115604e+02 3.0e-04
+target_item 3 -node_dof 33 -sigxx
+target_value 3 -1.474455260832e+01 2.0e-05
+target_item 4 -node_dof 40 -sigxx
+target_value 4 -1.658009373936e+02 2.0e-04
+end_data

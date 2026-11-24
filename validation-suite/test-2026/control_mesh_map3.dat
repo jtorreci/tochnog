@@ -1,0 +1,73 @@
+( control_mesh_map (manual Professional 6.210, F5 T4 U9d): the column of
+  control_mesh_map1 stopped after the linear calculation: -hex8 of the
+  corner nodes, element_map, the mid nodes deleted (DIVERGENCES
+  MESH-MAP-MID-NODES). Values = Professional 02-08-2026 (its _30.dbs). )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 1 0.5 0
+node 7 0 1 0
+node 8 0.5 1 0
+node 9 1 1 0
+node 10 0 0 0.5
+node 11 0.5 0 0.5
+node 12 1 0 0.5
+node 13 0 0.5 0.5
+node 14 0.5 0.5 0.5
+node 15 1 0.5 0.5
+node 16 0 1 0.5
+node 17 0.5 1 0.5
+node 18 1 1 0.5
+node 19 0 0 1
+node 20 0.5 0 1
+node 21 1 0 1
+node 22 0 0.5 1
+node 23 0.5 0.5 1
+node 24 1 0.5 1
+node 25 0 1 1
+node 26 0.5 1 1
+node 27 1 1 1
+node 28 0 0 1.5
+node 29 0.5 0 1.5
+node 30 1 0 1.5
+node 31 0 0.5 1.5
+node 32 0.5 0.5 1.5
+node 33 1 0.5 1.5
+node 34 0 1 1.5
+node 35 0.5 1 1.5
+node 36 1 1 1.5
+node 37 0 0 2
+node 38 0.5 0 2
+node 39 1 0 2
+node 40 0 0.5 2
+node 41 0.5 0.5 2
+node 42 1 0.5 2
+node 43 0 1 2
+node 44 0.5 1 2
+node 45 1 1 2
+element 1 -hex27 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27
+element 2 -hex27 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45
+element_group 1 1
+element_group 2 1
+geometry_quadrilateral 1 -1 -1 0 2 -1 0 -1 2 0 2 2 0 0.01
+bounda_dof 1 -geometry_quadrilateral 1 -velx -vely -velz
+force_gravity 0 0 -10
+group_type 1 -materi
+group_materi_memory 1 -total_linear
+group_materi_elasti_young 1 1000
+group_materi_elasti_poisson 1 0.2
+group_materi_density 1 1
+control_mesh_map 10 -yes
+control_timestep 20 1.0 1.0
+control_solver 20 -matrix_pardiso
+control_print_database 30 -separate_index
+end_data

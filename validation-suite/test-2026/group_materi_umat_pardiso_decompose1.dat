@@ -1,0 +1,24 @@
+(F5 T3 E: accepted without effect {no PARDISO in the GNU; DIVERGENCES
+ UMAT-PARDISO-DECOMPOSE}; Professional 02-08-2026 sigxx 1.)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+
+end_initia
+node 1  0
+node 2  1
+element 1  -bar2 1 2
+bounda_dof 0  1 -velx
+bounda_time 0  0.
+bounda_dof 1  2 -velx
+bounda_time 1  0.001
+group_type 0  -materi
+group_materi_elasti_young 0  1000.
+group_materi_umat_pardiso_decompose 0 -no
+control_timestep 0  1. 1.
+target_item 0 -node_dof 2 -sigxx
+target_value 0 1. 1.e-9
+end_data

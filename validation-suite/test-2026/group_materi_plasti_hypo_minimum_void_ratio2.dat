@@ -1,0 +1,77 @@
+(F5 T3 C1: group_materi_plasti_hypo_minimum_void_ratio, manual 6.715,
+ Masin clay hypoplasticity: copy of the Professional test other/hypo7
+ with the minimum 1.1207 {without it the void ratio ends at 1.1108}.
+ sigyy -224.8345, hyhis0 1.124790; Professional 02-08-2026 -224.8340 and
+ 1.124789.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_strain_plasti
+materi_stress
+materi_plasti_hypo_history
+end_initia
+
+node 1 0. 0.
+node 2 1. 0.
+node 3 0. 1.
+node 4 1. 1.
+
+element 1 -quad4 1 2 3 4
+
+start_define  edge_bottom geometry_line 1 end_define
+start_define  edge_left   geometry_line 2 end_define
+start_define  edge_right  geometry_line 3 end_define
+start_define  edge_top    geometry_line 4 end_define
+
+edge_bottom 0. 0. 1. 0. 1.e-5
+edge_left   0. 0. 0. 1. 1.e-5
+edge_right  1. 0. 1. 1. 1.e-5
+edge_top    0. 1. 1. 1. 1.e-5
+
+bounda_dof                   1 -edge_bottom -vely
+bounda_time                  1  0. 0. 100. 0.
+bounda_dof                   2 -edge_left   -velx
+bounda_time                  2  0. 0. 100. 0.
+bounda_dof                   4 -edge_top    -vely
+bounda_time                  4  0. -1. 1.e10 -1
+
+force_edge_normal_geometry   0  -edge_right
+force_edge_normal            0  -100
+
+group_type                   0  -materi 
+group_axisymmetric           0  -yes
+group_materi_memory          0  -updated_linear
+group_materi_plasti_hypo_masin 	0
+				22.56   (phic deg)
+                        	0.11 	(lambda*)
+                        	0.016 	(kappa*)
+                        	1.375  	(N)
+                        	0.4  	(r)
+post_point    0   0.5   0.5
+
+control_reset_dof               1  -sigxx -sigyy -sigzz
+control_reset_value_constant    1  -100
+
+control_reset_dof               2  -hyhis0 (void ratio)
+control_reset_value_constant    2   1.03
+
+control_timestep               20  5.e-4 0.3
+
+(
+control_print                  20  -time_current -post_node_rhside_ratio 
+
+control_print_data_versus_data 20  -post_point_dof 0 -eptyy
+                                   -post_point_dof 0 -sigyy
+                                   -post_point_dof 0 -sigxx
+                                   -post_point_dof 0 -eptxx
+                                   -post_point_dof 0 -hyhis0
+)
+group_materi_plasti_hypo_minimum_void_ratio 0 1.1207
+target_item 0 -post_point_dof 0 -sigyy
+target_value 0 -224.8345 1.e-2
+target_item 1 -post_point_dof 0 -hyhis0
+target_value 1 1.124790 1.e-5
+end_data

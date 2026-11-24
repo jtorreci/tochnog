@@ -1,0 +1,42 @@
+(
+mpc_element_group_closest -yes [manual 6.860]: the element_group_2 nodes lie
+outside the element_group_1 quad4 [gap 0.1]; each is tied to the closest
+element with the shape functions at its closest point [edge weights 0.5
+0.5, corner weight 1]. Records equal the Professional 02-08-2026 ones
+[build_safe mpc_check].
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_stress
+end_initia
+node 1 0.0 0.0
+node 2 0.0 1.0
+node 3 1.0 0.0
+node 4 1.0 1.0
+element 1 -quad4 1 2 3 4
+node 5 1.1 0.0
+node 6 1.1 0.5
+node 7 1.1 1.0
+node 8 2.0 0.0
+node 9 2.0 0.5
+node 10 2.0 1.0
+element 2 -quad4 5 6 8 9
+element 3 -quad4 6 7 9 10
+element_group 1 1
+element_group 2 2
+element_group 3 2
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+mpc_element_group 10 2 1
+mpc_element_group_dof 10 -velx -vely
+mpc_element_group_closest 10 -yes
+bounda_dof  10  -ra 1 2 -ra -velx -vely
+bounda_dof  20  -ra 8 9 10 -ra -velx -vely
+control_reset_dof 10  -sigxx
+control_reset_value_constant 10  1.
+control_timestep  20  1. 1.0
+control_print     20  -time_current -node_dof
+end_data

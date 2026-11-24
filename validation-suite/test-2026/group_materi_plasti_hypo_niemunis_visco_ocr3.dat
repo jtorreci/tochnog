@@ -1,0 +1,91 @@
+(F5 T3 E3: the OCR is applied once, in the first timestep of the
+ control index with -yes {index 30 here, after creep in index 20}, then the
+ void ratio follows the compression. Targets: Professional 02-08-2026
+ values {GNU differs by 1.e-5}.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_intergranular
+materi_strain_total
+materi_plasti_hypo_history
+materi_stress
+end_initia
+
+node 1  0.00 0.00
+node 2  1.00 0.00
+node 3  0.00 1.00
+node 4  1.00 1.00
+
+element 1 -quad4 1 2 3 4
+
+start_define
+  left_edge geometry_line 0
+end_define
+left_edge  0.00 0.00 0.00 1.00 1.e-5
+start_define
+  lower_edge geometry_line 1
+end_define
+lower_edge 0.00 0.00 1.00 0.00 1.e-5
+start_define
+  upper_edge geometry_line 2
+end_define
+upper_edge 0.00 1.00 1.00 1.00 1.e-5
+start_define
+  right_edge geometry_line 3
+end_define
+right_edge 1.00 0.00 1.00 1.00 1.e-5
+
+bounda_dof  0  -left_edge -velx
+bounda_time 0  0.
+bounda_dof  1  -right_edge -velx
+bounda_time 1 0.
+bounda_dof  2  -lower_edge -vely
+bounda_time 2  0.
+bounda_dof  3  -upper_edge -vely
+bounda_time 3  -1.
+
+group_type           0  -materi
+group_materi_memory  0  -total_linear
+group_materi_plasti_hypo_strain_intergranular 0
+                       1.e-4  5.0  2.0 0.50   6.0 6.0
+                       (R     m_R  m_T beta_r chi theta)
+group_materi_plasti_hypo_niemunis_visco 0
+                        30.0  0.2  100. 0.05  1.5    0.1   0.1   0.95    0.02
+                       (phi   nu    Dr   Iv   e_e0   p_e0  lambda beta_R kappa)
+
+post_point 1  0.5 0.5
+
+control_reset_dof             1  -epixx -epiyy -epizz (initial intergranular strain)
+control_reset_value_constant  1  -0.0000577
+control_reset_dof             2  -hyhis0 (initial void ratio e_0 INCREASED FROM 0.645 FOR SAND TO 1.48 FOR CLAY)
+control_reset_value_constant  2  1.48
+control_reset_dof             3  -sigxx -sigzz (initial stresses)
+control_reset_value_constant  3  -0.06
+control_reset_dof             4  -sigyy
+control_reset_value_constant  4  -0.1
+
+group_materi_plasti_hypo_niemunis_visco_ocr 0 2.
+control_materi_plasti_hypo_niemunis_visco_ocr_apply 30 -yes
+
+control_timestep                        20   1.e-6 1.e-4
+control_timestep                        30   1.e-6 0.9e-3 
+(
+control_print                           20  -time_current
+control_print_data_versus_data          20  -time_current 0 0
+                                            -post_point_dof 1 -eptxx
+                                            -post_point_dof 1 -sigxx
+                                            -post_point_dof 1 -sigyy
+                                            -post_point_dof 1 -hyhis0
+                                            -post_point_dof 1 -epixx
+                                            -post_point_dof 1 -epiyy
+)
+
+target_item  0   -post_point_dof 1 -hyhis0
+target_value 0  1.3621546  1.e-4
+target_item  1   -post_point_dof 1 -sigxx
+target_value 1  -0.0616485  1.e-4
+target_item  2   -post_point_dof 1 -sigyy
+target_value 2  -0.1090136  1.e-4
+end_data

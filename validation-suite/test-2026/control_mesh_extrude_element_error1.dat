@@ -1,0 +1,29 @@
+( F5 T4 U9b: control_mesh_extrude_element accepts -prism18 or -prism12
+  {manual 6.181}; -hex8 is an input error in the GNU. The Professional
+  02-08-2026 takes any other name as -prism18 [DIVERGENCES
+  EXTRUDE-ELEMENT-NAME].
+  EXPECTED_ERROR: Error: control_mesh_extrude_element must be -prism18 or -prism12. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 1 0.5 0
+node 8 1 1 0
+node 9 0.5 1 0
+element 1 -tria6 1 2 3 4 5 6
+element 2 -tria6 3 7 8 5 9 6
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 0.
+control_mesh_extrude 10 0. 1.
+control_mesh_extrude_element 10 -hex8
+end_data

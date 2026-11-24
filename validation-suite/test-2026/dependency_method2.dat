@@ -1,0 +1,40 @@
+(
+F5 T4 U3: the element loop uses the dependent value. One quad4, nu 0,
+uniaxial strain 0.02 {velocity 0.01 for 2 time units, one step}. young
+1000 with dependency_method -multiply and element_group -all: factor 0.3
+after t = 1 -> E 300 -> sigxx = 300 * 0.02 = 6 {Professional 02-08-2026:
+6}. One step: the Professional evaluates the diagram in the middle of
+the step and sums the stress increments of the steps with the E of each
+step {two steps of 1: 9.5}; BACKLOG C122.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_elasti
+materi_strain_total
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.
+dependency_item 1 -group_materi_elasti_young -all -time_current 2
+dependency_diagram 1 0. 1. 1. 0.3
+dependency_method 1 -multiply
+geometry_line 1 0 0 0 1 0.01
+geometry_line 2 1 0 1 1 0.01
+geometry_line 3 0 0 1 0 0.01
+bounda_dof 0 -geometry_line 1 -velx
+bounda_dof 1 -geometry_line 3 -vely
+bounda_dof 2 -geometry_line 2 -velx
+bounda_time 2 0. 0.01 10. 0.01
+control_timestep 0 2. 2.
+target_item 0 -node_dof 4 -sigxx
+target_value 0 6. 1.e-8
+end_data

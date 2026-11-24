@@ -1,0 +1,42 @@
+# materi_plasti_diprisco_history
+
+## Implementación
+
+- **Initia**: the `materi_history_variables` branch in `input.cc` now
+  accepts BOTH strings (`materi_history_variables` and
+  `materi_plasti_diprisco_history`, manual Professional 4.18): same
+  parser branch, same `materi_history_variables` value, same shared
+  `hisv_indx` dof (`dof_type = -MATERI_HISTORY_VARIABLES`). With the
+  di Prisco alias flag set the dof basenames become `dipriscohis0 ..
+  dipriscohisN-1` (db_initialize branch on
+  `materi_plasti_diprisco_history`), matching the Professional
+  node_dof names used by its tests (diprisc1 resets and targets
+  `-dipriscohis0/4/8/9/10`); plain `materi_history_variables` keeps
+  `hisv0 .. hisvN-1`. Using the alias sets the flag
+  `materi_plasti_diprisco_history` (initia.cc).
+- **Enum**: `MATERI_PLASTI_DIPRISCO_HISTORY` in `tochnog.h` /
+  `tochnog-mod.h`; name registered in `database.cc`.
+- **check.cc**: the alias self-check requires `materi_stress` (the
+  history dof is updated inside `set_stress`). The
+  `GROUP_MATERI_PLASTI_DIPRISCO` / `_RT` group checks now accept
+  EITHER initia name (`check_unknown_atleastone`), so a Professional
+  input with the alias passes the checks.
+- The di Prisco law (plasti.cc) is untouched: it reads
+  `old_hisv`/`new_hisv` sized by `materi_history_variables`.
+
+## Física
+
+Manual (4.18): "The history variable di Prisco plasticity models are
+added to the node_dof records. For group_materi_plasti_diprisco you
+need to set number_of_history_variables to 11. For
+group_materi_plasti_diprisco_density you need to set
+number_of_history_variables to 12." The 11 variables: chi tensor
+(9 values), beta (yield surface form factor), rc (preconsolidation mean
+pressure); the 12th is the current void ratio of the
+diprisco_density model (F5 T3 E2).
+
+## Gotchas
+
+- The camclay group checks still require the exact string
+  `materi_history_variables` (the alias is diprisco-specific, the
+  manual gives no cross-model alias).

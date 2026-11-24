@@ -1,0 +1,44 @@
+(F5 T5 U10: group_beam_force_moment_plasti, shear force and torsion
+ limits, equilibrium kept. Cantilever of length 1 along x, E 1, Izz 1,
+ G 1, J 1. Tip deflection prescribed (vely 0.1, disy 1 at t 10) with free
+ tip rotz: elastic fy = 3 E I disy / L^3 = 3; shear limit fy 0.5 at both
+ nodes: fy stays 0.5 and the root moment is fy L = 0.5 (the Professional
+ clips fy and keeps the elastic root moment 3, out of equilibrium). Tip
+ rotx prescribed to 1: elastic torque G J rotx / L = 1; torsion limit
+ 0.3: mx = 0.3.)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+beam_rotation
+end_initia
+node 1 0 0 0
+node 2 1 0 0
+element 1 -beam 1 2
+group_type 0 -beam
+group_beam_young 0 1
+group_beam_shear 0 1
+group_beam_inertia 0 1 1 1
+group_beam_memory 0 -total_linear
+group_beam_force_moment_plasti 0  1e10 0.5 1e10 0.3 1e10 1e10  1e10 0.5 1e10 0.3 1e10 1e10
+bounda_dof 0 1 -velx -vely -velz -rotx -roty -rotz
+bounda_dof 1 2 -velx -velz -roty
+bounda_dof 2 2 -vely
+bounda_time 2 0.1
+bounda_dof 3 2 -rotx
+bounda_time 3 0. 0. 10. 1. 100. 1.
+control_timestep 10 1. 10.
+control_timestep_iterations 10 20
+target_item 0 -element_beam_force_moment 1 1
+target_value 0 -0.5 1.e-8
+target_item 1 -element_beam_force_moment 1 5
+target_value 1 -0.5 1.e-8
+target_item 2 -element_beam_force_moment 1 11
+target_value 2 0. 1.e-8
+target_item 3 -element_beam_force_moment 1 9
+target_value 3 0.3 1.e-8
+target_item 4 -node_rhside 1 -vely
+target_value 4 0.5 1.e-8
+target_item 5 -node_rhside 2 -rotx
+target_value 5 -0.3 1.e-8
+end_data

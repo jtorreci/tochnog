@@ -1,0 +1,85 @@
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+end_initia
+
+bounda_force  2  -ra 9 18 -ra -velx
+bounda_time  0  0 0 100 0
+bounda_time  1  0 0 100 0
+bounda_time  2  0 0.01 100 0.01
+bounda_unknown  0  1 -velx -vely
+bounda_unknown  1  10 -velx -vely
+control_print_materi_stress_force  340  -all
+control_timestep  1  0.1 0.1
+element  1  -quad4 1 2 10 11
+element  2  -quad4 2 3 11 12
+element  3  -quad4 3 4 12 13
+element  4  -quad4 4 5 13 14
+element  5  -quad4 5 6 14 15
+element  6  -quad4 6 7 15 16
+element  7  -quad4 7 8 16 17
+element  8  -quad4 8 9 17 18
+element_group  1  0
+element_group  2  0
+element_group  3  0
+element_group  4  0
+element_group  5  0
+element_group  6  0
+element_group  7  0
+element_group  8  0
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0.3
+group_materi_elasti_young  0  1000
+group_materi_membrane  0  -yes
+group_materi_memory  0  -updated_without_rotation
+group_type  0  -materi
+node  1  0 0
+node  2  1 0
+node  3  2 0
+node  4  3 0
+node  5  4 0
+node  6  5 0
+node  7  6 0
+node  8  7 0
+node  9  8 0
+node  10  0 1
+node  11  1 1
+node  12  2 1
+node  13  3 1
+node  14  4 1
+node  15  5 1
+node  16  6 1
+node  17  7 1
+node  18  8 1
+options_convection   -no
+options_inertia   -no
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_calcul   -materi_stress -force
+post_calcul_materi_stress_force_element_group   0
+post_calcul_materi_stress_force_reference_point   4 1000
+target_item  0  -node_dof 1 -vely
+target_value  0  0 1e-08
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  5  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  6  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  7  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  8  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  9  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  10  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  11  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  12  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  13  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  14  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  15  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  16  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  17  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  18  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

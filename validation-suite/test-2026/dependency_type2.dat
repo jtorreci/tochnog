@@ -1,0 +1,47 @@
+(
+F5 T4 U3: dependency_type -sinus with -use: friction angle of group 0
+asin{0.8} = 0.927295218002.
+Two quad4 elements, element 1 in group 0 {E 1000, mohr_coul 0.5 10 0.1},
+element 2 in group 1 {E 2000, mohr_coul 0.3 4 0.05}, no load.
+The -time_current diagram is constant after t = 1, so the value used in
+the two steps {t = 1, 2} does not depend on the time inside the step.
+build_safe checks element_print_group_data_values; the values are those of
+the Professional 02-08-2026 on the same input.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_elasti
+materi_strain_total
+materi_strain_plasti
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 2 0
+node 6 2 1
+element 1 -quad4 1 2 3 4
+element 2 -quad4 2 5 4 6
+element_group 2 1
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_materi_plasti_mohr_coul 0 0.5 10. 0.1
+group_type 1 -materi
+group_materi_memory 1 -total_linear
+group_materi_elasti_young 1 2000.
+group_materi_elasti_poisson 1 0.3
+group_materi_plasti_mohr_coul 1 0.3 4. 0.05
+geometry_line 1 0 0 0 1 0.01
+bounda_dof 0 -geometry_line 1 -velx -vely
+dependency_item 1 -group_materi_plasti_mohr_coul 0 -time_current 2
+dependency_diagram 1 0. 1. 0.5 0.8
+dependency_number 1 0
+dependency_type 1 -sinus
+print_group_data -group_materi_elasti_young -group_materi_plasti_mohr_coul
+control_timestep 0 1. 2.
+end_data

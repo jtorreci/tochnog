@@ -1,0 +1,25 @@
+( C88 {F4 T6f, 2026-10-19}: spring elongation = relative displacement projected on the spring direction {Professional 02-08-2026}.
+  A -spring2 {k 10, no direction record} from {0,0} to {1,0}; node 2
+  moved {0,1} in 10 steps {a 90 degree rotation of the axis}. The
+  direction is the INITIAL axis {1,0}: force 0 {Professional}; the
+  node-distance elongation gave 4.142. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+element 1 -spring2 1 2
+group_type 0 -spring
+group_spring_stiffness 0 10.
+bounda_dof 1 1 -velx -vely
+bounda_time 1 0.
+bounda_dof 2 2 -velx
+bounda_time 2 0
+bounda_dof 3 2 -vely
+bounda_time 3 1
+control_timestep 10 0.1 1.
+target_item 20 -element_spring_force 1 0
+target_value 20 0. 1.e-9
+end_data

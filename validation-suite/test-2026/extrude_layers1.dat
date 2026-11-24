@@ -1,0 +1,32 @@
+( F5 T4 U5a: control_mesh_extrude 6.179 and control_mesh_extrude_n 6.185.
+  One quad4 and two tria3 extruded over z 0 1 3 with n 1 2 1: three
+  element layers [z 0-1, 1-2, 2-3], the 2D nodes become the plane z 0,
+  plane p of node i is node 6p+i, layer l of element e is element 3l+e;
+  quad4 a b c d -> hex8 a b a' b' c d c' d', tria3 -> prism6. Mesh =
+  Professional 02-08-2026 [build_safe compares the .dbs mesh]. Old GNU:
+  the 2D nodes stayed as an extra bottom layer at z 0 and _n was ignored. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1  0.0 0.0 0.0
+node 2  1.0 0.0 0.0
+node 3  2.0 0.0 0.0
+node 4  0.0 1.0 0.0
+node 5  1.0 1.0 0.0
+node 6  2.0 1.0 0.0
+element 1  -quad4  1 2 4 5
+element 2  -tria3  2 3 5
+element 3  -tria3  3 6 5
+element_group 1 0
+element_group 2 1
+element_group 3 1
+group_type -ra 0 1 -ra -materi
+group_materi_elasti_young -ra 0 1 -ra 1000.
+group_materi_elasti_poisson -ra 0 1 -ra 0.2
+group_materi_density -ra 0 1 -ra 0.
+control_mesh_extrude 10 0. 1. 3.
+control_mesh_extrude_n 10 1 2 1
+end_data

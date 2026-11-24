@@ -1,0 +1,80 @@
+(Bonded-soil generalised Cam clay (group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils, manual Professional 6.700,
+ 4.21, 4.38; GNU definition, see manual-user). Isotropic compression of one axisymmetric element:
+ p_s0 = 100, p_m0 = 50, k = 0.1, rho_s = 10, rho_m = 5, xi_s = xi_m = 0, linear elasticity E = 10000,
+ nu = 0.25. On the isotropic axis the surface gives p = p_s + p_m, and the hardening laws give
+ p_s = p_s0 exp(rho_s eps_v^p), p_m = p_m0 exp(-rho_m eps_v^p). With eps_v^p = 3 x 0.0151344729547:
+ p_s = 157.465183, p_m = 39.845358, p = 197.310541 (the targets). eppgencamyy equals eppyy.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_strain_plasti
+materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils
+materi_stress
+materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history
+end_initia
+
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+
+element 1  -quad4 1 2 3 4
+
+start_define
+  left_edge  geometry_line 0
+end_define
+start_define
+  lower_edge geometry_line 1
+end_define
+start_define
+  upper_edge geometry_line 2
+end_define
+start_define
+  right_edge geometry_line 3
+end_define
+
+left_edge  0. 0. 0. 1.  1.e-5
+lower_edge 0. 0. 1. 0.  1.e-5
+upper_edge 0. 1. 1. 1.  1.e-5
+right_edge 1. 0. 1. 1.  1.e-5
+
+bounda_dof     0  -left_edge  -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_dof     1  -lower_edge -vely
+bounda_time    1  0. 0. 100. 0.
+bounda_dof     2  -upper_edge -vely
+bounda_time    2  0. -0.2 100. -0.2
+bounda_dof     3  -right_edge  -velx
+bounda_time    3  0. -0.2 100. -0.2
+
+group_type                     0  -materi
+group_materi_memory            0  -total_linear
+group_materi_elasti_young      0  10000.
+group_materi_elasti_poisson    0  0.25
+group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils 0
+  0.9 0.4 1.1  0.9 0.4 1.2  10. 0.  5. 0.  0.1
+group_axisymmetric             0 -yes
+
+post_point 1  0.5 0.5
+
+control_reset_dof                1 -sigxx -sigyy -sigzz
+control_reset_value_constant     1 -100.
+control_reset_dof                2 -gencamhis0
+control_reset_value_constant     2 100.
+control_reset_dof                3 -gencamhis1
+control_reset_value_constant     3 50.
+
+control_timestep                20   0.001 0.1
+
+target_item    0  -post_point_dof 1 -gencamhis0
+target_value   0  157.465183176 1.e-5
+target_item    1  -post_point_dof 1 -gencamhis1
+target_value   1  39.8453579793 1.e-5
+target_item    2  -post_point_dof 1 -sigxx
+target_value   2  -197.310540905 1.e-5
+target_item    3  -post_point_dof 1 -eppgencamyy
+target_value   3  -0.0151344729547 1.e-10
+end_data

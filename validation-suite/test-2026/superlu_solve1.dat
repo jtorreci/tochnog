@@ -1,0 +1,56 @@
+( F4 T9 / C43: control_options_solver -matrix_superlu on a 2D quad4 block
+  40 x 40 [41 x 41 nodes], symmetry supports on x = 0 and y = 0,
+  prescribed x velocity 0.04 on x = 40 for one unit time step, E 1e6,
+  nu 0.2, plane strain: sigxx = E/(1-nu^2) * 1e-3 = 1041.6667 [sigyy = 0,
+  free edge], disx = 0.04 and disy = -nu/(1-nu) * 1e-3 * 40 = -0.01 at
+  the corner [40, 40] [analytic]. Regression input of the SuperLU route
+  [so_suplu.c: the old code read L and U after destroying them and
+  free()d the new[] matrix arrays - ASan alloc-dealloc-mismatch on the
+  sfnet examp9, segmentation fault on the Professional force11 with
+  -matrix_superlu]. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+start_define
+  x_start geometry_line 1
+end_define
+x_start  0. 0.  0. 40.  1.e-4
+start_define
+  y_start geometry_line 2
+end_define
+y_start  0. 0.  40. 0.  1.e-4
+start_define
+  x_end geometry_line 3
+end_define
+x_end  40. 0.  40. 40.  1.e-4
+
+bounda_dof  1  -x_start -velx
+bounda_time 1  0. 0. 100. 0.
+bounda_dof  2  -y_start -vely
+bounda_time 2  0. 0. 100. 0.
+bounda_dof  3  -x_end -velx
+bounda_time 3  0. 0.04 100. 0.04
+
+group_type 0  -materi
+group_materi_elasti_young   0  1.e6
+group_materi_elasti_poisson 0  0.2
+group_materi_memory 0  -total_linear
+
+post_point 1  20. 20.
+post_point 2  40. 40.
+
+control_mesh_macro 0  -rectangle 0 41 41
+control_mesh_macro_parameters 0  20. 20. 40. 40.
+control_options_solver 0  -matrix_superlu
+control_timestep 0  1. 1.
+target_item 1  -post_point_dof 1 -sigxx
+target_value 1  1041.6667 1.e-3
+target_item 2  -post_point_dof 2 -disx
+target_value 2  0.04 1.e-8
+target_item 3  -post_point_dof 2 -disy
+target_value 3  -0.01 1.e-8
+end_data

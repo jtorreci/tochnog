@@ -1,0 +1,86 @@
+( F4 T6a / K14a: the post-processing slots of materi_plasti_hypo_history
+  [manual Professional 4.23] for group_materi_plasti_hypo_masin.
+  The Professional 02-08-2026 test/other/hypo7.dat [axisymmetric
+  oedometer] run to t 0.1. The old GNU wrote back only hyhis0 [e] and
+  hyhis4 [s] and left hyhis1, 2, 3 and 5 at 0. Targets = the
+  Professional post_point values: hyhis2 [mobilized friction angle]
+  26.6363, hyhis3 [stiffness size sqrt[Mijkl Mijkl]] 24562.9, hyhis5
+  [OCR] 2.50029, sigyy -262.453; the GNU now gives them to 3e-4.
+  hyhis1 [substep size] is not targeted: the Professional reports the
+  time step 5e-4, the GNU basic Masin kernel integrates with 32 fixed
+  Runge-Kutta substeps and reports 5e-4/32 [DIVERGENCES K14]. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_strain_plasti
+materi_stress
+materi_plasti_hypo_history
+end_initia
+
+node 1 0. 0.
+node 2 1. 0.
+node 3 0. 1.
+node 4 1. 1.
+
+element 1 -quad4 1 2 3 4
+
+start_define  edge_bottom geometry_line 1 end_define
+start_define  edge_left   geometry_line 2 end_define
+start_define  edge_right  geometry_line 3 end_define
+start_define  edge_top    geometry_line 4 end_define
+
+edge_bottom 0. 0. 1. 0. 1.e-5
+edge_left   0. 0. 0. 1. 1.e-5
+edge_right  1. 0. 1. 1. 1.e-5
+edge_top    0. 1. 1. 1. 1.e-5
+
+bounda_dof                   1 -edge_bottom -vely
+bounda_time                  1  0. 0. 100. 0.
+bounda_dof                   2 -edge_left   -velx
+bounda_time                  2  0. 0. 100. 0.
+bounda_dof                   4 -edge_top    -vely
+bounda_time                  4  0. -1. 1.e10 -1
+
+force_edge_normal_geometry   0  -edge_right
+force_edge_normal            0  -100
+
+group_type                   0  -materi 
+group_axisymmetric           0  -yes
+group_materi_memory          0  -updated_linear
+group_materi_plasti_hypo_masin 	0
+				22.56   (phic deg)
+                        	0.11 	(lambda*)
+                        	0.016 	(kappa*)
+                        	1.375  	(N)
+                        	0.4  	(r)
+post_point    0   0.5   0.5
+
+control_reset_dof               1  -sigxx -sigyy -sigzz
+control_reset_value_constant    1  -100
+
+control_reset_dof               2  -hyhis0 (void ratio)
+control_reset_value_constant    2   1.03
+
+control_timestep               20  5.e-4 0.1
+
+(
+control_print                  20  -time_current -post_node_rhside_ratio 
+
+control_print_data_versus_data 20  -post_point_dof 0 -eptyy
+                                   -post_point_dof 0 -sigyy
+                                   -post_point_dof 0 -sigxx
+                                   -post_point_dof 0 -eptxx
+                                   -post_point_dof 0 -hyhis0
+)
+
+target_item  0   -post_point_dof 0 -sigyy
+target_value 0   -262.453 0.5
+target_item  1   -post_point_dof 0 -hyhis2
+target_value 1   26.6363 0.05
+target_item  2   -post_point_dof 0 -hyhis3
+target_value 2   24562.9 50.
+target_item  3   -post_point_dof 0 -hyhis5
+target_value 3   2.50029 0.005
+end_data

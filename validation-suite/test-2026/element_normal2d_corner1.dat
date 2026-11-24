@@ -1,0 +1,97 @@
+( element_normal, manual Professional 6.445: corner, edge and interior
+  elements. 3x3 quad4 mesh of 2 x 1 cells. The element_normal is the
+  normalized sum of the inward node normals of the element nodes; a node
+  normal is the normalized sum of the consistent side normals
+  (integral N n dA, i.e. length weighted) of its boundary sides.
+  Corner element 1: node 1 (1,2)/sqrt5 + node 2 (0,1) + node 5 (1,0) +
+  interior node 6 (0,0) -> (1.4472,1.8944)/|.| = (0.60706,0.79465).
+  Edge element 2: (0,1); interior element 5: (0,0).
+  Values measured on Pro 02-08-2026 (the group with the _automatic
+  record contains only element 1: the Professional aborts with an
+  assertion when an element with a zero normal uses it). )
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+node 1  0 0
+node 2  2 0
+node 3  4 0
+node 4  6 0
+node 5  0 1
+node 6  2 1
+node 7  4 1
+node 8  6 1
+node 9  0 2
+node 10  2 2
+node 11  4 2
+node 12  6 2
+node 13  0 3
+node 14  2 3
+node 15  4 3
+node 16  6 3
+element 1  -quad4 1 2 5 6
+element 2  -quad4 2 3 6 7
+element 3  -quad4 3 4 7 8
+element 4  -quad4 5 6 9 10
+element 5  -quad4 6 7 10 11
+element 6  -quad4 7 8 11 12
+element 7  -quad4 9 10 13 14
+element 8  -quad4 10 11 14 15
+element 9  -quad4 11 12 15 16
+
+element_group 1 1
+element_group 2 2
+element_group 3 2
+element_group 4 2
+element_group 5 2
+element_group 6 2
+element_group 7 2
+element_group 8 2
+element_group 9 2
+
+group_type 1  -materi
+group_materi_elasti_young 1  1.0
+group_materi_plasti_tension_direct 1  1.e10
+group_materi_plasti_tension_direct_normal_automatic 1  -yes
+
+group_type 2  -materi
+group_materi_elasti_young 2  1.0
+
+bounda_dof  0  -ra 1 4 -ra -velx -vely
+
+control_timestep 0  1. 1.
+
+target_item    0  -element_normal 1 0
+target_value   0  0.6070619982067 1.e-10
+target_item    1  -element_normal 1 1
+target_value   1  0.7946544722918 1.e-10
+target_item    2  -element_normal 3 0
+target_value   2  -0.6070619982067 1.e-10
+target_item    3  -element_normal 3 1
+target_value   3  0.7946544722918 1.e-10
+target_item    4  -element_normal 7 0
+target_value   4  0.6070619982067 1.e-10
+target_item    5  -element_normal 7 1
+target_value   5  -0.7946544722918 1.e-10
+target_item    6  -element_normal 9 0
+target_value   6  -0.6070619982067 1.e-10
+target_item    7  -element_normal 9 1
+target_value   7  -0.7946544722918 1.e-10
+target_item    8  -element_normal 2 0
+target_value   8  0.0 1.e-10
+target_item    9  -element_normal 2 1
+target_value   9  1.0 1.e-10
+target_item    10  -element_normal 4 0
+target_value   10  1.0 1.e-10
+target_item    11  -element_normal 4 1
+target_value   11  0.0 1.e-10
+target_item    12  -element_normal 5 0
+target_value   12  0.0 1.e-10
+target_item    13  -element_normal 5 1
+target_value   13  0.0 1.e-10
+end_data

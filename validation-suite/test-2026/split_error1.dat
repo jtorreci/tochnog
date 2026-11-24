@@ -1,0 +1,24 @@
+( F5 T4 U5b: control_mesh_split_element_to -quad4 is an input error in
+  the GNU; the Professional 02-08-2026 ignores it [DIVERGENCES
+  SPLIT-INPUT-CHECKS].
+  EXPECTED_ERROR: Error: control_mesh_split_element_to must be -tet4 or -prism6 )
+echo -no
+number_of_space_dimensions 2
+end_initia
+node 1 0. 0.
+node 2 1. 0.
+node 3 2. 0.
+node 4 0. 1.
+node 5 1. 1.
+node 6 0. 2.
+node 7 2. 2.
+node 8 1. 2.
+node 9 2. 1.
+node 10 3. 0.
+node 11 3. 1.
+element 1 -tria6 1 2 3 4 5 6
+element 2 -tria6 3 9 7 5 8 6
+element 3 -quad4 3 10 9 11
+control_mesh_split 10 -yes
+control_mesh_split_element_to 10 -quad4
+end_data

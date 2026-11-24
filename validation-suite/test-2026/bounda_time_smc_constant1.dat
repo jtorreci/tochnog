@@ -1,0 +1,25 @@
+( bounda_time_smc, manual 6.42-6.44: the Professional 02-08-2026 example
+  other/smc_1 with file 41.smc, a constant acceleration 1.234 in free
+  format at 2 samples per second. u = 0.5 a t^2: disx 61.7617 at t = 10
+  with the Euler steps, as in the Professional. )
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof 41 1 -accx
+bounda_time_smc 41 -yes
+bounda_time_smc_units 41 1. 1.
+control_timestep 10 1.e-2 10.
+target_item 0 -node_dof 1 -disx
+target_value 0 61.7617 1.e-4
+end_data

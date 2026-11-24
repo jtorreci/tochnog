@@ -1,0 +1,42 @@
+(
+F5 T4 U4: control_mesh_refine_locally_only_method accepts -all or -any only {manual 6.228}; -average is an input error {the Professional 02-08-2026 runs it as -any}.
+EXPECTED_ERROR: Error detected for data item : control_mesh_refine_locally_only_method
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+node 7 0 2
+node 8 1 2
+node 9 2 2
+element 1 -tria3 1 2 5
+element 2 -tria3 1 5 4
+element 3 -tria3 2 3 6
+element 4 -tria3 2 6 5
+element 5 -tria3 4 5 8
+element 6 -tria3 4 8 7
+element 7 -tria3 5 6 9
+element 8 -tria3 5 9 8
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+geometry_line 1 0 0 2 0 0.01
+geometry_line 2 0 0 0 2 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+geometry_quadrilateral 7 -0.01 -0.01 1.01 -0.01 -0.01 1.01 1.01 1.01 0.001
+control_mesh_refine_locally 0 100.
+control_mesh_refine_locally_dof 0 -nothing
+control_timestep 1 0.1 0.1
+control_mesh_refine_locally_only 0 -geometry_quadrilateral 7
+control_mesh_refine_locally_only_method 0 -average
+end_data

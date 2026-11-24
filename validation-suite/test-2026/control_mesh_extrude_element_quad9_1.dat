@@ -1,0 +1,36 @@
+( F5 T4 U9c: control_mesh_extrude_element 10 -prism12 on a mesh with a
+  -quad9: the quad9 needs mid planes {-hex27}, so every tria6 becomes a
+  -prism18, also element 1 that only shares node 3 with the quad9, and the
+  run warns {owner decision 2026-11-10: the mesh must be conforming}.
+  Mesh = Professional 02-08-2026. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 1 0.5 0
+node 8 1 1 0
+node 9 0.5 1 0
+element 1 -tria6 1 2 3 4 5 6
+element 2 -tria6 3 7 8 5 9 6
+node 10 1.5 0 0
+node 11 2 0 0
+node 12 1.5 0.5 0
+node 13 2 0.5 0
+node 14 1.5 1 0
+node 15 2 1 0
+element 3 -quad9 3 10 11 7 12 13 8 14 15
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 0.
+control_mesh_extrude 10 0. 2.
+control_mesh_extrude_element 10 -prism12
+end_data

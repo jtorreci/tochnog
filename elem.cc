@@ -82,7 +82,7 @@ void element_loop( void )
         array_add( node_dof_tmp_ptr, &node_dof_tmp[indx], 
           node_dof_tmp_ptr, nuknwn );
       }
-      if ( derivatives && node_nel_ptr[0]>0 ) {
+      if ( derivatives && node_nel_ptr[0]>0 && !stress_recovery_post_pass ) {
         for ( idim=0; idim<ndim; idim++ ) {
           for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
             iuknwn = ipuknwn*nder + idim + 1;
@@ -123,7 +123,7 @@ void parallel_element_loop( void )
       element = next_of_loop[iloop];
       if ( element>max_element )
         break;
-      else if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) )
+      if ( db_active_index( ELEMENT, element, VERSION_NORMAL ) )
         elem( element, ithread );
     }
     delete[] next_of_loop;
@@ -150,7 +150,7 @@ void elem( long int element, long int ithread )
     iprinc=0, jnol=0, jnod=0, len_type=0, indxi=0, indxj=0,
     idim=0, type=0, swit=0, itype=0, ipoint=0, length=0, npoint=0,
     nnol=0, name=0, icontrol=0, element_group=0,  element_empty=0,
-    indx=0, max_node=0, memory=-UPDATED, options_solver=-MATRIX_ITERATIVE_BICG,
+    indx=0, max_node=0, memory=-UPDATED, disp_primary_ref=-NO, options_solver=-MATRIX_ITERATIVE_BICG,
     options_matrix_group=-NO, options_matrix_length=0, mnolnuknwn=npointmax*nuknwn,
     length_element_matrix_values=0, filled=0, membrane=-NO, test1=0, test2=0,
     ldum=0, n=0, axisymmetric=0, plasti_on_boundary=0, idum[1], *types=NULL, 
@@ -161,12 +161,12 @@ void elem( long int element, long int ithread )
   double dtime=0., volfac=0., volumeip=0., tmp=0., tmp1=0., tmp2=0.,
     element_delete_factor=0., dens=0., vel=0., materi_dens=0.,
     materi_density_minimum=0., materi_diffusion_minimum=0.,
-    element_mass=0., res=0., radius=0., birth=0., death=0.,
+    element_mass=0., res=0., radius=0.,
     control_relaxation_materi_velocity=0., control_relaxation_condif_temperature=0.,
     control_relaxation_groundflow_pressure=0., control_relaxation_wave_fscalar=0.,
     control_relaxation_maxwell_e=0., element_strainenergy=0.,
-    element_volume=0., time_current=0., time_total=0., 
-    ddum[1], group_time[2], *coord=NULL, *new_coord=NULL, 
+    element_volume=0., time_current=0., time_total=0., disp_primary_factor=1.,
+    ddum[1], *coord=NULL, *new_coord=NULL,
     *h=NULL, *coord_ip=NULL, *old_dof=NULL, *new_dof=NULL, 
     *old_unknowns=NULL, *new_unknowns=NULL, 
     *old_grad_old_unknowns=NULL, *old_grad_new_unknowns=NULL, 
@@ -188,24 +188,31 @@ void elem( long int element, long int ithread )
 
   db( ELEMENT_GROUP, element, &element_group, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
+  memory = materi_memory_default();
   db( GROUP_MATERI_MEMORY, element_group, &memory, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
 
+  // The measured f=0 displacement-primary map has a fixed reference mass
+  // and elastic operator. The normal f<1 pass identifies it directly; the
+  // auxiliary f=1 pass is marked by solve() while it is reassembled.
+  disp_primary_factor = materi_dynamic_effective( NULL );
+  if ( disp_primary_reference==-YES ||
+       ( materi_velocity && materi_displacement &&
+         disp_primary_factor>=0. && disp_primary_factor<1. ) ) {
+    disp_primary_ref = -YES;
+    memory = -TOTAL_LINEAR;
+  }
+
   db( DTIME, 0, idum, &dtime, ldum, VERSION_NEW, GET );
 
-  if ( db( GROUP_TIME, element_group, idum, group_time, ldum, 
-      VERSION_NORMAL, GET_IF_EXISTS ) ) {
-    birth = group_time[0];
-    death = group_time[1];
+  if ( db_active_index( GROUP_TIME, element_group, VERSION_NORMAL ) ||
+       db_active_index( GROUP_TIME_FILL, element_group, VERSION_NORMAL ) ) {
     db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL, GET_IF_EXISTS );
     time_total = time_current + dtime;
-    if      ( time_total==0. && birth==0. ) 
-      ;
-    else if ( time_total>birth && time_total<=death ) 
-      ;
-    else
-      return;
+    if ( !group_time_alive( element_group, time_total ) ) return;
   }
+  // mesh_element_group_apply / control_mesh_element_group_apply
+  if ( !element_group_applied( element_group ) ) return;
 
   swit = set_swit(element,-1,"elem");
   if ( swit ) pri( "In routine ELEM" );
@@ -315,9 +322,13 @@ void elem( long int element, long int ithread )
   db( DOF_TYPE, 0, dof_type, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( DOF_PRINCIPAL, 0, dof_principal, ddum, ldum, VERSION_NORMAL, GET );
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
-  db( OPTIONS_SOLVER, 0, &options_solver, ddum, 
+  db( OPTIONS_SOLVER, 0, &options_solver, ddum,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
-  db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum, 
+  db( CONTROL_OPTIONS_SOLVER, icontrol, &options_solver, ddum,
+    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  // solver (manual Professional 6.1047): the global record overwrites
+  // every control_solver (see top.cc)
+  db( SOLVER, 0, &options_solver, ddum,
     ldum, VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_MATERI_MEMBRANE, element_group, &membrane, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
@@ -329,29 +340,17 @@ void elem( long int element, long int ithread )
   db( OPTIONS_MATRIX_LENGTH, 0, &options_matrix_length, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
 
-  if ( db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) {
-    db( ELEMENT_MATRIX_DELETE, element, idum, element_matrix_delete, ldum, 
-      VERSION_NORMAL, GET );
-    db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside_delete, ldum, 
-      VERSION_NORMAL, GET );
-    db( ELEMENT_DELETE_FACTOR, element, idum, &element_delete_factor, ldum, 
-      VERSION_NORMAL, GET );
-    for ( inol=0; inol<nnol; inol++ ) {
-      for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
-        iuknwn = ipuknwn*nder;
-        if ( dof_principal[iuknwn]>=0 ) {
-          indx = inol*npuknwn+ipuknwn;
-          element_matrix[indx*nnol*npuknwn+indx] = 
-            element_delete_factor * element_matrix_delete[indx];
-          element_rhside[indx] = 
-            element_delete_factor * element_rhside_delete[indx];
-	  
-        }
-      }
-    }
-    if(find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY) return;
-    goto add_to_system_vectors;
-  }
+    // Deleted elements (ELEMENT_DELETE_FACTOR active): the Professional
+    // stores only the delete factor and the frozen released-stress RHS
+    // (element_rhside_delete); it does NOT store a matrix-delete record.
+    // The old GNU code restored a diagonal-only snapshot of the element
+    // matrix here, which under-relaxed the deleted element. Now the element
+    // matrix is recomputed each iteration and scaled in full by the delete
+    // factor at add_to_system_vectors (see below). The nonlocal-softvar
+    // search still returns early.
+  if ( db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) &&
+       find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY )
+    return;
     // get dof of element
   for ( inol=0; inol<nnol; inol++ ) {
     inod = nodes[inol];
@@ -370,9 +369,12 @@ void elem( long int element, long int ithread )
   }
   	// added for options_element_dof
   if(options_element_dof==-YES) {
-    db( ELEMENT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NORMAL, GET );		
+    // F5 T2 V5: GET_IF_EXISTS, the step end drops the (zero) record of the
+    // elements without an integration rule (springs, trusses, beams); the
+    // buffers are zero then, as the record was
+    db( ELEMENT_INTPNT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NORMAL, GET_IF_EXISTS );		
     if(materi_plasti_softvar_nonlocal && !find_local_softvar)
-    	db( ELEMENT_DOF, element, idum, element_dof_npoint_new, mnolnuknwn, VERSION_NEW, GET );		
+    	db( ELEMENT_INTPNT_DOF, element, idum, element_dof_npoint_new, mnolnuknwn, VERSION_NEW, GET_IF_EXISTS );		
     db( ELEMENT_DOF_INITIALISED, element, &element_dof_initialised, 
     		ddum, one, VERSION_NORMAL, GET );
   }
@@ -436,6 +438,8 @@ void elem( long int element, long int ithread )
     db( NODE, inod, idum, &coord[inol*ndim], ldum, VERSION_NORMAL, GET );
     db( NODE, inod, idum, &new_coord[inol*ndim], ldum, VERSION_NEW, GET );
   }
+  if ( disp_primary_ref==-YES )
+    array_move( coord, new_coord, nnol*ndim );
 
   if ( db_active_index( OPTIONS_RESIDUEFACTOR, 0, VERSION_NORMAL ) )
     db( OPTIONS_RESIDUEFACTOR, 0, idum, residue_factor, ldum, VERSION_NORMAL, GET );
@@ -505,6 +509,23 @@ void elem( long int element, long int ithread )
   }
   else if ( name==-SPRING1 || name==-SPRING2 ) {
     spring( element, name, element_group, coord, old_dof,
+      new_dof, element_lhside, element_matrix, element_rhside );
+    if(find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY) return;
+    goto add_to_system_vectors;
+  }
+  else if ( db_active_index( GROUP_INTERFACE, element_group, VERSION_NORMAL ) ) {
+    // interface elements (Carril A): 2D quadrilaterals whose strains are
+    // the displacement differences between the two opposite sides
+    if ( name==-PRISM12 ) {
+      // F5 T4 U9c: the GNU prism12 is the continuum element; the interface
+      // prism12 of manual 6.624 (two tria6 sides) is not implemented
+      // (DIVERGENCES PRISM12-INTERFACE)
+      pri( "Error: an interface -prism12 is not available yet; element",
+        element );
+      pri( "Its element group has group_interface; use a continuum group." );
+      exit_tn_on_error();
+    }
+    interface_element( element, name, element_group, coord, old_dof,
       new_dof, element_lhside, element_matrix, element_rhside );
     if(find_nonlocal_weights && scalar_dabs(options_nonlocal_softvar)>TINY) return;
     goto add_to_system_vectors;
@@ -618,13 +639,42 @@ void elem( long int element, long int ithread )
     if(options_element_dof==-YES) {
     	long int startindx=nuknwn*ipoint;
 	if(element_dof_initialised) {
+	  // the remembered IP dofs. The stress restore keeps the
+	  // original MDIM*MDIM=9-slot limit (the solver behavior is
+	  // untouched); the WRITE below stores the FULL stress block
+	  // (6 components x nder slots, the compacted symmetric layout
+	  // of stress_indx(), input.cc) because the materi_stress_force
+	  // section integration (calcul_force.cc LOT 4) reads the
+	  // syy/syz/szz components from ELEMENT_INTPNT_DOF, which the former
+	  // 9-slot limit lost for the nder>1 models (`derivatives`,
+	  // fixed 2026-08-28). The strain blocks keep the original
+	  // MDIM*MDIM limit (the -1 block indices would make wider
+	  // ranges catch unrelated slots).
           for ( int i=0; i<nuknwn; i++ ) 
-	    if((i>=hisv_indx && i<(hisv_indx+materi_history_variables))||
-	      (i>=stres_indx && i<(stres_indx+MDIM*MDIM))||
+	    if((hisv_indx>=0 && i>=hisv_indx && i<(hisv_indx+materi_history_variables*nder))||
+	      (i>=stres_indx && i<(stres_indx+6*nder))||
 	      (i>=epe_indx && i<(epe_indx+MDIM*MDIM))||
    	      (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||
    	      (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
    	      (i>=epi_indx && i<(epi_indx+MDIM*MDIM))||
+	      // F4 T6f WU2 (2026-10-11): the hardening parameter kappa is an
+	      // integration-point state (manual: materi_plasti_kappa); read
+	      // it back from ELEMENT_INTPNT_DOF instead of the h-lumped nodal value.
+	      (materi_plasti_kappa && i==kap_indx) ||
+	      // C68 (F4 T6f): the other integration-point states of the
+	      // constitutive update (kappa_shear, cap1 pc, damage, the
+	      // kinematic hardening rho and the Maxwell stresses) likewise.
+	      (materi_plasti_kappa_shear && i==kapsh_indx) ||
+	      // F5 T2 V7: the total strain kappas (history maxima)
+	      (materi_strain_total_kappa && i==eptk_indx) ||
+	      (materi_strain_total_compression_kappa && i==eptkc_indx) ||
+	      (materi_strain_total_shear_kappa && i==eptks_indx) ||
+	      (materi_strain_total_tension_kappa && i==eptkt_indx) ||
+	      (materi_plasti_cap1_history && i==cap1_indx) ||
+	      (materi_damage && i==dam_indx) ||
+	      (materi_plasti_rho && i>=rho_indx && i<(rho_indx+6*nder)) ||
+	      (materi_maxwell_stress && i>=mstres_indx &&
+	       i<(mstres_indx+materi_maxwell_stress*6*nder)) ||
 	      i==svloc_indx || i==svnonloc_indx) 
 	       old_unknowns[i]=element_dof_npoint[i+startindx];
 	}
@@ -711,45 +761,61 @@ void elem( long int element, long int ithread )
       // loop over differential operators
     for ( itype=0; itype<len_type; itype++ ) {
       type = types[itype];
-      general( element, name, nnol, element_group, type, 
+      // groundflow_apply -no (manual Professional 6.555): the groundflow
+      // equation is skipped for all timesteps (general.cc)
+      if ( type==-GROUNDFLOW && groundflow_apply_off() ) continue;
+      // Stress-only pass (stress_recovery_post_pass): only the MATERI block
+      // (stress recovery) is assembled; the lumped/momentum operator and the
+      // other physics are left untouched.
+      if ( !stress_recovery_post_pass )
+        general( element, name, nnol, element_group, type, 
         nodes, coord_ip, old_dof, new_dof, 
         old_unknowns, new_unknowns, 
         new_grad_new_unknowns, &h[ipoint*nnol], 
-        &new_d[ipoint*ndim*nnol], volumeip,
+        &new_d[ipoint*ndim*nnol], volumeip, npoint, ipoint,
         grad_massflow, element_rhside, element_residue, 
         element_lhside, element_matrix );
-      if      ( type==-CONDIF )
-        condif( element, element_group, nnol, 
-          &h[ipoint*nnol], volumeip,
-          new_unknowns, element_lhside, element_matrix, element_rhside, 
+      if      ( type==-CONDIF ) {
+        if ( !stress_recovery_post_pass )
+        condif( element, element_group, nnol,
+          &h[ipoint*nnol], coord_ip, volumeip,
+          new_unknowns, element_lhside, element_matrix, element_rhside,
           element_residue );
-      else if ( type==-GROUNDFLOW )
-        groundflow( element, element_group, nnol, 
+      }
+      else if ( type==-GROUNDFLOW ) {
+        if ( !stress_recovery_post_pass )
+        groundflow( element, element_group, nnol, nodes,
           coord_ip, &h[ipoint*nnol], 
           &new_d[ipoint*ndim*nnol], volumeip, old_unknowns, 
           new_unknowns, new_grad_new_unknowns,
           element_matrix, element_rhside, element_residue );
+      }
       else if ( type==-MATERI ) 
-        materi( element, element_group, nnol, npoint, 
-          nodes, plasti_on_boundary, coord_ip, coord, 
-          &h[ipoint*nnol], &new_d[ipoint*ndim*nnol], 
+        materi( element, element_group, name, nnol, npoint, 
+          nodes, plasti_on_boundary, coord_ip, coord, ipoint,
+          new_dof, &h[ipoint*nnol], &new_d[ipoint*ndim*nnol], 
           &new_b[ipoint*MSTRAIN*nnol*ndim], 
-          volumeip, old_unknowns, new_unknowns, old_grad_old_unknowns, 
+          volumeip, old_unknowns, new_unknowns,
+          old_grad_old_unknowns, 
           old_grad_new_unknowns, new_grad_new_unknowns,
           element_lhside, element_matrix,
           element_rhside, element_residue, tendon_element_rhside );
-      else if ( type==-MAXWELL_FREQUENCY ||  type==-MAXWELL_TIME )
+      else if ( type==-MAXWELL_FREQUENCY ||  type==-MAXWELL_TIME ) {
+        if ( !stress_recovery_post_pass )
         maxwell( type, element, element_group, nnol, volumeip,
           new_unknowns, old_dof, new_dof,
           &h[ipoint*nnol], &new_d[ipoint*ndim*nnol], 
           element_lhside, element_matrix, element_matrix_second,
           element_rhside );
-      else if ( type==-WAVE )
+      }
+      else if ( type==-WAVE ) {
+        if ( !stress_recovery_post_pass )
           wave( element, element_group, nnol, 
           &h[ipoint*nnol], &new_d[ipoint*ndim*nnol],
           volumeip, new_unknowns, new_grad_new_unknowns, 
           element_lhside, element_matrix, 
           element_rhside, element_residue );
+      }
       else if ( type!=-EMPTY && type!=-NONE ) {
         pri( "Error detected for element ", element );
         pri( "Illegal group_type  ", type );
@@ -757,7 +823,7 @@ void elem( long int element, long int ithread )
       }
     }
 
-    if(!find_local_softvar) {//Not used when searching for local values of softening variable 
+  if(!find_local_softvar && !stress_recovery_post_pass) {//Not used when searching for local values of softening variable 
     
       // contribution to unknown gradients in nodes
     if ( derivatives ) {
@@ -781,12 +847,25 @@ void elem( long int element, long int ithread )
     if(options_element_dof==-YES) {
     	long int startindx=nuknwn*ipoint;
         for ( int i=0; i<nuknwn; i++ ) 
- 	  if((i>=hisv_indx && i<(hisv_indx+materi_history_variables))||
-	    (i>=stres_indx && i<(stres_indx+MDIM*MDIM))||
+ 	  if((hisv_indx>=0 && i>=hisv_indx && i<(hisv_indx+materi_history_variables*nder))||
+	    (i>=stres_indx && i<(stres_indx+6*nder))||
 	    (i>=epe_indx && i<(epe_indx+MDIM*MDIM))||
    	    (i>=epp_indx && i<(epp_indx+MDIM*MDIM))||
    	    (i>=ept_indx && i<(ept_indx+MDIM*MDIM))||
    	    (i>=epi_indx && i<(epi_indx+MDIM*MDIM))||
+	    (materi_plasti_kappa && i==kap_indx) || // F4 T6f WU2: IP kappa
+	    // C68 (F4 T6f): the other integration-point states
+	    (materi_plasti_kappa_shear && i==kapsh_indx) ||
+	    // F5 T2 V7: the total strain kappas (history maxima)
+	    (materi_strain_total_kappa && i==eptk_indx) ||
+	    (materi_strain_total_compression_kappa && i==eptkc_indx) ||
+	    (materi_strain_total_shear_kappa && i==eptks_indx) ||
+	    (materi_strain_total_tension_kappa && i==eptkt_indx) ||
+	    (materi_plasti_cap1_history && i==cap1_indx) ||
+	    (materi_damage && i==dam_indx) ||
+	    (materi_plasti_rho && i>=rho_indx && i<(rho_indx+6*nder)) ||
+	    (materi_maxwell_stress && i>=mstres_indx &&
+	     i<(mstres_indx+materi_maxwell_stress*6*nder)) ||
 	           i==svloc_indx || i==svnonloc_indx)
 	    element_dof_npoint[i+startindx]=new_unknowns[i];//only for unknowns filled in materi.cc
     }
@@ -794,16 +873,38 @@ void elem( long int element, long int ithread )
     if(find_local_softvar) {
     	long int startindx=nuknwn*ipoint;
 	element_dof_npoint[svloc_indx+startindx]=new_unknowns[svloc_indx];
-	db( ELEMENT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NEW, PUT );		
+	long int npoint_nuknwn = npoint*nuknwn;
+	db( ELEMENT_INTPNT_DOF, element, idum, element_dof_npoint, npoint_nuknwn, VERSION_NEW, PUT );		
     }
   }
   //end loop over integration points
 
-  if(!find_local_softvar) {//Not used when searching for local values of softening variable 
+  if(!find_local_softvar && !stress_recovery_post_pass) {//Not used when searching for local values of softening variable 
 
   //added for options_element_dof 
-  if(options_element_dof==-YES) 
-    db( ELEMENT_DOF, element, idum, element_dof_npoint, mnolnuknwn, VERSION_NEW, PUT );		
+  // Partially deleted element (ELEMENT_DELETE_FACTOR active): its
+  // integration-point state is FROZEN at the value of the FIRST delete
+  // iteration (manual Professional 6.174: the reactivated element takes
+  // its strains/stresses from the moment just before being deleted;
+  // global_element_dof_apply defaults to -yes in the Professional, so
+  // the element remembers its own IP values). The frozen released load
+  // (ELEMENT_RHSIDE_DELETE) is captured in the same first iteration; from
+  // then on the stored ELEMENT_INTPNT_DOF must NOT follow the recomputed
+  // constitutive value (measured on delete2.dat: the recompute drifts to
+  // 1.4 while the Professional freezes the pre-deletion 1.0, which then
+  // changes the reactivated element's equilibrium to 1.0 instead of the
+  // documented 0.8). ELEMENT_INTPNT_DOF VERSION_NEW is a copy of VERSION_NORMAL
+  // at the step start, so skipping the PUT keeps the frozen value across
+  // the step-end version copy.
+  if ( options_element_dof==-YES &&
+       !( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) &&
+          db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) ) {
+    // F5 T2 V5: the npoint points of the element only (manual 6.437, as
+    // the Professional 02-08-2026 writes element_intpnt_dof), not the
+    // npointmax-point buffer; the record keeps that length from now on.
+    long int npoint_nuknwn = npoint*nuknwn;
+    db( ELEMENT_INTPNT_DOF, element, idum, element_dof_npoint, npoint_nuknwn, VERSION_NEW, PUT );
+  }		
   
   array_multiply( tendon_element_rhside, tendon_element_rhside,
     1./npoint, nnol*npuknwn );
@@ -818,9 +919,22 @@ void elem( long int element, long int ithread )
     }
   }
 
-    // area integrals
-  area( element, name, element_group, nnol, nodes, new_coord, new_dof, 
-    element_lhside, element_matrix, element_rhside );
+    // area integrals. Elements of groups with type -empty/-none only
+    // (group_type X -empty) carry no loads: skipping them keeps edge
+    // loads (force_element_edge* and friends) from being applied TWICE
+    // on a face shared by a material element and an -empty element
+    // (corpus force12: face between group 1 and group 2).
+  {
+    long int itype_empty=0, any_material_type=0;
+    for ( itype_empty=0; itype_empty<len_type; itype_empty++ ) {
+      if ( types[itype_empty]!=-EMPTY && types[itype_empty]!=-NONE )
+        any_material_type = 1;
+    }
+    if ( any_material_type ) {
+      area( element, name, element_group, nnol, nodes, new_coord, new_dof, 
+        element_lhside, element_matrix, element_rhside );
+    }
+  }
 
     // residue
   if ( residue ) {
@@ -858,11 +972,80 @@ void elem( long int element, long int ithread )
   }//Not used when searching for local values of softening variable - end
   
   add_to_system_vectors:
-  
+
+    // Deleted-element semantics (Professional): the deleted element applies
+    // its FROZEN released-stress internal force as a nodal load and contributes
+    // NOTHING else. On the first iteration in which the factor is active the
+    // freshly computed element RHS is stored as the frozen released load
+    // (element_rhside_delete); on later iterations the frozen value is reused
+    // (scaled by element_delete_factor).
+    //
+    // The frozen RHS is a CONSTANT, so the element's tangent contribution to
+    // the staggered momentum residual must vanish: the historic "scale the
+    // full element matrix by element_delete_factor" left the deleted element's
+    // stiffness in the solve while its internal force was frozen, so the
+    // Newton cancellation A = dt*K = dt*B^T*C*B no longer held and the
+    // staggered u-sigma map relaxed geometrically instead of solving in one
+    // pass (mpc5 contracted at rate 0.5, reaching sigyy=0.5 only at k~12
+    // instead of at the test's own 2 iterations). Zeroing the matrix (and the
+    // lumped lhside used by the nodal stress projection) restores the
+    // Jacobian consistency; the released load keeps carrying the delete.
+    //
+    // Measured against the Professional binary (02-08-2026): the full node_dof
+    // field of mpc5 and delete3 is reproduced exactly for every delete factor
+    // tested (mpc5 post_point sigyy=0.5 at the test's 2 iterations, delete3
+    // sigyy=0.6). The GNU nodal-stress projection is a post-solve lumped update
+    // of the pre-solve residual, so the reported stress trails the velocity by
+    // one iteration (the Professional reports it in sync).
+  if ( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) ) {
+    // Stress-only pass: the frozen released load is already stored and must
+    // NOT be re-applied (it would double the momentum RHS); only the stress
+    // exclusion below is needed.
+    if ( !stress_recovery_post_pass ) {
+    db( ELEMENT_DELETE_FACTOR, element, idum, &element_delete_factor, ldum,
+      VERSION_NORMAL, GET );
+    if ( !db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) {
+      length = nnol*npuknwn;
+      db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside,
+        length, VERSION_NORMAL, PUT );
+    }
+    db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside_delete,
+      ldum, VERSION_NORMAL, GET );
+    for ( inol=0; inol<nnol*npuknwn; inol++ ) {
+      element_rhside[inol] = element_delete_factor * element_rhside_delete[inol];
+      element_lhside[inol] = 0.;
+    }
+    }
+    // A currently deleted element is EXCLUDED from the nodal stress
+    // recovery: its stress slots contribute neither numerator nor
+    // denominator, so a node whose only adjacent element is deleted keeps
+    // its previous stress and a shared node is recovered from the active
+    // elements alone (measured on delete3: the Professional's node_lhside
+    // for the stress dofs is 1 on the shared nodes and 0 on the nodes
+    // exclusive to the deleted element, node_dof = 0.6/1.0). The frozen
+    // released load (element_rhside_delete) is a MOMENTUM right-hand side;
+    // leaving it in the stress slots would pollute the absolute average
+    // (the reverted 2026-09-15 naive attempt: delete3 0.6 -> 0.12).
+    if ( stress_recovery_absolute && stres_indx>=0 ) {
+      long int ip0 = stres_indx/nder;
+      for ( inol=0; inol<nnol; inol++ )
+        for ( ipuknwn=ip0; ipuknwn<ip0+6; ipuknwn++ ) {
+          element_rhside[inol*npuknwn+ipuknwn] = 0.;
+          element_lhside[inol*npuknwn+ipuknwn] = 0.;
+        }
+    }
+    for ( inol=0; inol<nnol*npuknwn*nnol*npuknwn; inol++ )
+      element_matrix[inol] = 0.;
+  }
+
   if(!find_local_softvar) {//Not used when searching for local values of softening variable 
 
-    // store element matrices sparse
-  if ( options_solver!=-DIAGONAL && options_solver!=-NONE ) {
+    // store element matrices sparse; not during the post-solve passes
+    // (stress-only sync and material state pass, top.cc): no solve
+    // follows them, so the stored matrices stay those of the last solve
+    // (also what a step-close control_eigen uses)
+  if ( !stress_recovery_post_pass && !material_state_post_pass &&
+       options_solver!=-DIAGONAL && options_solver!=-NONE ) {
 
     length_element_matrix_values = 0;
     for ( inol=0; inol<nnol; inol++ ) {
@@ -958,30 +1141,9 @@ void elem( long int element, long int ithread )
       &node_dof_tmp[indx], nuknwn );
   }
 
-    // store for failure/delete options
-  if ( db_active_index( ELEMENT_DELETE_FACTOR, element, VERSION_NORMAL ) && 
-       !db_active_index( ELEMENT_RHSIDE_DELETE, element, VERSION_NORMAL ) ) {
-    for ( inol=0; inol<nnol; inol++ ) {
-      for ( ipuknwn=0; ipuknwn<npuknwn; ipuknwn++ ) {
-        iuknwn = ipuknwn*nder;
-        if ( dof_principal[iuknwn]>=0 ) {
-          indx = inol*npuknwn+ipuknwn;
-          element_rhside_delete[indx] = element_rhside[indx];
-          element_matrix_delete[indx] = element_matrix[indx*nnol*npuknwn+indx];
-        }
-      }
-    }
-    length = nnol*npuknwn;
-    db( ELEMENT_RHSIDE_DELETE, element, idum, element_rhside_delete, 
-      length, VERSION_NORMAL, PUT );
-
-    db( ELEMENT_MATRIX_DELETE, element, idum, element_matrix_delete, 
-      length, VERSION_NORMAL, PUT );
-    if ( swit ) {
-      pri( "element_rhside_delete", element_rhside_delete, nnol, npuknwn );
-      pri( "element_matrix_delete", element_matrix_delete, nnol, npuknwn );
-    }
-  }
+    // The frozen released-stress RHS (ELEMENT_RHSIDE_DELETE) is stored and
+    // applied at add_to_system_vectors above; no matrix-delete snapshot is
+    // kept (the Professional has no element_matrix_delete record).
 
     // some final printing
   if ( swit ) {

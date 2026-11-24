@@ -1,0 +1,35 @@
+( control_mesh_truss_distribute_mpc_exact, 3D: truss [2,3,4]-[17,6,9]
+  through two hex8: new node 15 at [10,4.6,6.6667] tied to the face nodes
+  2 5 8 11 of the first hex8; factors = Professional 02-08-2026 [its node 16].
+)
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 10 0 0
+node 3 20 0 0
+node 4 0 10 0
+node 5 10 10 0
+node 6 20 10 0
+node 7 0 0 10
+node 8 10 0 10
+node 9 20 0 10
+node 10 0 10 10
+node 11 10 10 10
+node 12 20 10 10
+element 1 -hex8 1 2 4 5 7 8 10 11
+element 2 -hex8 2 3 5 6 8 9 11 12
+node 13 2 3 4
+node 14 17 6 9
+element 3 -truss 13 14
+element_group 3 1
+group_type 1 -truss
+group_truss_area 1 0.1
+group_truss_memory 1 -total_linear
+group_truss_elasti_young 1 1.
+control_mesh_truss_distribute_mpc 10 -yes
+control_mesh_truss_distribute_mpc_exact 10 -yes
+end_data

@@ -19,6 +19,28 @@
 
 #include "tochnog.h"
 
+  // Manual 6.368 control_restart: the calculation restarts from the
+  // initial state ("calculate some path dependent behavior completely
+  // from the start"). The Professional deletes element_dof /
+  // element_intpnt_dof on restart. The GNU keeps the integration-point
+  // state in ELEMENT_INTPNT_DOF and only rebuilds it from the (reset) node dofs
+  // when ELEMENT_DOF_INITIALISED is 0 (elem.cc, options_element_dof), so
+  // clearing the flag gives a fresh integration-point state.
+static void restart_reset_element_state( void )
+
+{
+  long int ielem=0, max_element=0, zero=0, one=1;
+  double ddum[1];
+
+  db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
+  for ( ielem=0; ielem<=max_element; ielem++ ) {
+    if ( !db_active_index( ELEMENT, ielem, VERSION_NORMAL ) ) continue;
+    db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one, VERSION_NORMAL, PUT );
+    if ( db_version( ELEMENT_DOF_INITIALISED, VERSION_NEW ) )
+      db( ELEMENT_DOF_INITIALISED, ielem, &zero, ddum, one, VERSION_NEW, PUT );
+  }
+}
+
 void restart( void )
 
 {
@@ -36,6 +58,7 @@ void restart( void )
       db( TIME_CURRENT, 0, idum, &start_time_current, length, VERSION_NORMAL, PUT );
       db_copy( NODE_START_REFINED, NODE, VERSION_NORMAL );
       db_copy( NODE_DOF_START_REFINED, NODE_DOF, VERSION_NORMAL );
+      restart_reset_element_state();
     }
     if ( swit ) pri( "Out routine RESTART" );
   }

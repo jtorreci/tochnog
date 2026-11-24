@@ -18,6 +18,15 @@ doublereal *coords, *drot, *pnewdt, *celent, *dfgrd0, *dfgrd1;
 integer *noel, *npt, *layer, *kspt, *kstep, *kinc;
 ftnlen cmname_len;
 {
+  /* Dummy UMAT template: all Abaqus arguments are intentionally unused. */
+  (void)stress; (void)statev; (void)ddsdde; (void)sse; (void)spd; (void)scd;
+  (void)rpl; (void)ddsddt; (void)drplde; (void)drpldt; (void)stran;
+  (void)dstran; (void)time; (void)dtime; (void)temp; (void)dtemp;
+  (void)predef; (void)dpred; (void)cmname; (void)ndi; (void)nshr;
+  (void)ntens; (void)nstatv; (void)props; (void)nprops; (void)coords;
+  (void)drot; (void)pnewdt; (void)celent; (void)dfgrd0; (void)dfgrd1;
+  (void)noel; (void)npt; (void)layer; (void)kspt; (void)kstep; (void)kinc;
+  (void)cmname_len;
 
   /* Dummy version of umat routine.
 

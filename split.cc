@@ -32,7 +32,8 @@ void mesh_split( long int version )
     tmp_max_element=0, isplit_element=0, isplit_node=0,
     nsplit_element=0, nsplit_node=0, nnew_node=0, 
     nnew_number=0, element=0, icontrol=0, in_geometry=0,
-    all_in_geometry=0, ldum=0, iwork[1], control_mesh_split_only[2], 
+    all_in_geometry=0, ldum=0, split_from=0, split_to=0, split_center=0,
+    iwork[1], control_mesh_split_only[2], 
     new_node[MNEW_NODE][MNEW_NODE_LIST], *el=NULL, *nodes=NULL, 
     *split_nodes=NULL, *new_node_numbers=NULL, *in_geometry_list=NULL;
   double rdum=0., tmp_node[MDIM], tmp_node_start_refined[MDIM], 
@@ -72,6 +73,25 @@ void mesh_split( long int version )
     }
   }
 
+  // control_mesh_split_element_from (manual Professional 6.241): split
+  // only the elements with that name; control_mesh_split_element_to
+  // (6.242): -tet4 (default) or -prism6 for a -hex8, -tet10 (default) for
+  // a -hex27 (the GNU has no -prism18 element: the word is unknown)
+  if ( db_active_index( CONTROL_MESH_SPLIT_ELEMENT_FROM, icontrol,
+       VERSION_NORMAL ) )
+    db( CONTROL_MESH_SPLIT_ELEMENT_FROM, icontrol, &split_from, ddum, ldum,
+      VERSION_NORMAL, GET );
+  if ( db_active_index( CONTROL_MESH_SPLIT_ELEMENT_TO, icontrol,
+       VERSION_NORMAL ) ) {
+    db( CONTROL_MESH_SPLIT_ELEMENT_TO, icontrol, &split_to, ddum, ldum,
+      VERSION_NORMAL, GET );
+    if ( split_to!=-TET4 && split_to!=-PRISM6 && split_to!=-TET10 ) {
+      pri( "Error: control_mesh_split_element_to must be -tet4 or -prism6 "
+           "(hex8) or -tet10 (hex27)." );
+      exit_tn_on_error();
+    }
+  }
+
   for ( element=0; element<=max_element; element++ ) {
     if ( db_active_index( ELEMENT, element, version ) ) {
       db( ELEMENT, element, el, ddum, length, version, GET );
@@ -82,9 +102,12 @@ void mesh_split( long int version )
         inod = nodes[inol];
         if ( !in_geometry_list[inod] ) all_in_geometry = 0;
       }
-      if ( all_in_geometry && ( name==-QUAD4 || name==-QUAD9 || name==-HEX8 || name==-HEX27 ) ) {
+      if ( all_in_geometry && ( split_from==0 || name==split_from ) &&
+           ( name==-QUAD4 || name==-QUAD9 || name==-HEX8 || name==-HEX27 ||
+             name==-TRIA6 ) ) {
         nnew_node = -1;
         nnew_number = -1;
+        split_center = 0;
         if      ( name==-QUAD4 ) {
           split_nodes[0] = 0; split_nodes[1] = 1;
           split_nodes[2] = 1; split_nodes[3] = 3;
@@ -94,7 +117,30 @@ void mesh_split( long int version )
           nsplit_node = 2;
           nnew_node = 1;
           nnew_number = nnol;
+          split_center = 1;
           for ( inol=0; inol<nnol; inol++ ) new_node[0][inol] = inol;
+        }
+        else if ( name==-TRIA6 ) {
+          // four -tria3 on the corner and mid-side nodes (Professional
+          // 02-08-2026: n0 n1 n3, n1 n2 n4, n3 n4 n5, n1 n3 n4)
+          split_nodes[0] = 0; split_nodes[1] = 1; split_nodes[2] = 3;
+          split_nodes[3] = 1; split_nodes[4] = 2; split_nodes[5] = 4;
+          split_nodes[6] = 3; split_nodes[7] = 4; split_nodes[8] = 5;
+          split_nodes[9] = 1; split_nodes[10] = 3; split_nodes[11] = 4;
+          nsplit_element = 4;
+          nsplit_node = 3;
+          nnew_node = 0;
+        }
+        else if ( name==-HEX8 && split_to==-PRISM6 ) {
+          // two -prism6 (Professional 02-08-2026 other/prism6:
+          // hex8 1..8 -> 1 2 3 5 6 7 and 2 4 3 6 8 7)
+          split_nodes[0] = 0; split_nodes[1] = 1; split_nodes[2] = 2;
+          split_nodes[3] = 4; split_nodes[4] = 5; split_nodes[5] = 6;
+          split_nodes[6] = 1; split_nodes[7] = 3; split_nodes[8] = 2;
+          split_nodes[9] = 5; split_nodes[10] = 7; split_nodes[11] = 6;
+          nsplit_element = 2;
+          nsplit_node = 6;
+          nnew_node = 0;
         }
         else if ( name==-QUAD9 ) {
           nsplit_element = 4;
@@ -128,6 +174,7 @@ void mesh_split( long int version )
           nsplit_node = 3;
           nnew_node = 1;
           nnew_number = nnol;
+          split_center = 1;
           for ( inol=0; inol<nnol; inol++ ) new_node[0][inol] = inol;
         }
         else if ( name==-HEX27 ) {
@@ -241,6 +288,14 @@ void mesh_split( long int version )
           el[0] = -TRIA6;
           length_element = 7;
         }
+        else if ( name==-TRIA6 ) {
+          el[0] = -TRIA3;
+          length_element = 4;
+        }
+        else if ( name==-HEX8 && split_to==-PRISM6 ) {
+          el[0] = -PRISM6;
+          length_element = 7;
+        }
         else if ( name==-HEX8 ) {
           el[0] = -TET4;
           length_element = 5;
@@ -291,7 +346,7 @@ void mesh_split( long int version )
             for ( isplit_node=0; isplit_node<nsplit_node; isplit_node++ )
               el[1+isplit_node] = 
             nodes[split_nodes[isplit_element*nsplit_node+isplit_node]];
-            if ( name==-QUAD4 || name==-HEX8 ) 
+            if ( split_center )
               el[1+nsplit_node] = new_node_numbers[0];
           }
           create_element( element, tmp_max_element, el, length_element,

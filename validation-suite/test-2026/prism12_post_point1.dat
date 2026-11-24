@@ -1,0 +1,65 @@
+( F5 T4 U9c: a field quadratic in x, y and linear in z is represented
+  exactly by the -prism12 {tria6 x 2-node line}. All nodes prescribed
+  u_x = 0.01 {x^2 + 0.5 x y} {1 + z}, u_y = u_z = 0; E 1, nu 0. Analytic:
+  post_point disx at (0.25, 0.25, 0.5), (0.5, 0.25, 0.25), (0.1, 0.6, 0.75) =
+  1.40625e-3, 3.90625e-3, 7e-4 {point_el.cc}; at every one of the 14
+  integration points sigxx = 0.01 {2 x + 0.5 y} {1 + z} and
+  sigxz = 0.005 {x^2 + 0.5 x y}. The Professional 02-08-2026 {run with
+  -minimal, its default rule stops} interpolates post_point differently:
+  5e-3, 7.5e-3, 2e-3 for u_x = 0.01 x^2 {1 + z} instead of 9.375e-4,
+  3.125e-3, 1.75e-4 [DIVERGENCES PRISM12-POST-POINT]. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0 0
+node 2 0.5 0 0
+node 3 1 0 0
+node 4 0 0.5 0
+node 5 0.5 0.5 0
+node 6 0 1 0
+node 7 0 0 1
+node 8 0.5 0 1
+node 9 1 0 1
+node 10 0 0.5 1
+node 11 0.5 0.5 1
+node 12 0 1 1
+element 1 -prism12 1 2 3 4 5 6 7 8 9 10 11 12
+group_type 0 -materi
+group_materi_elasti_young 0 1.0
+group_materi_elasti_poisson 0 0.
+group_materi_memory 0 -total_linear
+bounda_dof 1 -ra 1 2 3 4 5 6 7 8 9 10 11 12 -ra -vely -velz
+bounda_time 1 0.
+bounda_dof 11 1 -velx
+bounda_time 11 0. 0. 1. 0
+bounda_dof 12 2 -velx
+bounda_time 12 0. 0. 1. 0.0025
+bounda_dof 13 3 -velx
+bounda_time 13 0. 0. 1. 0.01
+bounda_dof 14 4 -velx
+bounda_time 14 0. 0. 1. 0
+bounda_dof 15 5 -velx
+bounda_time 15 0. 0. 1. 0.00375
+bounda_dof 16 6 -velx
+bounda_time 16 0. 0. 1. 0
+bounda_dof 17 7 -velx
+bounda_time 17 0. 0. 1. 0
+bounda_dof 18 8 -velx
+bounda_time 18 0. 0. 1. 0.005
+bounda_dof 19 9 -velx
+bounda_time 19 0. 0. 1. 0.02
+bounda_dof 20 10 -velx
+bounda_time 20 0. 0. 1. 0
+bounda_dof 21 11 -velx
+bounda_time 21 0. 0. 1. 0.0075
+bounda_dof 22 12 -velx
+bounda_time 22 0. 0. 1. 0
+control_timestep 10 1. 1.
+post_point 0 0.25 0.25 0.5
+post_point 1 0.5 0.25 0.25
+post_point 2 0.1 0.6 0.75
+control_print_database 10 -separate_index
+end_data

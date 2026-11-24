@@ -45,7 +45,8 @@ void create_element( long int old_element, long int new_element,
       if ( idat==ELEMENT )
         db( ELEMENT, new_element, el, ddum, length_el, version_to, PUT );
       else if ( db_active_index( idat, old_element, version_from ) 
-      	&& idat!=ELEMENT_DOF && idat!=ELEMENT_DOF_INITIALISED
+      	&& idat!=ELEMENT_INTPNT_DOF && idat!=ELEMENT_DOF_INITIALISED
+	&& idat!=ELEMENT_DOF // F5 V5: nodal output of the old element only
 	&& idat!=NONLOCAL_ELEMENT_INFO) {
         if ( db_type(idat)==DOUBLE_PRECISION ) {
           db( idat, old_element, idum, dval, length, version_from, GET );
@@ -60,8 +61,10 @@ void create_element( long int old_element, long int new_element,
     if ( data_class==ELEMENT && db_version(idat,version_to)) {
       //element_dof will be re--initialised anyway->just version_to
       // added for options_element_dof
-      if ( idat==ELEMENT_DOF ) 
-        db( idat, new_element, idum, tmp_element_dof, mnolnuknwn, version_to, PUT );
+      if ( idat==ELEMENT_INTPNT_DOF ) {
+        if ( mnolnuknwn>0 )
+          db( idat, new_element, idum, tmp_element_dof, mnolnuknwn, version_to, PUT );
+      }
       else if ( idat==ELEMENT_DOF_INITIALISED ) 
         db( idat, new_element, &zero, ddum, one, version_to, PUT );
     }

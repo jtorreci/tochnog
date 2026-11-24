@@ -1,0 +1,70 @@
+(F5 T3 B, BACKLOG C112: default cap of the plastic loop 20000 iterations
+ per integration point, manual Professional 6.804. Copy of the sfnet
+ test-2014 examp16 {Mohr-Coulomb foundation}: some integration points
+ do not converge and reach the cap. Node 26 sigyy: -237309 with the cap
+ 20000, -218129 with the old cap 1000, Professional 02-08-2026 -271692.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_strain_total
+materi_strain_plasti
+materi_stress
+end_initia
+
+node 1  0.00   0.00
+node 2  1.52   0.00
+node 3  6.00   0.00
+node 4  0.00  -1.52
+node 5  1.52  -1.52
+node 6  6.00  -1.52
+node 7  0.00  -6.00
+node 8  1.52  -6.00
+node 9  6.00  -6.00
+
+element 1  -quad4 1 2 4 5
+element 2  -quad4 2 3 5 6
+element 3  -quad4 4 5 7 8
+element 4  -quad4 5 6 8 9
+
+(bottom)
+geometry_line 0  0.00 -6.00 6.00 -6.00  1.e-4
+(left)
+geometry_line 1  0.00 -6.00 0.00  0.00  1.e-4
+(right)
+geometry_line 2  6.00 -6.00 6.00  0.00  1.e-4
+(foundation)
+geometry_line 3  0.00  0.00 1.52  0.00  1.e-4
+
+bounda_unknown 0  -geometry_line 0 -velx -vely
+bounda_time    0  0. 0. 100. 0.
+bounda_unknown 1  -geometry_line 1 -velx
+bounda_time    1  0. 0. 100. 0.
+bounda_unknown 2  -geometry_line 2 -velx
+bounda_time    2  0. 0. 100. 0.
+bounda_unknown 3  -geometry_line 3 -vely
+bounda_time    3  0.0 -0.05 100.0 -0.05
+
+group_type 0  -materi
+group_materi_elasti_young 0 207.e6
+group_materi_elasti_poisson 0  0.3
+group_materi_memory 0  -updated
+group_materi_plasti_mohrcoul 0  0.349 0.069e6 0.349
+
+post_line 0  0.00 0.00 1.52 0.00
+print_filter 0  -post_line_dof 0 -sigyy
+
+control_mesh_refine_globally  1  -p_refinement
+control_mesh_refine_globally  2  -h_refinement
+
+control_timestep              10  1.e-2 0.6
+(
+control_print                 10  -time_current -post_line_dof
+control_print_history         10  -post_line_dof 0 -sigyy
+)
+
+target_item 1  -post_line_dof 0 -sigyy
+target_value 1 -1.1e6 1.e5
+target_item 2 -node_dof 26 -sigyy
+target_value 2 -237309. 2000.
+end_data

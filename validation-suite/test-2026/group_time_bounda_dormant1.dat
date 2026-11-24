@@ -1,0 +1,51 @@
+(
+C39 truss8 (2026-10-06): a node whose elements are all inactive by
+group_time (not yet born) is not driven by its bounda_dof; it stays at
+rest until its element is born (manual 6.769 silent; Professional
+02-08-2026 test other/truss8 and this input measured on it).
+Element 1 (nodes 1-2, group 0) is born at t = 1; node 1 has velx 0.1
+from t = 0. Element 2 (nodes 3-4, group 1, no group_time) is active from
+the start; node 3 has the same velx 0.1. Four steps of 0.5 up to t = 2:
+  node 1 disx 0.1 (rest until t = 1, then 0.1 * 1)  Professional 0.1
+  node 2 disx 0.1 (follows node 1 through the truss) Professional 0.1
+  node 3 disx 0.2 (active element, driven all along) Professional 0.2
+  node 4 disx 0.2                                    Professional 0.2
+GNU before C39: node 1 disx 0.2 (driven while its element was unborn).
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+end_initia
+node 1  0.
+node 2  1.
+node 3  5.
+node 4  6.
+element 1  -truss 1 2
+element 2  -truss 3 4
+element_group 1  0
+element_group 2  1
+group_type 0  -truss
+group_truss_memory 0  -total_linear
+group_truss_area 0  1.
+group_truss_elasti_young 0  1.
+group_time 0  1. 1.e20
+group_type 1  -truss
+group_truss_memory 1  -total_linear
+group_truss_area 1  1.
+group_truss_elasti_young 1  1.
+bounda_dof   0  1 -velx
+bounda_time  0  1.e-1
+bounda_dof   1  3 -velx
+bounda_time  1  1.e-1
+control_timestep             0  5.e-1 2.
+control_timestep_iterations  0  3
+target_item    0  -node_dof 1 -disx
+target_value   0  0.1 1.e-8
+target_item    1  -node_dof 2 -disx
+target_value   1  0.1 1.e-8
+target_item    2  -node_dof 3 -disx
+target_value   2  0.2 1.e-8
+target_item    3  -node_dof 4 -disx
+target_value   3  0.2 1.e-8
+end_data

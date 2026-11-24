@@ -1,0 +1,35 @@
+(
+force_gravity_geometry (manual 6.499) on truss elements: two vertical
+trusses, E = 10, area 1, density 1, gravity -10; the quadrilateral holds
+only the left one, the right one gets no gravity (Professional 02-08-2026:
+disy -0.5 / 0, without the record -0.5 / -0.5). F5 T5 U5.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 0 1
+node 3 1 0
+node 4 1 1
+element 1 -truss 1 2
+element 2 -truss 3 4
+group_type 0 -truss
+group_truss_area 0 1
+group_truss_elasti_young 0 10
+group_truss_density 0 1
+bounda_dof 0 1 -velx -vely
+bounda_dof 1 2 -velx
+bounda_dof 2 3 -velx -vely
+bounda_dof 3 4 -velx
+force_gravity 0 -10
+geometry_quadrilateral 1 -0.5 -0.5 0.5 -0.5 -0.5 1.5 0.5 1.5 1.e-3
+force_gravity_geometry -geometry_quadrilateral 1
+control_timestep 0 1 1
+target_item    1  -node_dof 2 -disy
+target_value   1  -0.5 1.e-10
+target_item    2  -node_dof 4 -disy
+target_value   2  0. 1.e-10
+end_data

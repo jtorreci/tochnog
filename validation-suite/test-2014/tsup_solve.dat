@@ -1,0 +1,57 @@
+( tsup_solve: the column on springs - a SOLVED case. One quad4
+  column 1x1, E=1000, bottom edge on support k_n=500, k_t=0. A total
+  load Fy=-1 on the TOP nodes (0.5 each, -y). Series statics: the
+  element compresses F*L/EA = 1/1000 and the support deflects
+  F/kL = 1/500, so the top displacement is uy = -(1/1000+1/500)
+  = -3e-3. The bottom reaction per node = 0.5 in +y. )
+
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  1. 1.
+node 4  0. 1.
+
+element 1  -quad4 1 2 4 3
+element_group 1 0
+
+group_type 0  -materi
+group_materi_elasti_young 0  1000.
+group_materi_elasti_poisson 0  0.0
+group_materi_memory 0  -total_linear
+
+node_support_edge_normal_force 1  0. 0.
+node_support_edge_normal_force 2  0. 0.
+node_support_edge_normal_plasti_tension_status 1  0
+node_support_edge_normal_plasti_tension_status 2  0
+
+support_edge_normal 1  500. 0.
+support_edge_normal_geometry 1  1 2
+support_edge_normal_element_side 1  1 1
+
+bounda_unknown 0  -ra 1 2 -ra -velx
+bounda_time    0  0. 0. 100. 0.
+bounda_force   1  -ra 3 4 -ra -vely
+bounda_time    1  0. -0.5 100. -0.5
+
+control_timestep 1  1. 1.0
+
+target_item 10  -node_dof 3 -vely
+target_value 10  -3.e-3 3.e-5
+target_item 20  -node_support_edge_normal_force 1 1
+target_value 20  0.5 1.e-3
+target_item 30  -node_support_edge_normal_force 2 1
+target_value 30  0.5 1.e-3
+end_data

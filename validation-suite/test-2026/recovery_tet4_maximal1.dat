@@ -1,0 +1,176 @@
+( C67 {F4 T6f, 2026-10-16} tet4 group_integration_points -maximal = the 5-point Keast rule {manual 6.623 and Professional; GNU before: 4 nodal points}, 24 distorted tets of unequal size: per element the physical linear fit of the point values {constant stress here}, arithmetic mean {GNU before: h weight, volume-weighted}. Prescribed nonlinear velocity at every node of a viscous materi. Targets = Professional 02-08-2026 node_dof. GNU before: node 4 sigxx 9.94217 (Professional 8.6563); node 3 sigxx 11.0513 (Professional 10.0136); node 9 sigxx 11.6237 (Professional 10.6168); node 1 sigyy 1.52696 (Professional 1.62885). )
+
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_stress
+end_initia
+mesh -fixed_in_space -fixed_in_space -fixed_in_space
+inertia_apply -no
+convection_apply -no
+node 1 0.167273468839275 0.568556958994092 0.609292178256764
+node 2 1.20471248464059 0.879921147046115 0.817358771419623
+node 3 1.42198449255003 1.52996408440142 0.929630779329067
+node 4 1.6845111487249 1.99249074057629 3.19215743550393
+node 5 1.46723914081545 1.34244780322098 3.07988542759449
+node 6 0.504760135448364 1.38269207649198 0.852358771419623
+node 7 0.767286791623231 1.84521873266684 3.11488542759449
+node 8 0.553431322127054 1.09196843372359 2.84132219291021
+node 9 1.76723914081545 2.74244780322098 1.07988542759449
+node 10 2.02976579699032 3.20497445939585 3.34241208376936
+node 11 0.853431322127054 2.49196843372359 0.841322192910212
+node 12 0.992326781189008 2.89361027134383 3.1343454906065
+node 13 2.95343132212705 0.991968433723594 0.741322192910212
+node 14 3.16728679162323 1.74521873266684 1.01488542759449
+node 15 3.4298134477981 2.20774538884171 3.27741208376936
+node 16 3.09232678118901 1.39361027134383 3.0343454906065
+node 17 3.39232678118901 2.79361027134383 1.0343454906065
+node 18 3.77848463447679 3.31702174607333 3.26637550525995
+element 1 -tet4 1 2 3 4
+element 2 -tet4 1 5 2 4
+element 3 -tet4 1 3 6 4
+element 4 -tet4 1 6 7 4
+element 5 -tet4 1 8 5 4
+element 6 -tet4 1 7 8 4
+element 7 -tet4 6 3 9 10
+element 8 -tet4 6 4 3 10
+element 9 -tet4 6 9 11 10
+element 10 -tet4 6 11 12 10
+element 11 -tet4 6 7 4 10
+element 12 -tet4 6 12 7 10
+element 13 -tet4 2 13 14 15
+element 14 -tet4 2 16 13 15
+element 15 -tet4 2 14 3 15
+element 16 -tet4 2 3 4 15
+element 17 -tet4 2 5 16 15
+element 18 -tet4 2 4 5 15
+element 19 -tet4 3 14 17 18
+element 20 -tet4 3 15 14 18
+element 21 -tet4 3 17 9 18
+element 22 -tet4 3 9 10 18
+element 23 -tet4 3 4 15 18
+element 24 -tet4 3 10 4 18
+bounda_dof 0 1 -velx
+bounda_time 0 0. 0.668443353438474 10. 0.668443353438474
+bounda_dof 1 1 -vely
+bounda_time 1 0. 0.0656280489964732 10. 0.0656280489964732
+bounda_dof 2 1 -velz
+bounda_time 2 0. 0.265970468207743 10. 0.265970468207743
+bounda_dof 3 2 -velx
+bounda_time 3 0. 2.80674599057536 10. 2.80674599057536
+bounda_dof 4 2 -vely
+bounda_time 4 0. 0.730600070792936 10. 0.730600070792936
+bounda_dof 5 2 -velz
+bounda_time 5 0. 0.485119505586106 10. 0.485119505586106
+bounda_dof 6 3 -velx
+bounda_time 6 0. 4.01386424776625 10. 4.01386424776625
+bounda_dof 7 3 -vely
+bounda_time 7 0. 0.937312849620351 10. 0.937312849620351
+bounda_dof 8 3 -velz
+bounda_time 8 0. 0.968477489934802 10. 0.968477489934802
+bounda_dof 9 4 -velx
+bounda_time 9 0. 5.75411823317073 10. 5.75411823317073
+bounda_dof 10 4 -vely
+bounda_time 10 0. 2.78682477879096 10. 2.78682477879096
+bounda_dof 11 4 -velz
+bounda_time 11 0. 1.1865911803221 10. 1.1865911803221
+bounda_dof 12 5 -velx
+bounda_time 12 0. 4.20291691010398 10. 4.20291691010398
+bounda_dof 13 5 -vely
+bounda_time 13 0. 2.27620277438968 10. 2.27620277438968
+bounda_dof 14 5 -velz
+bounda_time 14 0. 0.487756985979555 10. 0.487756985979555
+bounda_dof 15 6 -velx
+bounda_time 15 0. 1.80265039920441 10. 1.80265039920441
+bounda_dof 16 6 -vely
+bounda_time 16 0. -0.0250794964814979 10. -0.0250794964814979
+bounda_dof 17 6 -velz
+bounda_time 17 0. 0.755114017282434 10. 0.755114017282434
+bounda_dof 18 7 -velx
+bounda_time 18 0. 3.00745243956731 10. 3.00745243956731
+bounda_dof 19 7 -vely
+bounda_time 19 0. 1.45185162525485 10. 1.45185162525485
+bounda_dof 20 7 -velz
+bounda_time 20 0. 0.770541267473875 10. 0.770541267473875
+bounda_dof 21 8 -velx
+bounda_time 21 0. 1.79046129483318 10. 1.79046129483318
+bounda_dof 22 8 -vely
+bounda_time 22 0. 1.13126364256875 10. 1.13126364256875
+bounda_dof 23 8 -velz
+bounda_time 23 0. 0.122246164950208 10. 0.122246164950208
+bounda_dof 24 9 -velx
+bounda_time 24 0. 6.99322878564061 10. 6.99322878564061
+bounda_dof 25 9 -vely
+bounda_time 25 0. 1.61369214554614 10. 1.61369214554614
+bounda_dof 26 9 -velz
+bounda_time 26 0. 2.54492784737376 10. 2.54492784737376
+bounda_dof 27 10 -velx
+bounda_time 27 0. 9.40206445114689 10. 9.40206445114689
+bounda_dof 28 10 -vely
+bounda_time 28 0. 3.85355362177078 10. 3.85355362177078
+bounda_dof 29 10 -velz
+bounda_time 29 0. 3.17450078786218 10. 3.17450078786218
+bounda_dof 30 11 -velx
+bounda_time 30 0. 3.85376649994212 10. 3.85376649994212
+bounda_dof 31 11 -vely
+bounda_time 31 0. 0.0884156787469703 10. 0.0884156787469703
+bounda_dof 32 11 -velz
+bounda_time 32 0. 2.08100734684769 10. 2.08100734684769
+bounda_dof 33 12 -velx
+bounda_time 33 0. 5.06583256413239 10. 5.06583256413239
+bounda_dof 34 12 -vely
+bounda_time 34 0. 1.73151797264201 10. 1.73151797264201
+bounda_dof 35 12 -velz
+bounda_time 35 0. 2.31846259119213 10. 2.31846259119213
+bounda_dof 36 13 -velx
+bounda_time 36 0. 7.69604652402893 10. 7.69604652402893
+bounda_dof 37 13 -vely
+bounda_time 37 0. 3.95095755727954 10. 3.95095755727954
+bounda_dof 38 13 -velz
+bounda_time 38 0. 0.675153988563989 10. 0.675153988563989
+bounda_dof 39 14 -velx
+bounda_time 39 0. 10.2095083561963 10. 10.2095083561963
+bounda_dof 40 14 -vely
+bounda_time 40 0. 4.75573782086122 10. 4.75573782086122
+bounda_dof 41 14 -velz
+bounda_time 41 0. 1.31472569597021 10. 1.31472569597021
+bounda_dof 42 15 -velx
+bounda_time 42 0. 13.2610009641859 10. 13.2610009641859
+bounda_dof 43 15 -vely
+bounda_time 43 0. 7.24854896577661 10. 7.24854896577661
+bounda_dof 44 15 -velz
+bounda_time 44 0. 2.0150298504506 10. 2.0150298504506
+bounda_dof 45 16 -velx
+bounda_time 45 0. 9.74411791137784 10. 9.74411791137784
+bounda_dof 46 16 -vely
+bounda_time 46 0. 5.65164689177963 10. 5.65164689177963
+bounda_dof 47 16 -velz
+bounda_time 47 0. 0.99523008308615 10. 0.99523008308615
+bounda_dof 48 17 -velx
+bounda_time 48 0. 13.9210924757523 10. 13.9210924757523
+bounda_dof 49 17 -vely
+bounda_time 49 0. 5.86750092421154 10. 5.86750092421154
+bounda_dof 50 17 -velz
+bounda_time 50 0. 2.75761634121023 10. 2.75761634121023
+bounda_dof 51 18 -velx
+bounda_time 51 0. 18.2053216580254 10. 18.2053216580254
+bounda_dof 52 18 -vely
+bounda_time 52 0. 9.01706271962867 10. 9.01706271962867
+bounda_dof 53 18 -velz
+bounda_time 53 0. 3.97081304575725 10. 3.97081304575725
+group_type 0 -materi
+group_materi_viscosity 0 1.0
+group_materi_density 0 1.0
+group_materi_elasti_compressibility 0 1.0
+group_materi_memory 0 -updated_linear
+group_integration_points 0 -maximal
+control_timestep 10 1. 1.
+target_item 0 -node_dof 4 -sigxx
+target_value 0 8.656297621671e+00 4.0e-06
+target_item 1 -node_dof 3 -sigxx
+target_value 1 1.001357498255e+01 4.0e-06
+target_item 2 -node_dof 9 -sigxx
+target_value 2 1.061676884505e+01 4.0e-06
+target_item 3 -node_dof 1 -sigyy
+target_value 3 1.628846469427e+00 4.0e-06
+end_data

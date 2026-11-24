@@ -1,0 +1,41 @@
+( F5 T4 U9f: -method3 with control_mesh_remove_really -no: element 2 is
+  inactive while all its nodes have an mpc; control_data_delete removes the
+  mpc of node 6 at 15, so the remove of 20 activates it again. Factor 0 with
+  _activate_all -yes: node dofs = Professional 02-08-2026 default run. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 2 0
+node 6 2 1
+element 1 -quad4 1 2 3 4
+element 2 -quad4 2 5 4 6
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 1.
+force_gravity 0. -10.
+bounda_dof 1 -ra 1 3 -ra -velx -vely
+mpc_node_number 1 2 -velx 1 -velx
+mpc_node_number 2 5 -velx 1 -velx
+mpc_node_number 3 4 -velx 1 -velx
+mpc_node_number 4 6 -velx 1 -velx
+control_mesh_remove 10 -method3
+control_mesh_remove_really 10 -no
+control_timestep 10 1. 1.
+control_print_database 10 -yes
+control_data_delete 15 -mpc_node_number 4
+control_timestep 15 1. 1.
+control_print_database 15 -yes
+control_mesh_remove 20 -method3
+control_mesh_remove_really_activate_factor 20 0.
+control_mesh_remove_really_activate_all 20 -yes
+control_timestep 20 1. 1.
+control_print_database 20 -yes
+end_data

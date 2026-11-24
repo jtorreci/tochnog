@@ -1,0 +1,28 @@
+( F5 T4 U9a: the continuum -quad6 3 x 2 Gauss rule integrates the
+  self-weight of the distorted element exactly: the summed vertical
+  reaction is rho*g*area {area = Professional 02-08-2026 element_volume
+  of this mesh}, with node_rhside = Professional on this file. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1.1 -0.2
+node 3 2.3 0.1
+node 4 -0.2 1
+node 5 1.2 1.3
+node 6 2 1.2
+element 1 -quad6 1 2 3 4 5 6
+group_type 0 -materi
+group_materi_elasti_young 0 1.0e6
+group_materi_elasti_poisson 0 0.2
+group_materi_density 0 1.
+group_materi_memory 0 -total_linear
+force_gravity 0. -1.
+bounda_dof 10 -ra 1 2 3 -ra -velx -vely
+bounda_time 10 0.
+control_timestep 10 0.5 1.0
+control_print_database 10 -separate_index
+end_data

@@ -1,0 +1,53 @@
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_stress
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_time  1  0 0 100 0
+bounda_time  2  0 -0.01 100 -0.01
+bounda_unknown  0  -ra 1 2 -ra -vely
+bounda_unknown  1  -ra 1 2 -ra -velx
+bounda_unknown  2  -ra 3 4 -ra -vely
+control_repeat  20  0 10
+control_repeat_save  20  -post_point_dof 1 -veliy
+control_repeat_save_calculate  20  -yes
+control_timestep  10  0.05 0.05
+element  1  -quad4 1 2 3 4
+element_group  1  0
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -updated_without_rotation
+group_type  0  -materi
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+options_convection   -no
+options_inertia   -no
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_point  1  0.5 1
+repeat_calculate_result  0  -0.000999999951172 1.66666650391e-07
+repeat_save_result  0  -0.000499999975586
+repeat_save_result  1  -0.000999999951172
+repeat_save_result  2  -0.00149999992676
+target_item  1  -repeat_calculate_result 0 0
+target_item  2  -repeat_calculate_result 0 1
+target_item  3  -repeat_save_result 0 0
+target_item  4  -repeat_save_result 1 0
+target_item  5  -repeat_save_result 2 0
+target_value  1  -0.001 1e-09
+target_value  2  1.6666667e-07 1e-09
+target_value  3  -0.0005 1e-10
+target_value  4  -0.001 1e-10
+target_value  5  -0.0015 1e-10
+node_dof  1  0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0
+end_data

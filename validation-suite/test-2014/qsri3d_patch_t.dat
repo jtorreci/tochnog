@@ -1,0 +1,80 @@
+echo -no
+number_of_space_dimensions 3
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 8
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_time  1  0 0 100 0
+bounda_time  2  0 0 100 0
+bounda_time  3  0 0 100 0
+bounda_time  4  0 0 100 0
+bounda_time  5  0 0 100 0
+bounda_time  6  0 0 100 0
+bounda_time  7  0 0 100 0
+bounda_time  8  0 0.01 100 0.01
+bounda_time  9  0 0 100 0
+bounda_time  10  0 0.01 100 0.01
+bounda_time  11  0 0 100 0
+bounda_time  12  0 0.01 100 0.01
+bounda_time  13  0 0 100 0
+bounda_time  14  0 0.01 100 0.01
+bounda_time  15  0 0 100 0
+bounda_unknown  0  1 -velx
+bounda_unknown  1  1 -vely -velz
+bounda_unknown  2  3 -velx
+bounda_unknown  3  3 -vely -velz
+bounda_unknown  4  5 -velx
+bounda_unknown  5  5 -vely -velz
+bounda_unknown  6  7 -velx
+bounda_unknown  7  7 -vely -velz
+bounda_unknown  8  2 -velx
+bounda_unknown  9  2 -vely -velz
+bounda_unknown  10  4 -velx
+bounda_unknown  11  4 -vely -velz
+bounda_unknown  12  6 -velx
+bounda_unknown  13  6 -vely -velz
+bounda_unknown  14  8 -velx
+bounda_unknown  15  8 -vely -velz
+control_print_materi_stress_force  704  -all
+control_timestep  1  0.1 0.1
+element  1  -hex8 1 2 3 4 5 6 7 8
+element_group  1  0
+group_element_selective_reduced_integration  0  -yes
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0.3
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -updated_without_rotation
+group_type  0  -materi
+node  1  0 0 0
+node  2  1 0 0
+node  3  0 1 0
+node  4  1 1 0
+node  5  0 0 1
+node  6  1 0 1
+node  7  0 1 1
+node  8  1 1 1
+options_convection   -no
+options_inertia   -no
+options_mesh   -fixed_in_space -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_calcul   -materi_stress -force
+post_calcul_materi_stress_force_direction_include   1 0 0
+post_calcul_materi_stress_force_element_group   0
+post_calcul_materi_stress_force_reference_point   1000 0.5 0.5
+target_item  0  -node_dof 8 -velx
+target_value  0  0.01 1e-08
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  5  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  6  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  7  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  8  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+end_data

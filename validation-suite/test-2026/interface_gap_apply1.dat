@@ -1,0 +1,228 @@
+(F5 W1: interface_gap_apply -no, manual Pro 6.796: the group_interface_gap
+ 1.e20 is ignored, the default gap 0 applies and the interfaces pulled
+ open carry no stress (= the same file without the gap record, Professional
+ 02-08-2026 0 / 0). The Professional 02-08-2026 rejects interface_gap_apply
+ ("I don't know what to do with"): DIVERGENCES IFACE-GAP-APPLY.)
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_strain_total
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 6 3 0
+node 8 3 1
+node 9 1 0
+node 10 1 1
+element 1 -quad4 1 2 3 4
+element 2 -quad4 9 6 10 8
+element 3 -quad4 2 4 9 10
+element_group 1 1
+element_group 2 2
+element_group 3 10
+bounda_dof 0 1 -velx
+bounda_time 0 0 0 100 0
+bounda_dof 1 1 -vely
+bounda_time 1 0 0 100 0
+bounda_dof 2 2 -velx
+bounda_time 2 0 0 100 0
+bounda_dof 3 2 -vely
+bounda_time 3 0 0 100 0
+bounda_dof 4 3 -velx
+bounda_time 4 0 0 100 0
+bounda_dof 5 3 -vely
+bounda_time 5 0 0 100 0
+bounda_dof 6 4 -velx
+bounda_time 6 0 0 100 0
+bounda_dof 7 4 -vely
+bounda_time 7 0 0 100 0
+bounda_dof 8 6 -velx
+bounda_time 8 0 0.01 100 0.01
+bounda_dof 9 6 -vely
+bounda_time 9 0 0.002 100 0.002
+bounda_dof 10 8 -velx
+bounda_time 10 0 0.01 100 0.01
+bounda_dof 11 8 -vely
+bounda_time 11 0 0.002 100 0.002
+bounda_dof 12 9 -velx
+bounda_time 12 0 0.01 100 0.01
+bounda_dof 13 9 -vely
+bounda_time 13 0 0.002 100 0.002
+bounda_dof 14 10 -velx
+bounda_time 14 0 0.01 100 0.01
+bounda_dof 15 10 -vely
+bounda_time 15 0 0.002 100 0.002
+node 101 0 2
+node 102 1 2
+node 103 0 3
+node 104 1 3
+node 106 3 2
+node 108 3 3
+node 109 1 2
+node 110 1 3
+element 11 -quad4 101 102 103 104
+element 12 -quad4 109 106 110 108
+element 13 -quad4 109 110 102 104
+element_group 11 1
+element_group 12 2
+element_group 13 10
+bounda_dof 16 101 -velx
+bounda_time 16 0 0 100 0
+bounda_dof 17 101 -vely
+bounda_time 17 0 0 100 0
+bounda_dof 18 102 -velx
+bounda_time 18 0 0 100 0
+bounda_dof 19 102 -vely
+bounda_time 19 0 0 100 0
+bounda_dof 20 103 -velx
+bounda_time 20 0 0 100 0
+bounda_dof 21 103 -vely
+bounda_time 21 0 0 100 0
+bounda_dof 22 104 -velx
+bounda_time 22 0 0 100 0
+bounda_dof 23 104 -vely
+bounda_time 23 0 0 100 0
+bounda_dof 24 106 -velx
+bounda_time 24 0 0.01 100 0.01
+bounda_dof 25 106 -vely
+bounda_time 25 0 0.002 100 0.002
+bounda_dof 26 108 -velx
+bounda_time 26 0 0.01 100 0.01
+bounda_dof 27 108 -vely
+bounda_time 27 0 0.002 100 0.002
+bounda_dof 28 109 -velx
+bounda_time 28 0 0.01 100 0.01
+bounda_dof 29 109 -vely
+bounda_time 29 0 0.002 100 0.002
+bounda_dof 30 110 -velx
+bounda_time 30 0 0.01 100 0.01
+bounda_dof 31 110 -vely
+bounda_time 31 0 0.002 100 0.002
+node 201 0 4
+node 202 1 4
+node 203 0 5
+node 204 1 5
+node 206 3 4
+node 208 3 5
+node 209 1 4
+node 210 1 5
+element 21 -quad4 201 202 203 204
+element 22 -quad4 209 206 210 208
+element 23 -quad4 204 202 210 209
+element_group 21 1
+element_group 22 2
+element_group 23 10
+bounda_dof 32 201 -velx
+bounda_time 32 0 0 100 0
+bounda_dof 33 201 -vely
+bounda_time 33 0 0 100 0
+bounda_dof 34 202 -velx
+bounda_time 34 0 0 100 0
+bounda_dof 35 202 -vely
+bounda_time 35 0 0 100 0
+bounda_dof 36 203 -velx
+bounda_time 36 0 0 100 0
+bounda_dof 37 203 -vely
+bounda_time 37 0 0 100 0
+bounda_dof 38 204 -velx
+bounda_time 38 0 0 100 0
+bounda_dof 39 204 -vely
+bounda_time 39 0 0 100 0
+bounda_dof 40 206 -velx
+bounda_time 40 0 0.01 100 0.01
+bounda_dof 41 206 -vely
+bounda_time 41 0 0.002 100 0.002
+bounda_dof 42 208 -velx
+bounda_time 42 0 0.01 100 0.01
+bounda_dof 43 208 -vely
+bounda_time 43 0 0.002 100 0.002
+bounda_dof 44 209 -velx
+bounda_time 44 0 0.01 100 0.01
+bounda_dof 45 209 -vely
+bounda_time 45 0 0.002 100 0.002
+bounda_dof 46 210 -velx
+bounda_time 46 0 0.01 100 0.01
+bounda_dof 47 210 -vely
+bounda_time 47 0 0.002 100 0.002
+node 301 0 6
+node 302 1 6
+node 303 0 7
+node 304 1 7
+node 306 3 6
+node 308 3 7
+node 309 1 6
+node 310 1 7
+element 31 -quad4 301 302 303 304
+element 32 -quad4 309 306 310 308
+element 33 -quad4 310 309 304 302
+element_group 31 1
+element_group 32 2
+element_group 33 10
+bounda_dof 48 301 -velx
+bounda_time 48 0 0 100 0
+bounda_dof 49 301 -vely
+bounda_time 49 0 0 100 0
+bounda_dof 50 302 -velx
+bounda_time 50 0 0 100 0
+bounda_dof 51 302 -vely
+bounda_time 51 0 0 100 0
+bounda_dof 52 303 -velx
+bounda_time 52 0 0 100 0
+bounda_dof 53 303 -vely
+bounda_time 53 0 0 100 0
+bounda_dof 54 304 -velx
+bounda_time 54 0 0 100 0
+bounda_dof 55 304 -vely
+bounda_time 55 0 0 100 0
+bounda_dof 56 306 -velx
+bounda_time 56 0 0.01 100 0.01
+bounda_dof 57 306 -vely
+bounda_time 57 0 0.002 100 0.002
+bounda_dof 58 308 -velx
+bounda_time 58 0 0.01 100 0.01
+bounda_dof 59 308 -vely
+bounda_time 59 0 0.002 100 0.002
+bounda_dof 60 309 -velx
+bounda_time 60 0 0.01 100 0.01
+bounda_dof 61 309 -vely
+bounda_time 61 0 0.002 100 0.002
+bounda_dof 62 310 -velx
+bounda_time 62 0 0.01 100 0.01
+bounda_dof 63 310 -vely
+bounda_time 63 0 0.002 100 0.002
+group_type 1 -materi
+group_type 2 -materi
+group_type 10 -materi
+group_interface 10 -yes
+group_interface_gap 10 1.e20
+group_interface_materi_elasti_stiffness 10 1000 1000
+group_materi_elasti_poisson 1 0
+group_materi_elasti_poisson 2 0
+group_materi_elasti_young 1 1000
+group_materi_elasti_young 2 1000
+group_materi_memory 1 -updated_linear
+group_materi_memory 2 -updated_linear
+control_timestep 0 1 1
+(F4 T6f C87, explicit gap 1.e20 keeps the interface closed in traction (manual 6.625: to allow always tension stresses set gap to 1.e20). As interface_tension_default_gap1 with group_interface_gap 1.e20. Professional 02-08-2026: 9.999999172596 / +-1.999999834519 = kn*0.01 / kt*0.002; GNU before and after C87 10 / +-2.)
+interface_gap_apply -no
+target_item 0 -element_interface_intpnt_stress 3 0
+target_value 0 0. 1.e-8
+target_item 1 -element_interface_intpnt_stress 3 1
+target_value 1 0. 1.e-8
+target_item 2 -element_interface_intpnt_stress 13 0
+target_value 2 0. 1.e-8
+target_item 3 -element_interface_intpnt_stress 13 1
+target_value 3 0. 1.e-8
+target_item 4 -element_interface_intpnt_stress 23 0
+target_value 4 0. 1.e-8
+target_item 5 -element_interface_intpnt_stress 23 1
+target_value 5 0. 1.e-8
+target_item 6 -element_interface_intpnt_stress 33 0
+target_value 6 0. 1.e-8
+target_item 7 -element_interface_intpnt_stress 33 1
+target_value 7 0. 1.e-8
+end_data

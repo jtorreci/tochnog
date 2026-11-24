@@ -1,0 +1,43 @@
+(
+mesh_gid_* geometry records (manual Professional 6.818-6.853) and
+control_mesh_gid_batch (6.200), 2D: points, lines with every line option
+(size, structured nel/size, concentration, group), a hollow circle, an arc,
+a filled rectangle with a group, a structured quad8 surface and
+point/line conditions. build_safe.sh runs this test in a scratch copy
+without gid on the PATH and compares GidMeshBatch.bch byte by byte with
+mesh_gid_2d1.bch (= the file the Professional 02-08-2026 writes for this
+input). Without gid the run warns and continues.
+)
+echo -yes
+number_of_space_dimensions 2
+end_initia
+mesh_gid_point_coord 1 0. 0.
+mesh_gid_point_coord 2 2. 0.
+mesh_gid_point_coord 3 2. 1.
+mesh_gid_point_coord 4 0. 1.
+mesh_gid_line_point 1 1 2
+mesh_gid_line_size 1 0.05
+mesh_gid_line_point 2 2 3
+mesh_gid_line_structured_nel 2 7
+mesh_gid_line_structured_concentrate 2 -0.5 0.25
+mesh_gid_line_point 3 3 4
+mesh_gid_line_structured_size 3 0.2
+mesh_gid_line_element_group 3 2
+mesh_gid_line_point 4 4 1
+mesh_gid_arc_coord 1 0. 1. 1. 1.5 2. 1.
+mesh_gid_rectangle_coord 1 0.2 0.4 0.2 0.4
+mesh_gid_rectangle_element_group 1 3
+mesh_gid_circle_coord 1 1.5 0.5
+mesh_gid_circle_radius 1 0.1
+mesh_gid_circle_hollow 1 -yes
+mesh_gid_surface_line 1 1 2 3 4
+mesh_gid_surface_element_group 1 1
+mesh_gid_surface_element 1 -quad8
+mesh_gid_surface_structured_nel 1 4 0 4 0
+mesh_gid_surface_structured_size 1 0.1
+mesh_gid_assign_conditions_point 1 1 2
+mesh_gid_assign_conditions_point 2 3
+mesh_gid_assign_conditions_line 11 2 3
+mesh_gid_size 0.1
+control_mesh_gid_batch 10 -yes
+end_data

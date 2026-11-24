@@ -1,0 +1,44 @@
+(F5 T2 V5b: global_node_dof_empty (manual Professional 6.552), default -yes.
+ Two quad4; element 2 is group 1 (group_type 1 -empty), so nodes 3 and 6
+ are only connected to an empty element; their node_dof input is
+ 1.1 .. 2.9 (19 dofs: velx vely disx disy 6 eptxx.. 6 sigxx.. kap work temp).
+ Expected node_dof 3 and 6 (scripts/build_safe.sh): every dof zero except the
+ displacement, which keeps its value 1.3 1.4. Source: Professional
+ 02-08-2026 probe f5/v5b c2_def (same input). The manual says that all the
+ dofs are set to zero: the displacement is an open owner decision
+ (GLOBAL-NODE-DOF-EMPTY-DISPLACEMENT).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+materi_plasti_kappa
+materi_work
+condif_temperature
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 0 1
+node 5 1 1
+node 6 2 1
+element 1 -quad4 1 2 4 5
+element 2 -quad4 2 3 5 6
+element_group 2 1
+node_dof 3 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9
+node_dof 6 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9
+group_type 0 -materi -condif
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_condif_density 0 1.
+group_condif_capacity 0 1.
+group_condif_conductivity 0 1.
+group_type 1 -empty
+bounda_dof 0 -ra 1 4 -ra -velx -vely -temp
+bounda_dof 1 -ra 2 5 -ra -velx
+bounda_time 1 0.01
+
+control_timestep 0 1. 1.
+end_data

@@ -1,0 +1,33 @@
+(F5 T3 C3: materi_plasti_phimob below yield: c 1, principal stresses
+ 0 and -2.19780; the root of 0.5{s2-s0} + 0.5{s2+s0} sin phi - c cos phi
+ closest to 0 is 5.39561 degrees {the other root is 90}. Professional
+ 02-08-2026: 5.39561.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_plasti
+materi_plasti_phimob
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_materi_plasti_mohr_coul 0 0.5 1. 0.
+geometry_line 1 0 0 1 0 0.01
+geometry_line 2 0 0 0 1 0.01
+geometry_line 3 0 1 1 1 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -geometry_line 2 -velx
+bounda_dof 2 -geometry_line 3 -vely
+bounda_time 2 0 -0.002 100 -0.002
+control_timestep 0 0.1 1.
+target_item 0 -node_dof 4 -phimob
+target_value 0 5.39561 1.e-4
+end_data

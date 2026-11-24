@@ -1,0 +1,43 @@
+(
+F5 T4 U4: geometry_method -average {manual 6.532} for dependency_geometry.
+Two quad4 {element 1 on 0..1, element 2 on 1..2, groups 0 and 1}; dependency_geometry -geometry_point 10 {centre 0.9 0.5, radius 0.55}: nodes 1,0 and 1,1 are inside, the centre 0.5,0.5 of element 1 is inside, the centre 1.5,0.5 of element 2 is outside; young 1000 -> 300 by the dependency.
+With -average element 1 gets 300, element 2 keeps 2000; without geometry_method neither element is inside {default -all}. Expected values = Professional 02-08-2026 on the same input.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_elasti
+materi_strain_total
+materi_strain_plasti
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+node 5 2 0
+node 6 2 1
+element 1 -quad4 1 2 3 4
+element 2 -quad4 2 5 4 6
+element_group 2 1
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+group_materi_plasti_mohr_coul 0 0.5 10. 0.1
+group_type 1 -materi
+group_materi_memory 1 -total_linear
+group_materi_elasti_young 1 2000.
+group_materi_elasti_poisson 1 0.3
+group_materi_plasti_mohr_coul 1 0.3 4. 0.05
+geometry_line 1 0 0 0 1 0.01
+bounda_dof 0 -geometry_line 1 -velx -vely
+geometry_point 10 0.9 0.5 0.55
+dependency_item 1 -group_materi_elasti_young -all -time_current 2
+dependency_diagram 1 0. 1. 100. 300.
+dependency_geometry 1 -geometry_point 10
+print_group_data -group_materi_elasti_young -group_materi_plasti_mohr_coul
+control_timestep 0 1. 2.
+geometry_method 10 -average
+end_data

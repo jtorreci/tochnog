@@ -25,17 +25,33 @@ void print_element( long int data_item_name )
   long int element=0, max_element=0, ival=0, nval=0, inol=0, nnol=2,
     icontrol=0, test=0, idim=0, inod=0, ok=0, length_print_filter_index=0, 
     length=0, ldum=0, idum[1], nodes[MNOL], el[1+MNOL], 
-    print_filter_index[DATA_ITEM_SIZE];
+    print_filter_index[DATA_ITEM_SIZE], method=-MIDDLE;
   double ddum[1], dval[DATA_ITEM_SIZE], *coord=NULL;
   char filename[MCHAR], str[MCHAR];
 
   set_swit(-1,-1,"print_element");
 
   db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET );
+// C54 (F4 T6f LOW queue Q4): the run-time record name is read into a
+  // DOUBLE buffer with a 1-value integer dummy; an INTEGER record would
+  // overflow the dummy, so it is an input error.
+  if ( db_type(data_item_name)!=DOUBLE_PRECISION ) {
+    pri( "Error: a DOUBLE PRECISION data item is required here, not the INTEGER item", db_name(data_item_name) );
+    db_error( CONTROL_PRINT_ELEMENT, icontrol );
+  }
   if ( !db( CONTROL_PRINT_FILTER, icontrol, print_filter_index, ddum, 
       length_print_filter_index, VERSION_NORMAL, GET_IF_EXISTS ) ) {
     print_filter_index[0] = -ALL; length_print_filter_index = 1;
   }
+
+  // control_print_element_method (manual Professional 6.286): -middle
+  // (default) prints the average value of the element data with the
+  // coordinate of the middle of the element, one line per element;
+  // -node prints the nodal values with the nodal coordinates per element.
+  db( CONTROL_PRINT_ELEMENT_METHOD, icontrol, &method, ddum, ldum,
+    VERSION_NORMAL, GET_IF_EXISTS );
+  if ( method!=-MIDDLE && method!=-NODE )
+    db_error( CONTROL_PRINT_ELEMENT_METHOD, icontrol );
 
   nval = db_data_length( data_item_name );
   db_max_index( ELEMENT, max_element, VERSION_NORMAL, GET );
@@ -62,23 +78,40 @@ void print_element( long int data_item_name )
               db( ELEMENT, element, el, ddum, length, VERSION_NORMAL, GET );
               nnol = length - 1;
               array_move( &el[1], nodes, nnol );
-              for ( inol=0; inol<nnol; inol++ ) {
-                ok = 0;
-                if      ( data_item_name==-ELEMENT_TRUSS_FORCE )
-                  ok = 1;
-                else if ( data_item_name==-ELEMENT_BEAM_MOMENT ) {
-                  if      ( inol==0 && ival<nval/2 )
-                    ok = 1;
-                  else if ( inol==1 && ival>=nval/2 )
-                    ok = 1;
+              if ( data_item_name!=-ELEMENT_TRUSS_FORCE &&
+                   data_item_name!=-ELEMENT_BEAM_MOMENT )
+                db_error( CONTROL_PRINT_ELEMENT, icontrol );
+              if ( method==-MIDDLE ) {
+                // average value + coordinate of the middle of the element
+                for ( idim=0; idim<ndim; idim++ ) {
+                  double middle=0.;
+                  for ( inol=0; inol<nnol; inol++ ) {
+                    inod = nodes[inol];
+                    coord = db_dbl( NODE, inod, VERSION_NORMAL );
+                    middle += coord[idim];
+                  }
+                  out << middle/nnol << " ";
                 }
-                else
-                  db_error( CONTROL_PRINT_ELEMENT, icontrol );
-                if ( ok ) {
-                  inod = nodes[inol];
-                  coord = db_dbl( NODE, inod, VERSION_NORMAL );     
-                  for ( idim=0; idim<ndim; idim++ ) out << coord[idim] << " ";
-                  out << dval[ival] << "\n";
+                out << dval[ival] << "\n";
+              }
+              else {
+                // -node: nodal values and nodal coordinates per element
+                for ( inol=0; inol<nnol; inol++ ) {
+                  ok = 0;
+                  if      ( data_item_name==-ELEMENT_TRUSS_FORCE )
+                    ok = 1;
+                  else if ( data_item_name==-ELEMENT_BEAM_MOMENT ) {
+                    if      ( inol==0 && ival<nval/2 )
+                      ok = 1;
+                    else if ( inol==1 && ival>=nval/2 )
+                      ok = 1;
+                  }
+                  if ( ok ) {
+                    inod = nodes[inol];
+                    coord = db_dbl( NODE, inod, VERSION_NORMAL );     
+                    for ( idim=0; idim<ndim; idim++ ) out << coord[idim] << " ";
+                    out << dval[ival] << "\n";
+                  }
                 }
               }
             }

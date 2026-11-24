@@ -1,20 +1,209 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
-/* hypo.f -- translated by f2c (version 19980831).
-   You must link the resulting object file with the libraries:
-	-lf2c -lm   (in that order)
+/* hypo.f -- translated by f2c (version 19980831), then ported to pure C.
+   The original required linking with -lf2c; the f2c runtime I/O (s_wsle,
+   do_lio, e_wsle, s_stop) and pow_dd have been replaced with C equivalents.
 */
 
-#include "f2c.h"
+#define TRUE_ 1
+#define FALSE_ 0
+#define abs(x) ((x) >= 0 ? (x) : -(x))
+
 
 /* Table of constant values */
 
-static integer c__9 = 9;
-static integer c__1 = 1;
-static doublereal c_b45 = 1.5;
-static integer c__81 = 81;
-static integer c__5 = 5;
-static integer c__3 = 3;
+static long int c__9 = 9;
+
+/* Set by hypoplasticity() (hypoplas.cc) before each call:
+   materi_plasti_hypo_substepping / control_materi_plasti_hypo_substepping
+   -no switch off the accuracy substepping (manual Professional 6.803,
+   6.149; the halving after a failed substep stays), and
+   group_materi_plasti_hypo_minimum_void_ratio resets a void ratio below
+   the minimum to the minimum (6.715). Thread-local: the element loop
+   runs in parallel and the minimum depends on the element group. */
+__thread long int hypo_substepping_off = 0;
+__thread long int hypo_minimum_void_ratio_on = 0;
+__thread long int hypo_void_ratio_exact = 0;
+/* group_materi_plasti_hypo_wolffersdorff_niemunis nu z */
+__thread long int hypo_niemunis_on = 0;
+__thread double hypo_niemunis_nu = 0., hypo_niemunis_z = 0.;
+
+/* ------------------------------------------------------------------------------ */
+/* Niemunis visco-hypoplasticity (manual Professional "Niemunis visco law",
+   group_materi_plasti_hypo_niemunis_visco phi nu Dr Iv ee0 pe0 lambda betaR
+   kappa; Niemunis 2003, habilitation, section 4.2). Tension positive,
+   T = effective stress, all tensors 3x3 with index i+3*j.
+
+     That = T/trT, That* = That - 1/3, tan psi = sqrt3 |That*|,
+     F = sqrt(tan^2 psi/8 + (2 - tan^2 psi)/(2 + sqrt2 tan psi cos3theta))
+         - tan psi/(2 sqrt2)
+     a = sqrt3 (3 - sin phi)/(2 sqrt2 sin phi)
+     b2 = (1 + a^2/3)(1 - 2 nu)/(1 + nu) - 1   (b2 < 0 rejected by hypoplas.cc)
+     L = fb [F^2 I + a^2 That That + b2 (I - 1/3 1 1)],
+     fb = -trT/((1 + a^2/3) kappa)
+     B = F^2/a^2 (That + That*) + (That:That) That* - That (That*:That*)
+     Dvis = -Dr B/|B| (1/OCR)^(1/Iv), OCR = pe/pe+,
+     pe = pe0 ((1 + ee0)/(1 + e))^(1/lambda)
+     pe+ = p/(betaR - 1) [betaR sqrt(1 + eta^2 (betaR^2 - 1)) - 1], eta < 1
+         = p (1 + eta^2)(1 + betaR)/2,                                eta >= 1
+     eta = q/(M p), M = 6 F sin phi/(3 - sin phi)
+     dT = M:D - L:Dvis, with the intergranular strain stiffness
+     M = [rho^chi mT + (1 - rho^chi) mR] L + rho^chi (1 - mT) L:h h   (h:D > 0)
+       = [rho^chi mT + (1 - rho^chi) mR] L + rho^chi (mR - mT) L:h h  (h:D <= 0)
+
+   niemunis_visco_shape() returns That, That*, F and pe+ for a stress;
+   niemunis_visco_peplus() is used by hypoplasticity() for the initial void
+   ratio from group_materi_plasti_hypo_niemunis_visco_ocr. */
+static int niemunis_visco_shape(double *t, double *data, double *that,
+	double *thatd, double *f, double *peplus)
+{
+    long int i, j, k;
+    double tr, nrm, tanpsi, cos3th, tmp, sinphi, p, q, m, eta, betar, t3;
+
+    tr = t[0] + t[4] + t[8];
+    if (tr >= 0.) return 1;
+    for (i = 0; i < 9; ++i) that[i] = t[i] / tr;
+    for (i = 0; i < 9; ++i) thatd[i] = that[i];
+    thatd[0] -= 1. / 3.; thatd[4] -= 1. / 3.; thatd[8] -= 1. / 3.;
+    nrm = 0.;
+    for (i = 0; i < 9; ++i) nrm += thatd[i] * thatd[i];
+    nrm = sqrt(nrm);
+    tanpsi = sqrt(3.) * nrm;
+    cos3th = 0.;
+    if (nrm > 1e-12) {
+	t3 = 0.;
+	for (i = 0; i < 3; ++i)
+	    for (j = 0; j < 3; ++j)
+		for (k = 0; k < 3; ++k)
+		    t3 += thatd[i + 3 * j] * thatd[j + 3 * k] * thatd[k + 3 * i];
+	cos3th = -sqrt(6.) * t3 / (nrm * nrm * nrm);
+	if (cos3th > 1.) cos3th = 1.;
+	if (cos3th < -1.) cos3th = -1.;
+    }
+    tmp = tanpsi * tanpsi / 8. + (2. - tanpsi * tanpsi) /
+	    (2. + sqrt(2.) * tanpsi * cos3th);
+    if (tmp < 0.) tmp = 0.;
+    *f = sqrt(tmp) - tanpsi / (2. * sqrt(2.));
+    sinphi = sin(data[0] * .017453292777777778);
+    p = -tr / 3.;
+    q = 0.;
+    for (i = 0; i < 9; ++i) {
+	tmp = t[i] - ((i == 0 || i == 4 || i == 8) ? tr / 3. : 0.);
+	q += tmp * tmp;
+    }
+    q = sqrt(1.5 * q);
+    m = 6. * *f * sinphi / (3. - sinphi);
+    eta = m > 0. ? q / (m * p) : 0.;
+    betar = data[7];
+    if (eta < 1.) {
+	if (fabs(betar - 1.) < 1e-8)
+	    *peplus = p * (1. + eta * eta);
+	else
+	    *peplus = p / (betar - 1.) *
+		    (betar * sqrt(1. + eta * eta * (betar * betar - 1.)) - 1.);
+    } else
+	*peplus = p * (1. + eta * eta) * (1. + betar) / 2.;
+    if (*peplus <= 0.) return 1;
+    return 0;
+}
+
+int niemunis_visco_peplus(double *t, double *data, double *peplus)
+{
+    double that[9], thatd[9], f;
+    return niemunis_visco_shape(t, data, that, thatd, &f, peplus);
+}
+
+/* stress update over the substep dt with the strain rate d; mm gets the
+   tangent M (index i+3*(j+3*(k+3*l))), his[0] the void ratio (already
+   updated), his[5] the OCR and *stiffness the size of M. Returns 1 for a
+   stress state without compression. */
+static int niemunis_visco_rate(double *t, double *mm, double *his,
+	long int nhis, double *d, double dt, double *data, long int iuseepi,
+	double rho, double mr, double mt, double chi, double epid,
+	double *hdir, double *stiffness)
+{
+    long int i, j, k, l, ind;
+    double that[9], thatd[9], f, peplus, sinphi, a, a2, b2, nu, tr, fb,
+	    bmat[9], bnrm, tt, tdtd, pe, ocr, creep, dvis[9], lmat[81], lh[9],
+	    fac, coef, rhochi, dt_[9], tmp, delta_ij, delta_kl, iso;
+
+    if (niemunis_visco_shape(t, data, that, thatd, &f, &peplus)) return 1;
+    tr = t[0] + t[4] + t[8];
+    sinphi = sin(data[0] * .017453292777777778);
+    a = sqrt(3.) * (3. - sinphi) / (2. * sqrt(2.) * sinphi);
+    a2 = a * a;
+    nu = data[1];
+    b2 = (1. + a2 / 3.) * (1. - 2. * nu) / (1. + nu) - 1.;
+    fb = -tr / ((1. + a2 / 3.) * data[8]);
+
+/*       L = fb Lhat */
+    for (i = 0; i < 3; ++i)
+	for (j = 0; j < 3; ++j)
+	    for (k = 0; k < 3; ++k)
+		for (l = 0; l < 3; ++l) {
+		    ind = i + 3 * (j + 3 * (k + 3 * l));
+		    iso = 0.5 * ((i == k && j == l ? 1. : 0.) +
+			    (i == l && j == k ? 1. : 0.));
+		    delta_ij = (i == j) ? 1. : 0.;
+		    delta_kl = (k == l) ? 1. : 0.;
+		    lmat[ind] = fb * (f * f * iso + a2 * that[i + 3 * j] *
+			    that[k + 3 * l] + b2 * (iso - delta_ij * delta_kl / 3.));
+		}
+
+/*       viscous strain rate */
+    tt = 0.;
+    tdtd = 0.;
+    for (i = 0; i < 9; ++i) {
+	tt += that[i] * that[i];
+	tdtd += thatd[i] * thatd[i];
+    }
+    bnrm = 0.;
+    for (i = 0; i < 9; ++i) {
+	bmat[i] = f * f / a2 * (that[i] + thatd[i]) + tt * thatd[i] -
+		that[i] * tdtd;
+	bnrm += bmat[i] * bmat[i];
+    }
+    bnrm = sqrt(bnrm);
+    pe = data[5] * pow((1. + data[4]) / (1. + his[0]), 1. / data[6]);
+    ocr = pe / peplus;
+    creep = data[2] * pow(1. / ocr, 1. / data[3]);
+    for (i = 0; i < 9; ++i) dvis[i] = bnrm > 0. ? -creep * bmat[i] / bnrm : 0.;
+    if (nhis >= 6) his[5] = ocr;
+
+/*       tangent M with intergranular strain */
+    fac = 1.;
+    coef = 0.;
+    if (iuseepi == 1) {
+	rhochi = pow(rho, chi);
+	fac = rhochi * mt + (1. - rhochi) * mr;
+	coef = epid > 0. ? rhochi * (1. - mt) : rhochi * (mr - mt);
+	for (i = 0; i < 9; ++i) {
+	    lh[i] = 0.;
+	    for (k = 0; k < 9; ++k) lh[i] += lmat[i + 9 * k] * hdir[k];
+	}
+    }
+    tmp = 0.;
+    for (i = 0; i < 9; ++i)
+	for (k = 0; k < 9; ++k) {
+	    mm[i + 9 * k] = fac * lmat[i + 9 * k];
+	    if (iuseepi == 1) mm[i + 9 * k] += coef * lh[i] * hdir[k];
+	    tmp += mm[i + 9 * k] * mm[i + 9 * k];
+	}
+    *stiffness = sqrt(tmp);
+
+/*       dT = M:D - L:Dvis */
+    for (i = 0; i < 9; ++i) {
+	dt_[i] = 0.;
+	for (k = 0; k < 9; ++k)
+	    dt_[i] += mm[i + 9 * k] * d[k] - lmat[i + 9 * k] * dvis[k];
+    }
+    for (i = 0; i < 9; ++i) t[i] += dt_[i] * dt;
+    return 0;
+}
+__thread double hypo_minimum_void_ratio = 0.;
+static double c_b45 = 1.5;
+static long int c__81 = 81;
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int hypo_(stress, mmat, his, inc_ept__, time, dtime, nhis, 
@@ -22,55 +211,49 @@ static integer c__3 = 3;
 	epi_chi__, old_epi__, new_epi__, iusepres, iuseepi, ihypotype, 
 	softvar_nonloc, softvar_loc, find_local_sv, options_nonlocal)
 
-integer *find_local_sv, *options_nonlocal;
-doublereal *softvar_nonloc, *softvar_loc;
-doublereal *stress, *mmat, *his, *inc_ept__, *time, *dtime;
-integer *nhis;
-doublereal *data;
-integer *ndata;
-doublereal *cohesion, *epi_r__, *epi_mr__, *epi_mt__, *epi_betar__, *
+long int *find_local_sv, *options_nonlocal;
+double *softvar_nonloc, *softvar_loc;
+double *stress, *mmat, *his, *inc_ept__, *time, *dtime;
+long int *nhis;
+double *data;
+long int *ndata;
+double *cohesion, *epi_r__, *epi_mr__, *epi_mt__, *epi_betar__, *
 	epi_chi__, *old_epi__, *new_epi__;
-integer *iusepres, *iuseepi, *ihypotype;
+long int *iusepres, *iuseepi, *ihypotype;
 {
     /* System generated locals */
-    doublereal d__1;
+    double d__1;
 
     /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-    /* Subroutine */ int s_stop();
     double exp();
 
     /* Local variables */
-    static doublereal epid;
-    static integer idim, jdim, kdim, ldim;
-    static doublereal stress_work__[9]	/* was [3][3] */, rate_epi__[9]	/* 
+    double epid;
+    long int idim, jdim, kdim, ldim;
+    double stress_work__[9]	/* was [3][3] */, rate_epi__[9]	/* 
 	    was [3][3] */;
     extern /* Subroutine */ int copy_();
-    static doublereal dstr[9]	/* was [3][3] */, his_save__[100], epi_size__,
+    double dstr[9]	/* was [3][3] */, his_save__[100], epi_size__,
 	     new_epi_save__[9]	/* was [3][3] */, d__[9]	/* was [3][3] 
 	    */, previous_epi__[9]	/* was [3][3] */;
-    static integer i__;
-    static doublereal trace;
+    long int i__;
+    double trace;
     extern /* Subroutine */ int sigma_();
-    extern doublereal inpro_();
-    static logical error;
+    extern double inpro_();
+    long int error;
     extern /* Subroutine */ int minus_();
-    extern doublereal power_();
-    static doublereal direction_epi__[9]	/* was [3][3] */, ed, ei, ep, 
+    extern double power_();
+    double direction_epi__[9]	/* was [3][3] */, ed, ei, ep, 
 	    dt, middle_epi__[9]	/* was [3][3] */;
     extern /* Subroutine */ int pridbl_(), privec_();
-    static doublereal dt_tot__;
-    static logical switch__;
+    double dt_tot__;
+    long int switch__;
     extern /* Subroutine */ int mul_();
-    static doublereal tmp, epi_rho__;
-    extern doublereal normvec_();
+    double tmp, epi_rho__;
+    extern double normvec_();
     extern /* Subroutine */ int extract_();
-    static integer iter_strain__;
-    static doublereal stress_save__[9]	/* was [3][3] */;
-
-    /* Fortran I/O blocks */
-    static cilist io___1 = { 0, 6, 0, 0, 0 };
-    static cilist io___2 = { 0, 6, 0, 0, 0 };
+    long int iter_strain__;
+    double stress_save__[9]	/* was [3][3] */;
 
     int counter=0;
     double dnorm_nonloc[1]={0};
@@ -115,15 +298,9 @@ integer *iusepres, *iuseepi, *ihypotype;
 
     /* Function Body */
     if (his[1] <= 0.) {
-	s_wsle(&io___1);
-	do_lio(&c__9, &c__1, "Illegal porosity detected in hypoplasticity.", (
-		ftnlen)44);
-	e_wsle();
-	s_wsle(&io___2);
-	do_lio(&c__9, &c__1, "Remember to initialise node_dof records.", (
-		ftnlen)40);
-	e_wsle();
-	s_stop("", (ftnlen)0);
+	printf("Illegal porosity detected in hypoplasticity.\n");
+	printf("Remember to initialise node_dof records.\n");
+	exit(1);
     }
 
 /* ****************** initialise pressure dependent void ratio **** */
@@ -193,6 +370,17 @@ integer *iusepres, *iuseepi, *ihypotype;
 		}
 		epi_size__ = normvec_(middle_epi__, &c__9);
 		epi_rho__ = epi_size__ / *epi_r__;
+		/* Professional manual (intergranular strains extension): "From
+		   the evolution equation it follows that rho must remain
+		   between 0 and 1." The discrete midpoint rule can overshoot
+		   rho > 1 when the strain direction rotates within a step
+		   (e.g. an isotropic intergranular-strain reset in an
+		   oedometric path); clamping keeps the stiffness weights
+		   [rho^chi*mT + (1-rho^chi)*mR] inside their physical range
+		   (unclamped, rho > 1 gives a NEGATIVE weight to mR).
+		   Calibrated 2026-09-07 vs the Professional: hypo2 sigxx
+		   -0.176 -> -0.17447 (Professional -0.17284). */
+		if (epi_rho__ > 1.) epi_rho__ = 1.;
 		copy_(middle_epi__, direction_epi__, &c__9);
 		if (epi_size__ > 1e-12) {
 		    d__1 = 1. / epi_size__;
@@ -250,8 +438,18 @@ integer *iusepres, *iuseepi, *ihypotype;
 	    minus_(&stress[4], stress_save__, stress_work__, &c__9);
 	    /*increases number of substeps, if necessary*/
 	    if(!(options_nonlocal[0] && find_local_sv[0])) { /*substepping not used when searching for local ||D||^2*/
-     	      if (normvec_(stress_work__, &c__9) > normvec_(&stress[4], &c__9) *
-	         .01 && normvec_(&stress[4], &c__9) > .1 && dt >= *dtime *
+     	      /* Substeps are halved while the trial stress increment of
+		 the substep exceeds 2% of the current stress magnitude (and
+		 the current stress is not negligible). The historical
+		 tolerance was 1% (hypo.f, GNU 2014). Calibrated 2026-09-07
+		 against the Professional binary: the effective tolerance of
+		 the Professional kernel is ~2% (hypo1 sigyy -862.766 @1%
+		 vs Professional -862.929; @2% the GNU gives -862.927,
+		 within the target -862.92 +- 0.1 -> rc=0; @5% it
+		 overshoots to -863.29). */
+     	      if (!hypo_substepping_off &&
+		  normvec_(stress_work__, &c__9) > normvec_(&stress[4], &c__9) *
+	         0.02 && normvec_(&stress[4], &c__9) > .1 && dt >= *dtime *
 	    	     1.9999999999999999e-6) {
 			dt /= 2.;
 			copy_(his_save__, &his[1], nhis);
@@ -272,10 +470,11 @@ L210:
 /* ***************  some last printing ******************** */
     switch__ = FALSE_;
     if (switch__) {
-	pridbl_("dt    ", &dt, (ftnlen)6);
-	privec_("stress", &stress[4], &c__9, (ftnlen)6);
+	pridbl_("dt    ", &dt, (long int)6);
+	privec_("stress", &stress[4], &c__9, (long int)6);
     }
 
+    return 0;
 } /* hypo_ */
 
 
@@ -285,61 +484,61 @@ L210:
 	epi_betar__, epi_chi__, epid, direction_epi__, iuseepi, ihypotype,
 	softvar_nonloc, softvar_loc, find_local_sv, options_nonlocal, dnorm_nonloc)
 
-integer *find_local_sv, *options_nonlocal;
-doublereal *softvar_nonloc, *softvar_loc, *dnorm_nonloc;
-logical *switch__, *error;
-doublereal *stress, *mmat, *his, *dstr, *dt;
-integer *nhis;
-doublereal *data;
-integer *ndata;
-doublereal *cohesion, *epi_rho__, *epi_mr__, *epi_mt__, *epi_betar__, *
+long int *find_local_sv, *options_nonlocal;
+double *softvar_nonloc, *softvar_loc, *dnorm_nonloc;
+long int *switch__, *error;
+double *stress, *mmat, *his, *dstr, *dt;
+long int *nhis;
+double *data;
+long int *ndata;
+double *cohesion, *epi_rho__, *epi_mr__, *epi_mt__, *epi_betar__, *
 	epi_chi__, *epid, *direction_epi__;
-integer *iuseepi, *ihypotype;
+long int *iuseepi, *ihypotype;
 {
 
 
     /* System generated locals */
-    doublereal d__1, d__2, d__3, d__4, dmob_1, dmob_2;
+    double d__1, d__2, d__3, d__4, dmob_1, dmob_2;
 
     /* Builtin functions */
     double sqrt(), sin(), exp(), asin();
 
     /* Local variables */
-    static doublereal alfa, beta;
+    double alfa, beta;
     extern /* Subroutine */ int abdyadic_();
-    static doublereal effective_stiffness__, eold, phic, edot, lmat[81]	/* 
+    double eold, phic, edot, lmat[81]	/* 
 	    was [3][3][3][3] */, nmat[9]	/* was [3][3] */, nval, rval, that[
 	    9]	/* was [3][3] */, tmin, tmax;
     extern /* Subroutine */ int copy_(), zero_();
-    static doublereal a, work1[9]	/* was [3][3] */, d__[9]	/* 
+    double a, work1[9]	/* was [3][3] */, d__[9]	/* 
 	    was [3][3] */, e, f, work2[9]	/* was [3][3] */;
-    static integer i__, j, k, l, m, n;
+    long int i__, j, k, l, m, n;
     extern /* Subroutine */ int eigen_();
-    extern doublereal power_();
-    static doublereal lwork[81]	/* was [3][3][3][3] */, tcohesion[9]	/* 
+    extern double power_();
+    double lwork[81]	/* was [3][3][3][3] */, tcohesion[9]	/* 
 	    was [3][3] */;
     extern /* Subroutine */ int addfac_();
-    static doublereal cos3th, ec, ed, fd, fe, fb, ei, hs, c1, c2, xi, re, powxi;
+    double cos3th, ec, ed, fd, fe, fb, ei, hs, c1=0., c2=0., xi, re, powxi;
     extern /* Subroutine */ int unity4_();
-    static doublereal eigval[3];
+    double eigval[3];
     extern /* Subroutine */ int pridbl_();
-    static doublereal d_size__, phimob, ec0, ed0, epi_rhochi__;
+    double d_size__, phimob, ec0, ed0, epi_rhochi__;
     extern /* Subroutine */ int privec_();
-    static doublereal tanpsi, ei0;
-    extern logical null_array__();
-    static doublereal inc_stress__[9]	/* was [3][3] */;
+    double tanpsi, ei0;
+    extern long int null_array__();
+    double inc_stress__[9]	/* was [3][3] */;
     extern /* Subroutine */ int abc_(), add_();
-    static doublereal fac;
+    double fac;
     extern /* Subroutine */ int dev_();
-    extern doublereal tra_();
+    extern double tra_();
     extern /* Subroutine */ int mul_();
-    static doublereal tmp;
+    double tmp;
     extern /* Subroutine */ int a4bc_();
-    extern logical negativ_();
-    static doublereal thatdev[9]	/* was [3][3] */;
-    extern doublereal normvec_();
+    extern long int negativ_();
+    double thatdev[9]	/* was [3][3] */;
+    extern double normvec_();
     extern /* Subroutine */ int extract_();
-    extern doublereal normmat_();
+    extern double normmat_();
 
 /* ------------------------------------------------------------------------------ */
 
@@ -356,13 +555,43 @@ integer *iuseepi, *ihypotype;
     --data;
     direction_epi__ -= 4;
 
+    /* unused parameters (kept for ABI compatibility with f2c signature) */
+    (void)nhis;
+    (void)ndata;
+    (void)epi_betar__;
+    (void)softvar_nonloc;
+
     /* Function Body */
     eold = his[1];
 /*       new void ratio */
     extract_(&dstr[4], dt, d__);
     edot = (eold + 1.) * tra_(d__);
     e = eold + edot * *dt;
+/*       group_materi_plasti_hypo_void_ratio_linear -no: exact volume
+         change from the determinant of I + strain increment */
+    if (hypo_void_ratio_exact) {
+	double *g = &dstr[4];
+	double g00 = 1. + g[0], g11 = 1. + g[4], g22 = 1. + g[8];
+	double det = g00 * (g11 * g22 - g[5] * g[7])
+		   - g[3] * (g[1] * g22 - g[2] * g[7])
+		   + g[6] * (g[1] * g[5] - g[2] * g11);
+	e = (eold + 1.) * det - 1.;
+    }
+    if (hypo_minimum_void_ratio_on && e < hypo_minimum_void_ratio)
+	e = hypo_minimum_void_ratio;
     his[1] = e;
+
+/*       Niemunis visco-hypoplasticity: own stress update and tangent */
+    if (*ihypotype == 2) {
+	phic = data[1] * .017453292777777778;
+	if (niemunis_visco_rate(&stress[4], &mmat[40], &his[1], *nhis, d__,
+		*dt, &data[1], *iuseepi, *epi_rho__, *epi_mr__, *epi_mt__,
+		*epi_chi__, *epid, &direction_epi__[4], &re)) {
+	    *error = TRUE_;
+	    return 0;
+	}
+	goto L_mobilised;
+    }
 
 /*       von Wolffersdorff */
     phic = data[1] * .017453292777777778;
@@ -415,8 +644,8 @@ integer *iuseepi, *ihypotype;
 	}
     }
     if (*switch__) {
-	pridbl_("tanpsi", &tanpsi, (ftnlen)6);
-	pridbl_("cos3th", &cos3th, (ftnlen)6);
+	pridbl_("tanpsi", &tanpsi, (long int)6);
+	pridbl_("cos3th", &cos3th, (long int)6);
     }
 
     a = sqrt(3.) * (3. - sin(phic)) / (sqrt(2.) * 2. * sin(phic));
@@ -428,8 +657,8 @@ integer *iuseepi, *ihypotype;
     }
     f = sqrt(tmp) - tanpsi / (sqrt(2.) * 2.);
     if (*switch__) {
-	pridbl_("f     ", &f, (ftnlen)6);
-	pridbl_("a     ", &a, (ftnlen)6);
+	pridbl_("f     ", &f, (long int)6);
+	pridbl_("a     ", &a, (long int)6);
     }
 
     d__1 = -tra_(tcohesion);
@@ -443,9 +672,9 @@ integer *iuseepi, *ihypotype;
     ec = tmp * ec0;
     ed = tmp * ed0;
     if (*switch__) {
-	pridbl_("ei    ", &ei, (ftnlen)6);
-	pridbl_("ec    ", &ec, (ftnlen)6);
-	pridbl_("ed    ", &ed, (ftnlen)6);
+	pridbl_("ei    ", &ei, (long int)6);
+	pridbl_("ec    ", &ec, (long int)6);
+	pridbl_("ed    ", &ed, (long int)6);
     }
 
     d__1 = ec / e;
@@ -497,12 +726,12 @@ integer *iuseepi, *ihypotype;
 
     if( *ihypotype == 1 ) {
         eigen_(&stress[4], eigval);
-        dmob_1 = abs(eigval[0]), dmob_2 = abs(eigval[1]), dmob_1 = max(dmob_1,dmob_2), dmob_2 
+        dmob_1 = abs(eigval[0]), dmob_2 = abs(eigval[1]), dmob_1 = ((dmob_1>dmob_2)?dmob_1:dmob_2), dmob_2 
 	    = abs(eigval[2]);
-        tmax = -max(dmob_1,dmob_2);
-        dmob_1 = abs(eigval[0]), dmob_2 = abs(eigval[1]), dmob_1 = min(dmob_1,dmob_2), dmob_2 
+        tmax = -((dmob_1>dmob_2)?dmob_1:dmob_2);
+        dmob_1 = abs(eigval[0]), dmob_2 = abs(eigval[1]), dmob_1 = ((dmob_1<dmob_2)?dmob_1:dmob_2), dmob_2 
 	    = abs(eigval[2]);
-        tmin = -min(dmob_1,dmob_2);
+        tmin = -((dmob_1<dmob_2)?dmob_1:dmob_2);
         if ((dmob_1 = tmax + tmin, abs(dmob_1)) < 1e-12) 
 	   phimob = phic;
         else 
@@ -519,10 +748,27 @@ integer *iuseepi, *ihypotype;
 	    d__3) / (c2 * a * a + 3. * c1 - sqrt(3.) * a * power_(&d__4, &alfa));
     }
     
+/*       Niemunis extension {Niemunis 2003, eq. 4.211, 4.221, 4.223}:
+         f_d consistent with the lower bound e = e_d */
+    if (hypo_niemunis_on && *ihypotype == 0) {
+	double pt = -tra_(tcohesion) / hs, nm1 = nval - 1., mt, fdbar, fd1;
+	mt = -nval * ed / hs * power_(&pt, &nm1);
+	fdbar = -(sqrt(3.) * (e + 1.) + mt * fb * fe * 3. / sqrt(3.) *
+		(a * a + 3.)) / (mt * fb * fe * 3. * a);
+	d__1 = fabs(e - ed) / (ec - ed);
+	fd1 = power_(&d__1, &alfa);
+	if (e < ed) fd1 = -fd1;
+	fd = fd1;
+	if (fd < 1.) {
+	    d__1 = 1. - fd;
+	    fd += power_(&d__1, &hypo_niemunis_z) * fdbar;
+	}
+    }
+
     if (*switch__) {
-	pridbl_("fb    ", &fb, (ftnlen)6);
-	pridbl_("fe    ", &fe, (ftnlen)6);
-	pridbl_("fd    ", &fd, (ftnlen)6);
+	pridbl_("fb    ", &fb, (long int)6);
+	pridbl_("fe    ", &fe, (long int)6);
+	pridbl_("fd    ", &fd, (long int)6);
     }
 
     abc_(that, that, work1);
@@ -545,11 +791,49 @@ integer *iuseepi, *ihypotype;
     abdyadic_(that, that, lwork);
     mul_(lwork, &tmp, &c__81);
     add_(lwork, lmat, lmat, &c__81);
+
+/*        Niemunis extension: b2 {I - 1/3 1 1} with b2 from the Poisson
+          ratio nu at the hydrostatic axis {Niemunis 2003, eq. 4.183} */
+    if (hypo_niemunis_on && *ihypotype == 0) {
+	double b2 = (1. + a * a / 3. + a / sqrt(3.)) * (1. - 2. * hypo_niemunis_nu)
+		/ (1. + hypo_niemunis_nu) - 1.;
+	for (i__ = 1; i__ <= 3; ++i__) {
+	    for (j = 1; j <= 3; ++j) {
+		for (k = 1; k <= 3; ++k) {
+		    for (l = 1; l <= 3; ++l) {
+			tmp = 0.;
+			if (i__ == k && j == l) tmp += 1.;
+			if (i__ == j && k == l) tmp -= 1. / 3.;
+			lmat[i__ + (j + (k + l * 3) * 3) * 3 - 40] += fac * b2 * tmp;
+		    }
+		}
+	    }
+	}
+    }
     
 /*        nonlinear */
     tmp = fac * fd * a * f;
     add_(that, thatdev, nmat, &c__9);
     mul_(nmat, &tmp, &c__9);
+
+/*        Niemunis extension: the flow rule m stays unchanged {Niemunis
+          2003, below eq. 4.183}, so N = -fd Y L:m follows the b2 term of
+          L: N := N + b2 dev{Lhat^-1 : N}, Lhat = F^2 I + a^2 That That */
+    if (hypo_niemunis_on && *ihypotype == 0) {
+	double b2 = (1. + a * a / 3. + a / sqrt(3.)) * (1. - 2. * hypo_niemunis_nu)
+		/ (1. + hypo_niemunis_nu) - 1.;
+	double tn = 0., tt = 0., x[9], trx;
+	for (i__ = 0; i__ < 9; ++i__) {
+	    tn += that[i__] * nmat[i__];
+	    tt += that[i__] * that[i__];
+	}
+	for (i__ = 0; i__ < 9; ++i__)
+	    x[i__] = (nmat[i__] - a * a * that[i__] * tn / (f * f + a * a * tt))
+		/ (f * f);
+	trx = (x[0] + x[4] + x[8]) / 3.;
+	x[0] -= trx; x[4] -= trx; x[8] -= trx;
+	for (i__ = 0; i__ < 9; ++i__) nmat[i__] += b2 * x[i__];
+    }
 
 /*        total stress increment and material stiffness */
     if (*iuseepi == 1) {
@@ -630,19 +914,20 @@ integer *iuseepi, *ihypotype;
     mul_(inc_stress__, dt, &c__9);
     add_(&stress[4], inc_stress__, &stress[4], &c__9);
     if (*switch__) {
-	privec_("stress", &stress[4], &c__9, (ftnlen)6);
+	privec_("stress", &stress[4], &c__9, (long int)6);
     }
 
+L_mobilised:
 /*       mobilised friction angle for postprocessing */
     eigen_(&stress[4], eigval);
 /* Computing MAX */
-    d__1 = abs(eigval[0]), d__2 = abs(eigval[1]), d__1 = max(d__1,d__2), d__2 
+    d__1 = abs(eigval[0]), d__2 = abs(eigval[1]), d__1 = ((d__1>d__2)?d__1:d__2), d__2 
 	    = abs(eigval[2]);
-    tmax = -max(d__1,d__2);
+    tmax = -((d__1>d__2)?d__1:d__2);
 /* Computing MIN */
-    d__1 = abs(eigval[0]), d__2 = abs(eigval[1]), d__1 = min(d__1,d__2), d__2 
+    d__1 = abs(eigval[0]), d__2 = abs(eigval[1]), d__1 = ((d__1<d__2)?d__1:d__2), d__2 
 	    = abs(eigval[2]);
-    tmin = -min(d__1,d__2);
+    tmin = -((d__1<d__2)?d__1:d__2);
     if ((d__1 = tmax + tmin, abs(d__1)) < 1e-12) {
 	phimob = phic;
     } else {
@@ -652,22 +937,21 @@ integer *iuseepi, *ihypotype;
     }
     his[3] = phimob;
 
-/*       effective stiffness */
-    effective_stiffness__ = normvec_(&mmat[40], &c__81);
+    /*       effective stiffness */
     /*his[4] = effective_stiffness__;*/
     his[4] = re;
 
 L1000:
 
-    ;
+    return 0;
 } /* sigma_ */
 
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int abc_(a, b, c__)
-doublereal *a, *b, *c__;
+double *a, *b, *c__;
 {
-    static integer idi, jdi, kdi;
+    long int idi, jdi, kdi;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -691,14 +975,15 @@ doublereal *a, *b, *c__;
 /* L30: */
     }
 
+    return 0;
 } /* abc_ */
 
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int a4bc_(a, b, c__)
-doublereal *a, *b, *c__;
+double *a, *b, *c__;
 {
-    static integer idi, jdi, kdi, ldi;
+    long int idi, jdi, kdi, ldi;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -726,19 +1011,20 @@ doublereal *a, *b, *c__;
 /* L40: */
     }
 
+    return 0;
 } /* a4bc_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int add_(a, b, c__, n)
-doublereal *a, *b, *c__;
-integer *n;
+double *a, *b, *c__;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -755,19 +1041,20 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* add_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int addfac_(tot, inc, factor, n)
-doublereal *tot, *inc, *factor;
-integer *n;
+double *tot, *inc, *factor;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -783,19 +1070,20 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* addfac_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int copy_(a, b, n)
-doublereal *a, *b;
-integer *n;
+double *a, *b;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    long int i__;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -811,16 +1099,16 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* copy_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int dev_(a, adev)
-doublereal *a, *adev;
+double *a, *adev;
 {
-    static integer idi, jdi;
-    extern doublereal tra_();
-    static doublereal tmp;
+    long int idi, jdi;
+    extern double tra_();
 
 /* ------------------------------------------------------------------------------ */
 
@@ -831,7 +1119,6 @@ doublereal *a, *adev;
     a -= 4;
 
     /* Function Body */
-    tmp = tra_(&a[4]);
     for (idi = 1; idi <= 3; ++idi) {
 	for (jdi = 1; jdi <= 3; ++jdi) {
 	    adev[idi + jdi * 3] = a[idi + jdi * 3];
@@ -841,15 +1128,16 @@ doublereal *a, *adev;
 /* L20: */
     }
 
+    return 0;
 } /* dev_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int extract_(dstr, dt, d__)
-doublereal *dstr, *dt, *d__;
+double *dstr, *dt, *d__;
 {
     /* System generated locals */
-    doublereal d__1;
+    double d__1;
 
     /* Local variables */
     extern /* Subroutine */ int copy_(), mul_();
@@ -867,19 +1155,20 @@ doublereal *dstr, *dt, *d__;
     d__1 = (double)1. / *dt;
     mul_(&d__[4], &d__1, &c__9);
 
+    return 0;
 } /* extract_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int minus_(a, b, c__, n)
-doublereal *a, *b, *c__;
-integer *n;
+double *a, *b, *c__;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -896,19 +1185,20 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* minus_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int mul_(a, scal, n)
-doublereal *a, *scal;
-integer *n;
+double *a, *scal;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -923,15 +1213,16 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* mul_ */
 
 
 /* ----------------------------------------------------------------------------- */
-logical negativ_(x)
-doublereal *x;
+long int negativ_(x)
+double *x;
 {
     /* System generated locals */
-    logical ret_val;
+    long int ret_val;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -947,19 +1238,19 @@ doublereal *x;
 
 
 /* ------------------------------------------------------------------------------ */
-doublereal normmat_(a)
-doublereal *a;
+double normmat_(a)
+double *a;
 {
     /* System generated locals */
-    doublereal ret_val;
+    double ret_val;
 
     /* Builtin functions */
     double sqrt();
 
     /* Local variables */
-    static doublereal work[9]	/* was [3][3] */;
+    double work[9]	/* was [3][3] */;
     extern /* Subroutine */ int abc_();
-    extern doublereal tra_();
+    extern double tra_();
 
 /* ------------------------------------------------------------------------------ */
 
@@ -977,19 +1268,19 @@ doublereal *a;
 
 
 /* ------------------------------------------------------------------------------ */
-doublereal normvec_(a, n)
-doublereal *a;
-integer *n;
+double normvec_(a, n)
+double *a;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
-    doublereal ret_val;
+    long int i__1;
+    double ret_val;
 
     /* Builtin functions */
     double sqrt();
 
     /* Local variables */
-    static integer i__;
+    long int i__;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -1011,11 +1302,11 @@ integer *n;
 
 
 /* ----------------------------------------------------------------------------- */
-logical null_array__(x)
-doublereal *x;
+long int null_array__(x)
+double *x;
 {
     /* System generated locals */
-    logical ret_val;
+    long int ret_val;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -1031,19 +1322,16 @@ doublereal *x;
 
 
 /* ------------------------------------------------------------------------------ */
-doublereal power_(x, y)
-doublereal *x, *y;
+double power_(x, y)
+double *x, *y;
 {
     /* System generated locals */
-    doublereal ret_val;
-
-    /* Builtin functions */
-    double pow_dd();
+    double ret_val;
 
 /* ------------------------------------------------------------------------------ */
 
 
-    ret_val = pow_dd(x, y);
+    ret_val = pow(*x, *y);
 
     return ret_val;
 } /* power_ */
@@ -1052,91 +1340,64 @@ doublereal *x, *y;
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int pridbl_(label, a, label_len)
 char *label;
-doublereal *a;
-ftnlen label_len;
+double *a;
+long int label_len;
 {
-    /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-
-    /* Fortran I/O blocks */
-    static cilist io___94 = { 0, 6, 0, 0, 0 };
 
 
 /* ------------------------------------------------------------------------------ */
 
 
-    s_wsle(&io___94);
-    do_lio(&c__9, &c__1, label, (ftnlen)6);
-    do_lio(&c__5, &c__1, (char *)&(*a), (ftnlen)sizeof(doublereal));
-    e_wsle();
+    printf(" %.*s %.12g\n", (int)label_len, label, *a);
 
+    return 0;
 } /* pridbl_ */
 
 
 /* Subroutine */ int priint_(label, a, label_len)
 char *label;
-integer *a;
-ftnlen label_len;
+long int *a;
+long int label_len;
 {
-    /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-
-    /* Fortran I/O blocks */
-    static cilist io___95 = { 0, 6, 0, 0, 0 };
 
 
 /* ------------------------------------------------------------------------------ */
 
 
-    s_wsle(&io___95);
-    do_lio(&c__9, &c__1, label, (ftnlen)6);
-    do_lio(&c__3, &c__1, (char *)&(*a), (ftnlen)sizeof(integer));
-    e_wsle();
+    printf(" %.*s %ld\n", (int)label_len, label, (long)*a);
 
+    return 0;
 } /* priint_ */
 
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int pritxt_(label, label_len)
 char *label;
-ftnlen label_len;
+long int label_len;
 {
-    /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
-
-    /* Fortran I/O blocks */
-    static cilist io___96 = { 0, 6, 0, 0, 0 };
 
 
 /* ------------------------------------------------------------------------------ */
 
 
-    s_wsle(&io___96);
-    do_lio(&c__9, &c__1, label, (ftnlen)6);
-    e_wsle();
+    printf(" %.*s\n", (int)label_len, label);
 
+    return 0;
 } /* pritxt_ */
 
 
 /* ------------------------------------------------------------------------------ */
 /* Subroutine */ int privec_(label, a, n, label_len)
 char *label;
-doublereal *a;
-integer *n;
-ftnlen label_len;
+double *a;
+long int *n;
+long int label_len;
 {
     /* System generated locals */
-    integer i__1;
-
-    /* Builtin functions */
-    integer s_wsle(), do_lio(), e_wsle();
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
-
-    /* Fortran I/O blocks */
-    static cilist io___97 = { 0, 6, 0, 0, 0 };
-    static cilist io___99 = { 0, 6, 0, 0, 0 };
+    long int i__;
 
 
 /* ------------------------------------------------------------------------------ */
@@ -1146,26 +1407,23 @@ ftnlen label_len;
     --a;
 
     /* Function Body */
-    s_wsle(&io___97);
-    do_lio(&c__9, &c__1, label, (ftnlen)6);
-    e_wsle();
+    printf(" %.*s:", (int)label_len, label);
     i__1 = *n;
     for (i__ = 1; i__ <= i__1; ++i__) {
-	s_wsle(&io___99);
-	do_lio(&c__5, &c__1, (char *)&a[i__], (ftnlen)sizeof(doublereal));
-	e_wsle();
-/* L10: */
+	printf(" %.12g", a[i__]);
     }
+    printf("\n");
 
+    return 0;
 } /* privec_ */
 
 
 /* ------------------------------------------------------------------------------ */
-doublereal tra_(a)
-doublereal *a;
+double tra_(a)
+double *a;
 {
     /* System generated locals */
-    doublereal ret_val;
+    double ret_val;
 
 /* ------------------------------------------------------------------------------ */
 
@@ -1183,14 +1441,14 @@ doublereal *a;
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int zero_(a, n)
-doublereal *a;
-integer *n;
+double *a;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
+    long int i__1;
 
     /* Local variables */
-    static integer i__;
+    long int i__;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1205,21 +1463,22 @@ integer *n;
 /* L10: */
     }
 
+    return 0;
 } /* zero_ */
 
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int eigen_(sigmat, eigval)
-doublereal *sigmat, *eigval;
+double *sigmat, *eigval;
 {
     /* Builtin functions */
     double sqrt(), acos(), cos();
 
     /* Local variables */
-    static doublereal bigr, p, q, r__, s, t;
+    double bigr, p, q, r__, s, t;
     extern /* Subroutine */ int invar_();
-    static doublereal i1, i2, i3, y0, y1, y2, phi, inv[3], tmp;
+    double i1, i2, i3, y0, y1, y2, phi, inv[3], tmp;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1264,12 +1523,13 @@ doublereal *sigmat, *eigval;
     eigval[2] = y1 - r__ / 3.;
     eigval[3] = y2 - r__ / 3.;
 
+    return 0;
 } /* eigen_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int invar_(sigmat, inv)
-doublereal *sigmat, *inv;
+double *sigmat, *inv;
 {
     extern /* Subroutine */ int determ_();
 
@@ -1288,12 +1548,13 @@ doublereal *sigmat, *inv;
 	    sigmat[6] * sigmat[10];
     determ_(&sigmat[4], &inv[3]);
 
+    return 0;
 } /* invar_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int determ_(a, det)
-doublereal *a, *det;
+double *a, *det;
 {
 /* ----------------------------------------------------------------------------- */
 
@@ -1306,13 +1567,14 @@ doublereal *a, *det;
     *det = a[4] * (a[8] * a[12] - a[9] * a[11]) - a[7] * (a[5] * a[12] - a[6] 
 	    * a[11]) + a[10] * (a[5] * a[9] - a[6] * a[8]);
 
+    return 0;
 } /* determ_ */
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int unity4_(a)
-doublereal *a;
+double *a;
 {
-    static integer idi, jdi, kdi, ldi;
+    long int idi, jdi, kdi, ldi;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1340,14 +1602,15 @@ doublereal *a;
 /* L100: */
     }
 
+    return 0;
 } /* unity4_ */
 
 
 /* ----------------------------------------------------------------------------- */
 /* Subroutine */ int abdyadic_(a, b, c__)
-doublereal *a, *b, *c__;
+double *a, *b, *c__;
 {
-    static integer idi, jdi, kdi, ldi;
+    long int idi, jdi, kdi, ldi;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -1374,19 +1637,20 @@ doublereal *a, *b, *c__;
 /* L100: */
     }
 
+    return 0;
 } /* abdyadic_ */
 
 /* ----------------------------------------------------------------------------- */
-doublereal inpro_(a, b, n)
-doublereal *a, *b;
-integer *n;
+double inpro_(a, b, n)
+double *a, *b;
+long int *n;
 {
     /* System generated locals */
-    integer i__1;
-    doublereal ret_val;
+    long int i__1;
+    double ret_val;
 
     /* Local variables */
-    static integer i__;
+    long int i__;
 
 /* ------------------------------------------------------------------------------ */
 

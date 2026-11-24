@@ -505,6 +505,7 @@ void tendons( long int element, long int gr, long int nnol,
       ntendon, VERSION_NORMAL, GET_AND_CHECK );
     db( ELEMENT_TENDON_STRESS, element, idum, new_element_tendon_stress, 
       ntendon, VERSION_NORMAL, GET_AND_CHECK );
+    memory = materi_memory_default();
     db( GROUP_MATERI_MEMORY, gr, &memory, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
     array_set( tendon_force, 0., ndim*ndim );
@@ -563,7 +564,8 @@ void tendons( long int element, long int gr, long int nnol,
         exit(TN_EXIT_STATUS);
       }
       else {
-        assert( memory==-UPDATED_WITHOUT_ROTATION );
+        assert( memory==-UPDATED_WITHOUT_ROTATION || memory==-UPDATED_LINEAR ||
+          memory==-TOTAL_LINEAR || memory==-UPDATED_JAUMANN );
         array_move( direction, tmp_vec, MDIM );
       }
       for ( idim=0; idim<ndim; idim++ ) {

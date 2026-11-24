@@ -1,0 +1,39 @@
+( F5 T3 C114: group_materi_plasti_bounda on group_materi_plasti_mohr_coul_direct
+  without a plane normal and without a _wall record: phi, c and phi_flow
+  are reduced by the default factor 2/3, manual 6.687. Single quad4 of
+  mohr_coul_direct_mpc_total1 with c 0.02; every element is on the wall.
+  sigxy 0.0799210 = Professional 02-08-2026, equal to the explicit
+  reduced data 0.0666667 0.0133333; before C114 the GNU ignored the
+  factor on this path: 0.119733. )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_strain_total
+materi_stress
+materi_plasti_f
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+group_type 0  -materi
+group_materi_elasti_young 0  1.e3
+group_materi_plasti_tension_direct 0  0.0
+group_materi_plasti_mohr_coul_direct 0  0.1 0.02 0.0
+bounda_dof 0  -ra 1 2 -ra -velx -vely
+bounda_dof 1  3 -velx
+bounda_time 1  1.0
+bounda_force 10  3 -vely
+bounda_time  10  -1.0
+mpc_node_number 10  4 -velx 3 -velx
+mpc_node_number 20  4 -vely 3 -vely
+post_calcul -materi_stress -prival
+print_filter 10 -node_dof -all -sigxx -sigxy -sigyy
+group_materi_plasti_bounda 0 0
+control_timestep 0  1.e-3 1.
+control_print 0  -node_dof -node_dof_calcul
+target_item 0 -node_dof 1 -sigxy
+target_value 0 0.0799210 1.e-6
+end_data

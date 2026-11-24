@@ -1,0 +1,46 @@
+( F5 T5 U2: slide_damping (manual 6.1045), viscous damping only.
+  The top is pressed down (vely -0.01) and dragged (velx 1) over the
+  bottom slide plane, which has slide_damping 100 10 and no stiffness.
+  GNU: the force on a node is -cn*vn*n - ct*vt (v the node velocity), so
+  node_slide_force slot 0 = cn*vn and slot 1 = -ct*|vt|.
+  DELIBERATE DIVERGENCE SLIDE-DAMPING-VISCOUS: the Professional 02-08-2026
+  gives c*u/dt (u the total slide displacement), a spring of stiffness c/dt.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_stress
+end_initia
+start_define
+  bottom geometry_line 1
+end_define
+bottom 0. 0. 1. 0. 1.e-4
+start_define
+  top geometry_line 2
+end_define
+top 0. 1. 1. 1. 1.e-4
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+group_type 0  -materi
+group_materi_elasti_young 0  1.0
+bounda_dof     0  -top -vely
+bounda_time    0  0. -1.e-2 1.e10 -1.e-2
+bounda_dof     1  -top -velx
+bounda_time    1  0. 1. 1.e10 1.
+slide_geometry 10  -bottom
+slide_damping 10  100. 10.
+control_timestep 0  1.e-2 0.5
+( node 1: vely 1.21551544957e-3, velx 1.24127634871e-2 at t = 0.5 )
+target_item  0  -node_dof 1 1
+target_value 0  1.21551544957e-3 1.e-12
+target_item  1  -node_slide_force 1 0
+target_value 1  1.21551544957e-1 1.e-10
+target_item  2  -node_dof 1 0
+target_value 2  1.24127634871e-2 1.e-12
+target_item  3  -node_slide_force 1 1
+target_value 3  -1.24127634871e-1 1.e-10
+end_data

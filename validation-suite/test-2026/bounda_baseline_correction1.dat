@@ -1,0 +1,40 @@
+( bounda_baseline_correction time_start time_end (manual 6.19), F5 T5 U9.
+  The prescribed acceleration a(t) = 1 on [0,1] gets the parabola
+  p(tau) = c0 + c1*tau + c2*tau^2, tau = (t - 0)/(1 - 0), fitted by least
+  squares of the velocities of the time steps: p = -1, the velocity stays 0
+  up to t = 1; after time_end the acceleration is not corrected, so
+  v(2) = 0.1*(0.9+0.8+...+0) = 0.45. The velocity record of node 2 is not
+  an acceleration and is not corrected.
+  The Professional 02-08-2026 writes the same parameters (-1 0 0) but adds
+  them to the bounda_time points: DIVERGENCES BASELINE-CORRECTION-SIGNAL. )
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof  10  1 -accx
+bounda_time 10  0. 1.  0.5 1.  1. 1.  2. 0.
+bounda_dof  11  2 -velx
+bounda_time 11  0. 1.  2. 1.
+bounda_baseline_correction 0. 1.
+control_timestep 10  0.1 2.
+target_item  0  -bounda_baseline_correction_parameters 10 0
+target_value 0  -1. 1.e-10
+target_item  1  -bounda_baseline_correction_parameters 10 1
+target_value 1  0. 1.e-10
+target_item  2  -bounda_baseline_correction_parameters 10 2
+target_value 2  0. 1.e-10
+target_item  3  -node_dof 1 -velx
+target_value 3  0.45 1.e-10
+target_item  4  -node_dof 2 -velx
+target_value 4  1. 1.e-10
+end_data

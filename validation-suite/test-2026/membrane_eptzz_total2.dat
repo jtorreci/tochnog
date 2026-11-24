@@ -1,0 +1,50 @@
+(F4 T6f [dt 0.1], class A divergence MEMBRANE-EPTZZ, owner decision
+ 2026-10-12. Single quad4, von Mises 24.3 hardening to 248.3 at kap 1
+ [slope 224], E 7000, nu 0.2, -total_linear, group_materi_membrane
+ [plane stress], uniaxial stretch eptxx 0.02 at t 1.
+ Tochnog kap = sqrt[epp:epp/2] = sqrt[3]/2 eppxx. Analytic: eppxx =
+ 0.0165286 / [1 + 224 sqrt[3]/2 / 7000] = 0.0160829, sigxx = 24.3 +
+ 224 kap = 27.4199; Prandtl-Reuss flow under uniaxial stress gives
+ eppyy = eppzz = -eppxx/2 = -0.0080414 [eppzz = -[eppxx + eppyy]], so
+ eptzz = -nu sigxx/E + eppzz = -0.0007834 - 0.0080414 = -0.0088249.
+ GNU stores eptzz = accumulated elastic + plastic zz strain [manual 6.685].
+ GNU eptzz -0.0072102: the same eppyy/eppzz split error as total1, larger
+ at dt 0.1 [-0.009654 / -0.006426, BACKLOG C69]. Tolerance 2e-3 guards
+ the accumulation [total, not last step], not the split accuracy: the
+ Professional 02-08-2026 stores only the last step's zz correction,
+ eptzz -7.9e-4 [about the elastic part -nu sigxx/E alone], rejected.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+materi_strain_plasti
+materi_plasti_kappa
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1 -quad4 1 2 3 4
+bounda_dof 0  -ra 1 3 -ra -velx
+bounda_time 0  0 0 1.e6 0
+bounda_dof 1  -ra 2 4 -ra -velx
+bounda_time 1  0 0.02 1 0.02 1.000001 0 1.e6 0
+bounda_dof 2  -ra 1 2 -ra -vely
+bounda_time 2  0 0 1.e6 0
+group_type 0  -materi
+group_materi_elasti_young   0  7.e3
+group_materi_elasti_poisson 0  0.2
+group_materi_memory 0  -total_linear
+group_materi_membrane 0 -yes
+group_materi_plasti_vonmises 0  24.3
+dependency_item 1  -group_materi_plasti_vonmises 0 -kap 2
+dependency_diagram 1  0. 1.  24.3 248.3
+control_timestep 10  1.e-1 1.
+post_point 1  0.5 0.5
+target_item 1 -post_point_dof 1 -eptzz
+target_value 1 -0.0088249 2.e-3
+target_item 2 -post_point_dof 1 -sigxx
+target_value 2 27.4199 0.05
+end_data

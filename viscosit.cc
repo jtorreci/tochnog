@@ -19,7 +19,7 @@
 
 #include "tochnog.h"
 
-void viscous_stress( long int element, long int gr, double user_data[], 
+void viscous_stress( long int element, long int gr, double user_data[],
   double unknowns[], double grad_unknowns[], double new_sig[],
   double &viscosity, double &viscosity_heatgeneration )
 
@@ -27,6 +27,14 @@ void viscous_stress( long int element, long int gr, double user_data[],
   long int idim=0, jdim=0, ldum=0, group_materi_viscosity_user=-NO,
     group_materi_viscosity_heatgeneration=-NO;
   double ddum[1], D[MDIM*MDIM];
+
+  // control_materi_viscosity_apply -no (manual Professional 6.154):
+  // ignore any viscosity in the input file for these timesteps
+  if ( control_materi_gate_off( CONTROL_MATERI_VISCOSITY_APPLY ) ) {
+    viscosity = 0.;
+    viscosity_heatgeneration = 0.;
+    return;
+  }
 
   get_group_data( GROUP_MATERI_VISCOSITY, gr, element,
     unknowns, &viscosity, ldum, GET_IF_EXISTS );

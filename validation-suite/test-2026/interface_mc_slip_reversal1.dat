@@ -1,0 +1,79 @@
+(F4 T6d C52, interface Mohr-Coulomb slip reversal, quasi-static.
+ Interface element 3 (kt = kn = 1000, c = 5, phi = 0) between two
+ quad4 blocks; the right block is pushed in x (normal force -10) and
+ slid in y: vely 0.1 for 5 steps (elastic trial 10 per step -> slides
+ at the friction limit 5), then reversed, vely -0.002 for 5 steps
+ (elastic unloading -0.2 per step). Analytic shear 5 - 5*0.2 = 4.0;
+ Professional 02-08-2026: 4.000000083. GNU before the fix (history =
+ elastic trial kt*gamma_total, no memory of the plastic slip): 5.0.)
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_strain_total
+materi_stress
+end_initia
+node  1  0 0
+node  2  1 0
+node  3  0 1
+node  4  1 1
+node  6  3 0
+node  8  3 1
+node  9  1 0
+node  10  1 1
+element  1  -quad4 1 2 3 4
+element  2  -quad4 9 6 10 8
+element  3  -quad4 2 4 9 10
+element_group  1  1
+element_group  2  2
+element_group  3  10
+group_type  1  -materi
+group_type  2  -materi
+group_type  10  -materi
+group_interface  10  -yes
+group_interface_materi_elasti_stiffness  10  1000 1000
+group_interface_materi_plasti_mohr_coul_direct  10  0 5 0
+group_materi_elasti_poisson  1  0
+group_materi_elasti_poisson  2  0
+group_materi_elasti_young  1  1000
+group_materi_elasti_young  2  1000
+group_materi_memory  1  -updated_linear
+group_materi_memory  2  -updated_linear
+bounda_dof  0  1 -velx
+bounda_time  0  0 0 100 0
+bounda_dof  1  1 -vely
+bounda_time  1  0 0 100 0
+bounda_dof  2  2 -velx
+bounda_time  2  0 0 100 0
+bounda_dof  3  2 -vely
+bounda_time  3  0 0 100 0
+bounda_dof  4  3 -velx
+bounda_time  4  0 0 100 0
+bounda_dof  5  3 -vely
+bounda_time  5  0 0 100 0
+bounda_dof  6  4 -velx
+bounda_time  6  0 0 100 0
+bounda_dof  7  4 -vely
+bounda_time  7  0 0 100 0
+bounda_dof  8  6 -velx
+bounda_time  8  0 -0.01 100 -0.01
+bounda_dof  9  6 -vely
+bounda_time  9  0 0.1 0.55 0.1 0.56 -0.002 100 -0.002
+bounda_dof  10  8 -velx
+bounda_time  10  0 -0.01 100 -0.01
+bounda_dof  11  8 -vely
+bounda_time  11  0 0.1 0.55 0.1 0.56 -0.002 100 -0.002
+bounda_dof  12  9 -velx
+bounda_time  12  0 -0.01 100 -0.01
+bounda_dof  13  9 -vely
+bounda_time  13  0 0.1 0.55 0.1 0.56 -0.002 100 -0.002
+bounda_dof  14  10 -velx
+bounda_time  14  0 -0.01 100 -0.01
+bounda_dof  15  10 -vely
+bounda_time  15  0 0.1 0.55 0.1 0.56 -0.002 100 -0.002
+control_timestep  0  0.1 1
+target_item  0  -element_interface_intpnt_stress 3 1
+target_value  0  4.0 1.e-4
+target_item  1  -element_interface_force_tang 3 0
+target_value  1  4.0 1.e-4
+end_data

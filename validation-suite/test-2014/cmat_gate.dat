@@ -1,0 +1,64 @@
+( F4 T6f K21 WU2 2026-10-12: rewritten as a well-posed simple shear.
+  '-ra 1 4 -ra' is a LIST (nodes 1 and 4), not a range (Professional
+  user manual "Ranges"), so vely was fixed only on the left edge: the
+  element rotated rigidly and the old target sigxy 3.20774 +- 2 was
+  met by chance by the convected nodal output (GNU 1.532; with the
+  group_materi_stokes default -yes of K21 WU2 0.921; the Professional
+  gives sigxy 0). Now vely is fixed at all four nodes: shear rate 2,
+  G = 500, 100 of shear stress per time step of 0.1. The gate is kept:
+  control_materi_plasti_tension_apply 1 -no switches the principal
+  tension cap (tension_direct 1) off in the two steps of record 1.
+  Analytic: step 1 capped (sig1 1, sig2 -100: sigxy 50.5, sigxx
+  -49.5), steps 2-3 elastic (+100 each): sigxy 250.5, sigxx -49.5.
+  Without the gate every step is capped: sigxy 150.5, sigxx -149.5.
+  Professional 02-08-2026 (-updated_linear translation): exactly
+  250.5 / -49.5 (150.5 / -149.5 without the gate). GNU convected nodal
+  output 250.4989 / -49.4998: tolerance 0.01. )
+( K03 2026-10-06: explicit convection_apply -yes. The target was
+  calibrated on the legacy GNU default -yes; the default is now -no
+  as in the Professional manual 6.395. )
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_stress
+number_of_integration_points 4
+end_initia
+
+bounda_time  0  0 0 100 0
+bounda_time  1  0 -1 100 -1
+bounda_time  2  0 1 100 1
+bounda_unknown  0  -ra 1 2 3 4 -ra -vely
+bounda_unknown  1  -ra 1 2 -ra -velx
+bounda_unknown  2  -ra 3 4 -ra -velx
+control_materi_plasti_tension_apply  1  -no
+control_timestep  0  0.1 0.1
+control_timestep  1  0.1 0.2
+element  1  -quad4 1 2 3 4
+element_group  1  0
+group_materi_density  0  1
+group_materi_elasti_poisson  0  0
+group_materi_elasti_young  0  1000
+group_materi_memory  0  -updated_without_rotation
+group_materi_plasti_tension_direct  0  1
+group_type  0  -materi
+node  1  0 0
+node  2  1 0
+node  3  1 1
+node  4  0 1
+options_mesh   -fixed_in_space -fixed_in_space
+options_processors   1
+options_stabilization   -static
+post_point  1  0.5 0.5
+target_item  1  -post_point_dof 1 -sigxy
+target_value  1  250.5 0.01
+target_item  2  -post_point_dof 1 -sigxx
+target_value  2  -49.5 0.01
+node_dof  1  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  2  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  3  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+node_dof  4  0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+convection_apply -yes
+end_data

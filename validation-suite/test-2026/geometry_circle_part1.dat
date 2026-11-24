@@ -1,0 +1,54 @@
+(
+F5 T4 U2: geometry_circle_part {6.515} centre 0,0, angles 0 to 0.8 rad,
+radius 2, tolerance 0.25: nodes 3 {2,0} and 7 {2,1}; 13 {0,2} and 10
+{1,2} are outside the angle range.
+Mesh: 3x3 quad4 on [0,3]x[0,3], nodes 1-16 row by row {node 1 at 0,0,
+node 4 at 3,0}. build_safe checks node_geometry_present, equal to the
+Professional 02-08-2026 on the same input.
+)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_elasti
+materi_strain_total
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 2 0
+node 4 3 0
+node 5 0 1
+node 6 1 1
+node 7 2 1
+node 8 3 1
+node 9 0 2
+node 10 1 2
+node 11 2 2
+node 12 3 2
+node 13 0 3
+node 14 1 3
+node 15 2 3
+node 16 3 3
+element 1 -quad4 1 2 5 6
+element 2 -quad4 2 3 6 7
+element 3 -quad4 3 4 7 8
+element 4 -quad4 5 6 9 10
+element 5 -quad4 6 7 10 11
+element 6 -quad4 7 8 11 12
+element 7 -quad4 9 10 13 14
+element 8 -quad4 10 11 14 15
+element 9 -quad4 11 12 15 16
+element_geometry 1 10
+element_geometry 2 10
+element_geometry 5 20
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+geometry_circle_part 1 0 0 0 0.8 2 0.25
+print_node_geometry_present -yes
+bounda_dof 0 1 -velx -vely
+bounda_dof 1 2 -vely
+control_timestep 0 1. 1.
+end_data

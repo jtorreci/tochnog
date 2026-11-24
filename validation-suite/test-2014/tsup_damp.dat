@@ -1,0 +1,52 @@
+( tsup_damp: damping (6.1068) + factor (6.1075): prescribed u=v=(1e-4,-1e-3), k=(1000,100), c=(200,100), spatial factor 0.5 on stiffnesses. Per unit: fx = -(0.5*100*1e-4 + 100*1e-4) = -0.015; fy = +(0.5*1000*1e-3 + 200*1e-3) = +0.7. Node: (-0.0075, +0.35). )
+
+echo -no
+number_of_space_dimensions 2
+derivatives
+materi_velocity
+materi_velocity_integrated
+materi_displacement
+materi_strain_total
+materi_stress
+end_initia
+
+options_mesh -fixed_in_space -fixed_in_space
+options_convection -no
+options_inertia -no
+
+node 1  0. 0.
+node 2  1. 0.
+node 3  1. 1.
+node 4  0. 1.
+
+element 1  -quad4 1 2 3 4
+element_group 1 0
+
+group_type 0  -materi
+group_materi_elasti_young 0  1.e7
+group_materi_elasti_poisson 0  0.0
+group_materi_memory 0  -total_linear
+
+node_support_edge_normal_force 1  0. 0.
+node_support_edge_normal_force 2  0. 0.
+node_support_edge_normal_plasti_tension_status 1  0
+node_support_edge_normal_plasti_tension_status 2  0
+
+support_edge_normal 1  1000. 100.
+support_edge_normal_geometry 1  1 2
+support_edge_normal_element_side 1  1 1
+support_edge_normal_damping 1  200. 100.
+support_edge_normal_factor 1  0.5
+
+bounda_unknown 0  -ra 1 2 -ra -velx
+bounda_time    0  0. 0.0001 100. 0.0001
+bounda_unknown 1  -ra 1 2 -ra -vely
+bounda_time    1  0. -0.001 100. -0.001
+
+control_timestep 1  1. 1.0
+
+target_item 10  -node_support_edge_normal_force 1 0
+target_value 10  -0.0075 1.e-4
+target_item 20  -node_support_edge_normal_force 2 1
+target_value 20  0.35 1.e-4
+end_data

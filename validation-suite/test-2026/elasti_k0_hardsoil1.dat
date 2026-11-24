@@ -1,0 +1,66 @@
+(group_materi_elasti_k0 with group_materi_elasti_hardsoil, control index 1
+ (manual Pro 6.650). m = 0 (constant E), nu50 = nuur = 0.2, high cohesion
+ (elastic). Pro 02-08-2026 measured: the K0 poisson replaces nu50/nuur ->
+ sigxx = K0*sigyy = -0.05, sigyy -0.5 (before: sigxx = nu/(1-nu)*sigyy
+ = -0.125).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_velocity_integrated
+materi_strain_total
+materi_strain_plasti
+materi_plasti_kappa
+materi_plasti_hardsoil_history
+materi_stress
+materi_strain_plasti_hardsoil
+end_initia
+
+start_define
+  eps_geometry 1.e-4
+end_define
+
+start_define
+  bottom geometry_line 1
+end_define
+bottom 0. 0. 1. 0. 1.e-4
+
+start_define
+  left geometry_line 2
+end_define
+left 0. 0. 0. 1. 1.e-4
+
+start_define
+  right geometry_line 3
+end_define
+right 1. 0. 1. 1. 1.e-4
+
+node 1  0 0
+node 2  1 0
+node 3  0 1
+node 4  1 1
+element 1  -quad4 1 2 3 4
+
+group_type                   0  -materi
+group_materi_memory          0   -updated
+group_materi_density         0   1.
+group_materi_elasti_hardsoil 0 1.e6 1. 0.2 0. 1.e6 1. 0.2
+group_materi_elasti_k0       0   0.1
+group_materi_plasti_hardsoil 0 0.523599 1000. 0. 0.9
+
+bounda_dof 10  -bottom -vely
+bounda_dof 20  -left -velx
+bounda_dof 30  -right -velx
+
+force_gravity 0. -1.
+
+post_point 1 0.5 0.5
+
+control_timestep             1  1. 1.
+control_materi_elasti_k0     1 -yes
+
+target_item  0   -post_point_dof 1 -sigxx
+target_value 0   -0.05 1.e-4
+target_item  1   -post_point_dof 1 -sigyy
+target_value 1   -0.5 1.e-4
+control_timestep_iterations 1 5
+end_data

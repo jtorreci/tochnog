@@ -1,0 +1,28 @@
+( control_mesh_truss_distribute_mpc_air -no without _exact [6.246: not
+  generated when the centre of the truss is not inside an isoparametric
+  element]: truss 5..25, centre 15 inside the second bar, is kept; node 4
+  tied, node 5 in the air untied. The Professional 02-08-2026 deletes the
+  truss because one node is outside [class D TRUSS-DISTRIBUTE-AIR-NO].
+)
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0
+node 2 10
+node 3 20
+element 1 -bar2 1 2
+element 2 -bar2 2 3
+node 4 5
+node 5 25
+element 3 -truss 4 5
+element_group 3 1
+group_type 1 -truss
+group_truss_area 1 0.1
+group_truss_memory 1 -total_linear
+group_truss_elasti_young 1 1.
+control_mesh_truss_distribute_mpc 10 -yes
+control_mesh_truss_distribute_mpc_air 10 -no
+end_data

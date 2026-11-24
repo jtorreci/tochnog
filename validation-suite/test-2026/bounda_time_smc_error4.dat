@@ -1,0 +1,23 @@
+( bounda_time_smc without bounda_time_smc_units is an input error, as in
+  the Professional 02-08-2026.
+  EXPECTED_ERROR: Error detected for data item : bounda_time_smc_units
+)
+echo -no
+number_of_space_dimensions 1
+materi_acceleration
+materi_velocity
+materi_displacement
+end_initia
+inertia_apply -yes
+node 1  0
+node 2  1
+element 1  -truss 1 2
+group_type 0  -truss
+group_truss_area 0  1.0
+group_truss_elasti_young 0  1.0
+group_truss_density 0  2.0
+bounda_dof 52 1 -accx
+bounda_time_smc 52 -yes
+
+control_timestep 10 0.25 1.
+end_data

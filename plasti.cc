@@ -23,6 +23,146 @@
 #define EPS_DIR 1.e-10
 #define EPS_PRISCO_1 1.e-8
 #define EPS_PRISCO_2 1.e-5
+#define EPS_GENCAM 1.e-8
+
+// Lagioia-Puzrin-Potts (1996) surface of the bonded-soil Cam clay
+// (group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils).
+// The stress-dilatancy rule d = mu (M-eta) (alpha M/eta + 1) integrates to
+// ln(p*/p_c) + I(eta) = 0 with I(eta) = int_0^eta e/Q(e) de and
+// Q(e) = (1-mu) e^2 + mu (1-alpha) M e + mu alpha M^2.
+// gencam_eta_limit returns the smallest positive root of Q (where the
+// surface reaches p* = 0), or DBL_MAX when Q stays positive.
+static double gencam_eta_limit( double mu, double alpha, double M )
+{
+  double A = 1. - mu, b = mu*(1.-alpha)*M, c = mu*alpha*M*M, lim = DBL_MAX,
+    D = 0., s = 0., qr = 0., r = 0.;
+
+  if ( c<=0. ) {
+      // alpha = 0: Q = e (A e + b), the integrand is 1/(A e + b)
+    if ( A<0. && scalar_dabs(A)>EPS_GENCAM*EPS_GENCAM ) lim = -b/A;
+    return lim;
+  }
+  if ( scalar_dabs(A)<=EPS_GENCAM*EPS_GENCAM ) {
+    if ( b<0. ) lim = -c/b;
+    return lim;
+  }
+  D = b*b - 4.*A*c;
+  if ( D<0. ) return lim;
+  s = sqrt(D);
+  qr = -0.5*( b + ( b<0. ? -s : s ) );
+  r = qr/A;
+  if ( r>0. && r<lim ) lim = r;
+  r = c/qr;
+  if ( r>0. && r<lim ) lim = r;
+  return lim;
+}
+
+// I(eta) for 0 <= eta < gencam_eta_limit. With real roots r1, r2 of Q the
+// partial fractions e/Q = (r1/(e-r1) - r2/(e-r2))/(A (r1-r2)) give
+// I = (r1 ln(1-eta/r1) - r2 ln(1-eta/r2)) / (A (r1-r2)); the roots are
+// formed without cancellation, so the form stays accurate when mu -> 1
+// (A -> 0, r1 -> infinity) and when alpha -> 0 (r2 -> 0).
+static double gencam_integral( double mu, double alpha, double M, double eta )
+{
+  double A = 1. - mu, b = mu*(1.-alpha)*M, c = mu*alpha*M*M, D = 0., s = 0.,
+    qr = 0., r1 = 0., r2 = 0., J = 0.;
+
+  if ( eta<=0. ) return 0.;
+  if ( c<=0. ) {
+    if ( scalar_dabs(A)<=EPS_GENCAM*EPS_GENCAM ) return eta/b;
+    return log1p(A*eta/b)/A;
+  }
+  if ( scalar_dabs(A)<=EPS_GENCAM*EPS_GENCAM ) {
+    if ( scalar_dabs(b)<=EPS_GENCAM*M ) return eta*eta/(2.*c);
+    return eta/b - c/(b*b)*log1p(b*eta/c);
+  }
+  D = b*b - 4.*A*c;
+  if ( D<0. ) {
+    s = sqrt(-D);
+    J = 2./s*( atan((2.*A*eta+b)/s) - atan(b/s) );
+    return log1p((A*eta*eta+b*eta)/c)/(2.*A) - b/(2.*A)*J;
+  }
+  s = sqrt(D);
+  qr = -0.5*( b + ( b<0. ? -s : s ) );
+  r2 = c/qr;
+  if ( D==0. ) {
+    r1 = r2;
+    return ( log1p(-eta/r1) + eta/(r1-eta) )/A;
+  }
+  return ( qr/A*log1p(-eta*A/qr) - r2*log1p(-eta/r2) ) / ( qr - A*r2 );
+}
+
+// eta on the surface for p*/p_c = x, 0 < x <= 1: the root of
+// I(eta) = -ln(x) on [0, gencam_eta_limit) (I increases with eta),
+// safeguarded Newton with I'(eta) = eta/Q(eta).
+static double gencam_eta_of_x( double mu, double alpha, double M, double x )
+{
+  long int iter=0;
+  double T = -log(x), lim = gencam_eta_limit( mu, alpha, M ), lo = 0.,
+    hi = 0., eta = 0., I = 0., Q = 0., step = 0.;
+
+  if ( T<=0. ) return 0.;
+  if ( lim<DBL_MAX ) hi = lim;
+  else {
+    hi = M;
+    while ( gencam_integral( mu, alpha, M, hi )<T && iter<1000 ) {
+      lo = hi; hi *= 2.; iter++;
+    }
+  }
+  eta = 0.5*(lo+hi);
+  for ( iter=0; iter<200; iter++ ) {
+    I = gencam_integral( mu, alpha, M, eta );
+    if ( I<T ) lo = eta; else hi = eta;
+    Q = (1.-mu)*eta*eta + mu*(1.-alpha)*M*eta + mu*alpha*M*M;
+    step = ( eta>0. && Q>0. ) ? (I-T)*Q/eta : 0.;
+    if ( step!=0. && eta-step>lo && eta-step<hi ) eta -= step;
+    else eta = 0.5*(lo+hi);
+    if ( hi-lo<=EPS_GENCAM*EPS_GENCAM*(1.+hi) ||
+         scalar_dabs(step)<=EPS_GENCAM*EPS_GENCAM*(1.+eta) ) break;
+  }
+  return eta;
+}
+
+// Yield function with stress dimension, zero on the surface, negative inside.
+// For p* >= 0.05 p_c it is p_c (ln(p*/p_c) + I(eta)): the return mapping of
+// stress.cc converges cleanly on it (a steady critical state, no spurious
+// plastic volume change). Near and beyond the apex, where ln(p*/p_c) tends to
+// -infinity, it is q - p* eta(p*/p_c), which stays finite and continuous
+// through the apex p* = 0 (f = q). Both forms have the same sign everywhere and
+// the same zero set. Beyond the cap f = q + M (p* - p_c); beyond the apex
+// (tension, p* < 0) f = q - C p* with C the slope of the surface at the apex
+// (or M when the surface reaches the apex tangentially).
+static double gencam_yield( double mu, double alpha, double M,
+  double p_star, double q, double p_c )
+{
+  double lim = gencam_eta_limit( mu, alpha, M );
+
+  if ( p_star>=p_c ) return q + M*(p_star-p_c);
+  if ( p_star>=0.05*p_c && q/p_star<lim*(1.-EPS_GENCAM) )
+    return p_c*( log(p_star/p_c) + gencam_integral( mu, alpha, M, q/p_star ) );
+  if ( p_star>0. ) return q - p_star*gencam_eta_of_x( mu, alpha, M, p_star/p_c );
+  return q - p_star*( lim<DBL_MAX ? lim : M );
+}
+
+// Plastic potential: ln(p*) + I(eta) has the potential surfaces of every
+// size as level sets, so its gradient is the flow direction. Where the
+// closed form does not apply (p* <= 0, or eta at or beyond the limit, that
+// is at and beyond the apex) the smooth q^2/(2 C p_c) - C p* is used (C as in
+// gencam_yield): dilatant flow that is purely volumetric under isotropic
+// tension, so the vertex of the cone does not produce spurious shear flow.
+static double gencam_potential( double mu, double alpha, double M,
+  double p_star, double q, double p_c )
+{
+  double lim = gencam_eta_limit( mu, alpha, M ), eta = 0., C = 0.;
+
+  if ( p_star>EPS_GENCAM*p_c ) {
+    eta = q/p_star;
+    if ( eta<lim*(1.-EPS_GENCAM) )
+      return p_c*( log(p_star/p_c) + gencam_integral( mu, alpha, M, eta ) );
+  }
+  C = lim<DBL_MAX ? lim : M;
+  return q*q/(2.*C*p_c) - C*p_star;
+}
 
 void plasti_rule( long int element, long int gr, 
   long int plasti_on_boundary, double user_data[],
@@ -38,6 +178,7 @@ void plasti_rule( long int element, long int gr,
     test1=0, test2=0, test3=0, test4=0, test5=0,
     test6=0, test7=0, test8=0, test9=0, ldum=0, icontrol=0,
     tension_cutoff=-NO, tension_limit=-NO,
+    prisco_record=GROUP_MATERI_PLASTI_DIPRISCO,
     options_skip_plasticity=-NO, idum[1];
   double sig_yield=0., sigm=0., signorm=0., K=0., K_flow=0., alpha=0.,
     dev=0., devp=0., q=0., p=0., C=0., kappa_0=0., n=0., options_nonlocal=0.,
@@ -53,12 +194,16 @@ void plasti_rule( long int element, long int gr,
     prisco_tp=0., prisco_betafhat=0., 
     prisco_r0=0., prisco_st0=0., prisco_b4=0., prisco_b5=0., prisco_b7=0.,
     prisco_beta=0., prisco_betaf0=0., prisco_r1tmp=0.,
-    prisco_r2tmp=0., prisco_rt=0.,
+    prisco_r2tmp=0., prisco_rt=0., prisco_el=0., prisco_ed=0.,
+    prisco_e=0., prisco_w=0.,
     pa=0., pb=0., R=0., t=0., epp_vol=0., 
     phi0=0., c0=0., phi0_flow=0., phi1=0., c1=0., 
     phi1_flow=0., kappa=0., kappa_crit=0., I1=0., I2=0., I3=0.,
     plasti_on_boundary_factor=BOUNDARY_REDUCTION_FACTOR,
     m=0., lambda=0., e=0., N=0., de=0., p0=0., dp0=0., rdum=0.,
+    M=0., pc=0., p_star=0., pc_star=0.,
+    hs_elasti[7], hs_sig3=0., hs_base=0., hs_E50=0., hs_Eur=0., hs_qf=0.,
+    hs_qa=0., hs_gp_extra=0., hs_ccot=0., hs_Rf=0., gammap=0.,
     prisco_rv[MDIM][MDIM], prisco_st[MDIM][MDIM], prisco_rr[MDIM][MDIM],
     prisco_st1[MDIM][MDIM], prisco_st2[MDIM][MDIM], prisco_sv0[MDIM][MDIM],
     prisco_chi[MDIM*MDIM], prisco_chihat[MDIM*MDIM],
@@ -76,6 +221,10 @@ void plasti_rule( long int element, long int gr,
   db( CONTROL_OPTIONS_SKIP_PLASTICITY, icontrol, &options_skip_plasticity, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
   if ( options_skip_plasticity==-YES ) return;
+  // group_time_fill (manual 6.770): no plasticity while the element is
+  // being filled (Professional 02-08-2026: elastic until birth_filled,
+  // plastic from the step that reaches it)
+  if ( group_time_fill_factor( gr )<1. ) return;
 
   swit = set_swit(element,-1,"plasti_rule");
   if ( task==GET_FLOW_RULE ) swit = 0;
@@ -99,8 +248,13 @@ void plasti_rule( long int element, long int gr,
     VERSION_NORMAL, GET_IF_EXISTS );
   db( GROUP_MATERI_PLASTI_USER, 0, &group_materi_plasti_user, ddum, ldum, 
     VERSION_NORMAL, GET_IF_EXISTS );
-  db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &plasti_on_boundary_factor, 
-    ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( plasti_on_boundary==2 )
+    // wall through group_materi_plasti_mpc (group.cc), manual 6.734
+    db( GROUP_MATERI_PLASTI_MPC_FACTOR, gr, idum, &plasti_on_boundary_factor,
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  else
+    db( GROUP_MATERI_PLASTI_BOUNDARY_FACTOR, gr, idum, &plasti_on_boundary_factor, 
+      ldum, VERSION_NORMAL, GET_IF_EXISTS );
 
     // mean stress
   sigm = ( sig[0] + sig[4] + sig[8] ) / 3.;
@@ -135,12 +289,32 @@ void plasti_rule( long int element, long int gr,
       m = plasti_data[0];
       kappa = plasti_data[1];
       lambda = plasti_data[2];
-      N = plasti_data[3];
       if ( scalar_dabs(lambda-kappa)==0. ) db_error( GROUP_MATERI_PLASTI_CAMCLAY, gr );
       e = old_hisv[0];
-      //p0 = old_hisv[1];
+      // p0 is the stored preconsolidation pressure (cchis1). The GNU
+      // legacy closure derived p0 from the void ratio e and the current
+      // pressure p through the 4th material parameter N
+      // (p0 = exp((N-kappa*ln(p)-(1+e))/(lambda-kappa))); the
+      // Professional layout (manual 2.2.x, group_materi_plasti_camclay
+      // 6.689 = M kappa lambda) tracks p0 EXPLICITLY as a history
+      // variable (materi_plasti_camclay_history / node_dof -cchis1) and
+      // derives N from the initial state. Fall back to the N-based
+      // closure only for legacy inputs that still give 4 values AND have
+      // no initialized p0.
       p = -sigm;
-      p0 = exp((N-kappa*log(p)-(1+e))/(lambda-kappa));
+      p0 = old_hisv[1];
+      if ( p0<=0. ) {
+        if ( ldum>=4 ) {
+          N = plasti_data[3];
+          p0 = exp((N-kappa*log(p)-(1+e))/(lambda-kappa));
+        }
+        else {
+          pri( "\nError: GROUP_MATERI_PLASTI_CAMCLAY needs initial p0."
+               "\nSpecify initia 'materi_plasti_camclay_history' and initialize"
+               " -cchis1 (p0) with control_reset_dof." );
+          exit(1);
+        }
+      }
       if ( swit ) {
         pri( "e", e );
         pri( "p0", p0 );
@@ -178,6 +352,90 @@ void plasti_rule( long int element, long int gr,
       }
       else {
         assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
+  if ( get_group_data( GROUP_MATERI_PLASTI_GENCAM_BONDED, gr, element,
+      new_unknowns, plasti_data, length, GET_IF_EXISTS ) ) {
+      // bonded-soil Cam clay (manual Professional 6.700, 4.21, 4.38; Nova
+      // bonded-soil model, see manual-user page of the record):
+      // p* = p + p_t, p_c = p_s + p_m + p_t, p_t = k p_m;
+      // yield f and plastic potential g of the Lagioia-Puzrin-Potts form;
+      // dp_s = rho_s p_s (deps_v^p + xi_s deps_s^p),
+      // dp_m = -rho_m p_m (|deps_v^p| + xi_m deps_s^p).
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_GENCAM_BONDED;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_GENCAM_BONDED;
+    if ( test1 || test2 || test3 ) {
+      double gc_mu_f=0., gc_alpha_f=0., gc_M_f=0., gc_mu_g=0., gc_alpha_g=0.,
+        gc_M_g=0., gc_rho_s=0., gc_xi_s=0., gc_rho_m=0., gc_xi_m=0., gc_k=0.,
+        gc_ps=0., gc_pm=0., gc_pt=0., gc_pc=0., gc_devp=0., gc_desp=0.,
+        gc_dev[MDIM*MDIM];
+      if ( swit ) pri( "plasti_gencam_bonded" );
+      if ( length!=11 ) db_error( GROUP_MATERI_PLASTI_GENCAM_BONDED, gr );
+      gc_mu_f = plasti_data[0]; gc_alpha_f = plasti_data[1]; gc_M_f = plasti_data[2];
+      gc_mu_g = plasti_data[3]; gc_alpha_g = plasti_data[4]; gc_M_g = plasti_data[5];
+      gc_rho_s = plasti_data[6]; gc_xi_s = plasti_data[7];
+      gc_rho_m = plasti_data[8]; gc_xi_m = plasti_data[9]; gc_k = plasti_data[10];
+      if ( gc_mu_f<=0. || gc_alpha_f<0. || gc_M_f<=0. ||
+           gc_mu_g<=0. || gc_alpha_g<0. || gc_M_g<=0. ||
+           gc_rho_s<0. || gc_rho_m<0. || gc_k<0. )
+        db_error( GROUP_MATERI_PLASTI_GENCAM_BONDED, gr );
+      if ( !materi_plasti_gencam_bonded_history ) {
+        pri( "\nError: group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils"
+             " needs initia 'materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history'." );
+        exit(TN_EXIT_STATUS);
+      }
+      gc_ps = old_hisv[0];
+      gc_pm = old_hisv[1];
+      if ( gc_ps<=0. || gc_pm<0. ) {
+        pri( "\nError: group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils"
+             " needs an initial p_s > 0 and p_m >= 0."
+             "\nInitialize -gencamhis0 (p_s) and -gencamhis1 (p_m), for example with control_reset_dof." );
+        exit(TN_EXIT_STATUS);
+      }
+      p = -sigm;
+      q = sqrt(
+        0.5*( scalar_square(geo_sig[0]-geo_sig[4])+
+              scalar_square(geo_sig[4]-geo_sig[8])+
+              scalar_square(geo_sig[0]-geo_sig[8]) ) +
+        3.*( scalar_square(geo_sig[1]) +
+             scalar_square(geo_sig[2]) +
+             scalar_square(geo_sig[5]) ) );
+      if ( task==GET_YIELD_RULE ) {
+          // hardening with the current plastic strain increment
+          // (compression positive), integrated exactly for constant rates
+        gc_devp = geo_inc_epp[0] + geo_inc_epp[4] + geo_inc_epp[8];
+        array_move( geo_inc_epp, gc_dev, MDIM*MDIM );
+        for ( idim=0; idim<MDIM; idim++ ) gc_dev[idim*MDIM+idim] -= gc_devp/3.;
+        gc_desp = sqrt( 2./3.*scalar_dabs(array_inproduct(gc_dev,gc_dev,MDIM*MDIM)) );
+        gc_ps *= exp( gc_rho_s*(gc_devp+gc_xi_s*gc_desp) );
+        gc_pm *= exp( -gc_rho_m*(scalar_dabs(gc_devp)+gc_xi_m*gc_desp) );
+      }
+      gc_pt = gc_k*gc_pm;
+      gc_pc = gc_ps + gc_pm + gc_pt;
+      if ( swit ) {
+        pri( "p_s", gc_ps );
+        pri( "p_m", gc_pm );
+        pri( "p", p );
+        pri( "q", q );
+      }
+      if ( task==GET_YIELD_RULE ) {
+        f_yield = gencam_yield( gc_mu_f, gc_alpha_f, gc_M_f, p+gc_pt, q, gc_pc );
+        if ( f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_GENCAM_BONDED;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+        new_hisv[0] = gc_ps;
+        new_hisv[1] = gc_pm;
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+          // only the gradient of the potential is used
+        f_flow = gencam_potential( gc_mu_g, gc_alpha_g, gc_M_g, p+gc_pt, q, gc_pc );
         f = f_flow;
         if ( swit ) pri( "f_flow", f_flow );
       }
@@ -229,6 +487,181 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
+  if ( get_group_data( GROUP_MATERI_PLASTI_CAP1, gr, element, new_unknowns, 
+    plasti_data, length, GET_IF_EXISTS ) ) {
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_CAP1;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_CAP1;
+    if ( test1 || test2 || test3 ) {
+      if ( swit ) pri( "check plasti_cap1" );
+        // manual Professional 6.691 (theory cap1): 8 parameters
+        // phi c M lambda_star kappa_star K_ref p_ref m. M is READ from
+        // the record (typically 6*sin(phi)/(3-sin(phi))). Surface:
+        // f = q^2/M^2 + p*(p* - p*c) with p* = p + c*cot(phi),
+        // p*c = pc + c*cot(phi), pc the materi_plasti_cap1_history
+        // node dof (initial value given via node_dof). The hardening
+        // (stress.cc) grows pc with the cap plastic volume strain, so
+        // the surface translates along the p axis. Combined with shear
+        // laws (DP, MC, ...) the standard driver picks the largest f.
+      c = plasti_data[0];
+      phi = plasti_data[1];
+      M = plasti_data[2];
+        // cot(phi) diverges at phi=0: the manual expects phi>0; the
+        // tension pole at phi=pi/2 (cot = 0) is also rejected
+      if ( cos(phi)==0. || sin(phi)==0. ) db_error( GROUP_MATERI_PLASTI_CAP1, gr );
+      if ( M==0. ) db_error( GROUP_MATERI_PLASTI_CAP1, gr );
+      if ( !materi_plasti_cap1_history ) {
+        pri( "Error: GROUP_MATERI_PLASTI_CAP1 needs initia 'materi_plasti_cap1_history'" );
+        exit(TN_EXIT_STATUS);
+      }
+      pc = new_unknowns[cap1_indx];
+        // invariants: p compression-positive; q invariant to the sign
+      p = -( sig[0] + sig[4] + sig[8] ) / 3.;
+      q = sqrt( 
+        0.5*( scalar_square(sig[0]-sig[4])+
+              scalar_square(sig[4]-sig[8])+
+              scalar_square(sig[0]-sig[8]) ) + 
+        3.*( scalar_square(sig[1]) +
+             scalar_square(sig[2]) +
+             scalar_square(sig[5]) ) );
+      tmp = c * cos(phi) / sin(phi);
+      p_star = p + tmp;
+      pc_star = pc + tmp;
+      f_yield = q*q/(M*M) + p_star*(p_star - pc_star);
+      f_flow = f_yield;
+      if      ( task==GET_YIELD_RULE ) {
+        if (  f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_CAP1;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
+  if ( get_group_data( GROUP_MATERI_PLASTI_HARDSOIL, gr, element, new_unknowns,
+    plasti_data, length, GET_IF_EXISTS ) ) {
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_HARDSOIL;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_HARDSOIL;
+    if ( test1 || test2 || test3 ) {
+      if ( swit ) pri( "check plasti_hardsoil" );
+        // manual Professional 6.703 + theory "Hardening-Soil model":
+        // 4 parameters phi c psi Rf. The yield function reads
+        // f = q/(E50*(1 - q/qa)) - 2*q/Eur - gamma_p with q the
+        // equivalent shear stress, qa = qf/Rf the asymptotic shear
+        // stress and gamma_p the equivalent plastic shear strain
+        // (here the materi_plasti_kappa dof, see below). E50 and Eur
+        // are the power-law moduli of group_materi_elasti_hardsoil
+        // evaluated at the CURRENT minor principal stress sig3
+        // (coupled elasticity-plasticity, one-step lag documented).
+        // The manual does not give the explicit qf; standard Schanz:
+        // at Mohr-Coulomb failure in triaxial (q = sig1 - sig3,
+        // sig1 = sig3*(1+sin(phi))/(1-sin(phi)) +
+        // 2c*cos(phi)/(1-sin(phi))) qf = sig1 - sig3 =
+        // 2*sin(phi)*(sig3 + c*cot(phi))/(1-sin(phi)) with sig3 the
+        // minor principal stress in the manual (compression-positive)
+        // convention: sig3_manual = -sig3_code + c*cot(phi),
+        // sig3_code = largest algebraic eigenvalue (least compressive).
+        // Flow: associative (the flow direction is the numerical
+        // gradient of f, computed by the driver with central
+        // differences: the law only defines f; psi is accepted for
+        // input compatibility and documented as pending for the
+        // non-associative flow potential).
+      phi = plasti_data[0];
+      c = plasti_data[1];
+      hs_Rf = plasti_data[3];
+      if ( sin(phi)<=0. || cos(phi)<=0. ) db_error( GROUP_MATERI_PLASTI_HARDSOIL, gr );
+      if ( hs_Rf<=0. ) db_error( GROUP_MATERI_PLASTI_HARDSOIL, gr );
+      if ( !get_group_data( GROUP_MATERI_ELASTI_HARDSOIL, gr, element,
+          new_unknowns, hs_elasti, ldum, GET_IF_EXISTS ) ) {
+        pri( "Error: GROUP_MATERI_PLASTI_HARDSOIL needs group_materi_elasti_hardsoil" );
+        exit(TN_EXIT_STATUS);
+      }
+      if ( hs_elasti[0]<=0. || hs_elasti[4]<=0. )
+        db_error( GROUP_MATERI_ELASTI_HARDSOIL, gr );
+      hs_ccot = 0.;
+      if ( c!=0. ) hs_ccot = c * cos(phi) / sin(phi);
+        // minor principal stress: largest algebraic eigenvalue (the
+        // manual's sig3, least compressive; see the elastic block)
+      matrix_eigenvalues( sig, sig_princ );
+      hs_sig3 = sig_princ[0];
+      for ( i=1; i<MDIM; i++ )
+        if ( sig_princ[i]>hs_sig3 ) hs_sig3 = sig_princ[i];
+      hs_base = -hs_sig3 + hs_ccot;
+      hs_E50 = hs_elasti[0];
+      hs_Eur = hs_elasti[4];
+      if ( hs_base>0. ) {
+        if ( hs_elasti[1]+hs_ccot<=0. || hs_elasti[5]+hs_ccot<=0. )
+          db_error( GROUP_MATERI_ELASTI_HARDSOIL, gr );
+        hs_E50 = hs_elasti[0] *
+          scalar_power( hs_base/(hs_elasti[1]+hs_ccot), hs_elasti[3] );
+        hs_Eur = hs_elasti[4] *
+          scalar_power( hs_base/(hs_elasti[5]+hs_ccot), hs_elasti[3] );
+      }
+      if ( hs_elasti[3]==0. ) { hs_E50 = hs_elasti[0]; hs_Eur = hs_elasti[4]; }
+        // base <= 0 (sig3 very tensile beyond the cohesion): E = Eref
+        // (same clamp as the elastic block) and the yield surface does
+        // not exist -> no yielding from the hardsoil law (documented;
+        // use a tension cut-off for those states)
+      if ( hs_base<=0. ) {
+        f_yield = NO_YIELD_F;
+        f_flow = NO_YIELD_F;
+      }
+      else {
+          // gamma_p: the accumulated plastic strain size kappa
+          // (materi_plasti_kappa dof, kappa = int sqrt(0.5*deps_p:deps_p),
+          // the same measure the manual calls "equivalent plastic shear
+          // strain"; the yield function is calibrated to it, see
+          // manual-developer) plus the optional extra initial
+          // contribution from control_materi_plasti_hardsoil_gammap_initial
+          // (stored per element by set_stress on the first timestep)
+        gammap = 0.;
+        if ( materi_plasti_kappa ) gammap = new_unknowns[kap_indx];
+        hs_gp_extra = 0.;
+        ldum = 0;
+        db( ELEMENT_INTPNT_MATERI_PLASTI_HARDSOIL_GAMMAP_INITIAL, element, idum,
+          &hs_gp_extra, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+        gammap += hs_gp_extra;
+          // equivalent shear stress (same invariant as cap1)
+        q = sqrt(
+          0.5*( scalar_square(sig[0]-sig[4])+
+                scalar_square(sig[4]-sig[8])+
+                scalar_square(sig[0]-sig[8]) ) +
+          3.*( scalar_square(sig[1]) +
+               scalar_square(sig[2]) +
+               scalar_square(sig[5]) ) );
+        hs_qf = 2. * sin(phi) * hs_base / ( 1. - sin(phi) );
+        hs_qa = hs_qf / hs_Rf;
+          // q >= qa is the asymptote of the surface: the stress can
+          // never reach qa, f -> +infinity approaching it. Set f to a
+          // very large positive value (the driver's own "too large
+          // time steps" exit threshold) so the return is driven hard;
+          // if the plastic iterations cannot bring q below qa, the
+          // driver exits with "too large time steps" (documented).
+        if ( q>=hs_qa ) f_yield = DBL_MAX/1.e6;
+        else f_yield = q / ( hs_E50 * ( 1. - q/hs_qa ) ) - 2.*q/hs_Eur - gammap;
+        f_flow = f_yield;
+      }
+      if ( task==GET_YIELD_RULE ) {
+        if (  f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_HARDSOIL;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
+
   if ( get_group_data( GROUP_MATERI_PLASTI_COMPRESSION, gr, element, new_unknowns, 
     plasti_data, ldum, GET_IF_EXISTS ) ) {
     test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
@@ -263,7 +696,41 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
-  if ( get_group_data( GROUP_MATERI_PLASTI_DIPRISCO, gr, element, new_unknowns, 
+    // group_materi_plasti_diprisco_density: the ten diprisco data are
+    // interpolated linearly between the loose set {first ten} and the dense
+    // set {next ten} with the current void ratio e {history variable 12}:
+    // w = {el-e}/{el-ed} clamped to [0,1]; e evolves with the total
+    // volumetric strain, e_new = e + {1+e} * tr{inc_ept}
+  prisco_record = GROUP_MATERI_PLASTI_DIPRISCO;
+  if ( get_group_data( GROUP_MATERI_PLASTI_DIPRISCO_DENSITY, gr, element, 
+      new_unknowns, plasti_data, ldum, GET_IF_EXISTS ) ) {
+    prisco_record = GROUP_MATERI_PLASTI_DIPRISCO_DENSITY;
+    prisco_el = plasti_data[20];
+    prisco_ed = plasti_data[21];
+    if ( prisco_el<=prisco_ed ) {
+      pri( "Error in group_materi_plasti_diprisco_density. The el should be larger than the ed." );
+      exit(TN_EXIT_STATUS);
+    }
+    if ( materi_history_variables<12 ) {
+      pri( "Error: group_materi_plasti_diprisco_density needs materi_plasti_diprisco_history 12." );
+      exit(TN_EXIT_STATUS);
+    }
+    prisco_e = old_hisv[MDIM*MDIM+2];
+    prisco_w = ( prisco_el - prisco_e ) / ( prisco_el - prisco_ed );
+    if ( prisco_w<0. ) prisco_w = 0.;
+    if ( prisco_w>1. ) prisco_w = 1.;
+    for ( i=0; i<10; i++ )
+      plasti_data[i] = ( 1. - prisco_w ) * plasti_data[i] + 
+        prisco_w * plasti_data[10+i];
+    new_hisv[MDIM*MDIM+2] = prisco_e + ( 1. + prisco_e ) * 
+      ( inc_ept[0] + inc_ept[4] + inc_ept[8] );
+    if ( swit ) {
+      pri( "prisco_e", prisco_e );
+      pri( "prisco_w", prisco_w );
+    }
+  }
+  if ( prisco_record==GROUP_MATERI_PLASTI_DIPRISCO_DENSITY ||
+       get_group_data( GROUP_MATERI_PLASTI_DIPRISCO, gr, element, new_unknowns, 
     plasti_data, ldum, GET_IF_EXISTS ) ) {
     test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
     test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_DIPRISCO;
@@ -301,7 +768,7 @@ void plasti_rule( long int element, long int gr,
       prisco_betaf0 = plasti_data[9];
         // fixed data
       prisco_r = array_inproduct( geo_sig, prisco_chi, MDIM*MDIM );
-      if ( prisco_bp<=0. ) db_error( GROUP_MATERI_PLASTI_DIPRISCO, gr );
+      if ( prisco_bp<=0. ) db_error( prisco_record, gr );
       if ( swit ) {
         pri( "prisco_chi", prisco_chi, MDIM*MDIM );
         pri( "prisco_betaf", prisco_betaf );
@@ -537,6 +1004,136 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
+  long int mc_hs_direct = 0;
+  if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING, gr, element, new_unknowns,
+      plasti_data, ldum, GET_IF_EXISTS ) ||
+       ( ( mc_hs_direct = get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL_DIRECT_HARDENING_SOFTENING,
+         gr, element, new_unknowns, plasti_data, ldum, GET_IF_EXISTS ) ) ) ) {
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING;
+    if ( test1 || test2 || test3 ) {
+      if ( swit ) pri( "plasti_mohr_coul_hardening_softening" );
+      if ( mc_hs_direct ) {
+        // direct variant: the angles are in degrees (like every
+        // group_materi_plasti_mohr_coul_direct record)
+        plasti_data[0] *= PIRAD/180.;
+        plasti_data[2] *= PIRAD/180.;
+        plasti_data[3] *= PIRAD/180.;
+        plasti_data[5] *= PIRAD/180.;
+      }
+      // manual Professional 6.731: same surface as mohr_coul, but c and
+      // phi (both yield and flow) vary LINEARLY with the effective
+      // plastic strain kappa_shear from the _0 values at kappa=0 up to
+      // the _1 values at kappa_shear_crit, constant afterwards. The
+      // accumulated kappa is the materi_plasti_kappa dof
+      // (new_unknowns[kap_indx], a node dof filled by the standard
+      // driver; kappa = int sqrt(0.5*depsp:depsp)).
+      {
+        double phi_0 = plasti_data[0], c_0 = plasti_data[1],
+               phi_flow_0 = plasti_data[2], phi_1 = plasti_data[3],
+               c_1 = plasti_data[4], phi_flow_1 = plasti_data[5],
+               kappa_crit = plasti_data[6], kappa_now = 0., ratio;
+        // manual Professional 6.731: the hardening variable is the
+        // SHEAR plastic strain kappa_shear (materi_plasti_kappa_shear
+        // dof kapsh, manual 4.25) - the size of the deviatoric plastic
+        // strain. The total kappa (materi_plasti_kappa, 4.24) is used
+        // only when the shear dof is not initialized.
+        if ( materi_plasti_kappa_shear )
+          kappa_now = new_unknowns[kapsh_indx];
+        else if ( materi_plasti_kappa )
+          kappa_now = new_unknowns[kap_indx];
+        if ( kappa_crit>0. ) {
+          ratio = kappa_now/kappa_crit;
+          if ( ratio>1. ) ratio = 1.;
+          if ( ratio<0. ) ratio = 0.;
+        }
+        else
+          ratio = 1.;
+        phi = phi_0 + ratio*(phi_1-phi_0);
+        c = c_0 + ratio*(c_1-c_0);
+        phi_flow = phi_flow_0 + ratio*(phi_flow_1-phi_flow_0);
+      }
+      if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
+        phi *= plasti_on_boundary_factor;
+        phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
+      }
+      matrix_eigenvalues( sig, sig_princ );
+      {
+        double sig_max = sig_princ[0], sig_min = sig_princ[0];
+        long int ipr;
+        for ( ipr=1; ipr<MDIM; ipr++ ) {
+          if ( sig_princ[ipr]>sig_max ) sig_max = sig_princ[ipr];
+          if ( sig_princ[ipr]<sig_min ) sig_min = sig_princ[ipr];
+        }
+        f_yield = 0.5*(sig_max-sig_min) + 0.5*(sig_max+sig_min)*sin(phi)
+                 - c*cos(phi);
+        f_flow  = 0.5*(sig_max-sig_min) + 0.5*(sig_max+sig_min)*sin(phi_flow)
+                 - c*cos(phi);
+      }
+      if      ( task==GET_YIELD_RULE ) {
+        if ( f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_MOHR_COUL_HARDENING_SOFTENING;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
+  if ( get_group_data( GROUP_MATERI_PLASTI_MOHR_COUL, gr, element, new_unknowns,
+      plasti_data, ldum, GET_IF_EXISTS ) ) {
+    test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
+    test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL;
+    test3 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHR_COUL;
+    if ( test1 || test2 || test3 ) {
+      if ( swit ) pri( "plasti_mohr_coul" );
+      phi = plasti_data[0];
+      c = plasti_data[1];
+      phi_flow = plasti_data[2];
+      if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
+        phi *= plasti_on_boundary_factor;
+        phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
+      }
+      // Mohr-Coulomb (manual Professional: 0.5(sig1-sig3) +
+      // 0.5(sig1+sig3) sin(phi) - c cos(phi) = 0, sig1 the LARGEST and
+      // sig3 the SMALLEST principal stress, tension-positive). The flow
+      // rule uses phi_flow (non-associative when different).
+      matrix_eigenvalues( sig, sig_princ );
+      {
+        double sig_max = sig_princ[0], sig_min = sig_princ[0];
+        long int ipr;
+        for ( ipr=1; ipr<MDIM; ipr++ ) {
+          if ( sig_princ[ipr]>sig_max ) sig_max = sig_princ[ipr];
+          if ( sig_princ[ipr]<sig_min ) sig_min = sig_princ[ipr];
+        }
+        f_yield = 0.5*(sig_max-sig_min) + 0.5*(sig_max+sig_min)*sin(phi)
+                 - c*cos(phi);
+        f_flow  = 0.5*(sig_max-sig_min) + 0.5*(sig_max+sig_min)*sin(phi_flow)
+                 - c*cos(phi);
+      }
+      if      ( task==GET_YIELD_RULE ) {
+        if ( f_yield>f ) {
+          f = f_yield;
+          tmp_plasti_type = GROUP_MATERI_PLASTI_MOHR_COUL;
+        }
+        if ( swit ) pri( "f_yield", f_yield );
+      }
+      else {
+        assert( task==GET_FLOW_RULE );
+        f = f_flow;
+        if ( swit ) pri( "f_flow", f_flow );
+      }
+    }
+  }
   if ( get_group_data( GROUP_MATERI_PLASTI_DRUCKPRAG, gr, element, new_unknowns,
       plasti_data, ldum, GET_IF_EXISTS ) ) {
     tension_cutoff = -NO;
@@ -554,11 +1151,13 @@ void plasti_rule( long int element, long int gr,
       if ( swit ) pri( "check plasti_druckprag" );
       phi = plasti_data[0];
       phi_flow = plasti_data[2];
+      c = plasti_data[1];
       if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
         phi *= plasti_on_boundary_factor;
         phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
       }
-      c = plasti_data[1];
       alpha = 2.*sin(phi)/((3.-sin(phi))*sqrt(3.));
       alpha_flow = 2.*sin(phi_flow)/((3.-sin(phi_flow))*sqrt(3.));
       K = 6.*c*cos(phi)/((3.-sin(phi))*sqrt(3.));
@@ -697,8 +1296,10 @@ void plasti_rule( long int element, long int gr,
       c = plasti_data[1];
       phi_flow = plasti_data[2];
       if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
         phi *= plasti_on_boundary_factor;
         phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
       }
       alpha_flow = 2.*sin(phi_flow)/((3.-sin(phi_flow))*sqrt(3.));
       if ( phi>0. )
@@ -779,7 +1380,7 @@ void plasti_rule( long int element, long int gr,
     test6 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_01;
     test7 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_12;
     test8 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_20;
-    test9 = GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_APEX;
+    test9 = task==GET_FLOW_RULE&&plasti_type==GROUP_MATERI_PLASTI_MOHRCOUL_APEX;
     if ( test1 || test2 || test3 || test4 || test5 || test6 || test7 || test8 || test9 ) {
       if ( swit ) pri( "check plasti_mohrcoul" );
       if ( get_group_data( GROUP_MATERI_PLASTI_MOHRCOUL_SOFTENING, gr, element, 
@@ -810,8 +1411,10 @@ void plasti_rule( long int element, long int gr,
         phi_flow = plasti_data[2];
       }
       if ( plasti_on_boundary ) {
+        // wall reduction of phi, phi_flow and c (manual 6.687, C114)
         phi *= plasti_on_boundary_factor;
         phi_flow *= plasti_on_boundary_factor;
+        c *= plasti_on_boundary_factor;
       }
       matrix_eigenvalues( sig, sig_princ );
       test1 = task==GET_YIELD_RULE&&plasti_type==-NONE && phi>0.;
@@ -943,7 +1546,11 @@ void plasti_rule( long int element, long int gr,
       }
     }
   }
-  if ( get_group_data( GROUP_MATERI_PLASTI_TENSION, gr, element, new_unknowns, 
+  // materi_plasti_tension_apply / control_materi_plasti_tension_apply
+  // -no (manual Professional 6.804 / 6.150): tension plasticity ignored
+  if ( !materi_apply_gate_off( MATERI_PLASTI_TENSION_APPLY,
+       CONTROL_MATERI_PLASTI_TENSION_APPLY ) &&
+       get_group_data( GROUP_MATERI_PLASTI_TENSION, gr, element, new_unknowns, 
       plasti_data, ldum, GET_IF_EXISTS ) ) {
     test1 = task==GET_YIELD_RULE&&plasti_type==-NONE;
     test2 = task==GET_YIELD_RULE&&plasti_type==GROUP_MATERI_PLASTI_TENSION;

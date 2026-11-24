@@ -1,0 +1,73 @@
+( F4 T6f / BACKLOG C57: post_point in a quad9 -> hex27 extruded mesh
+  [control_mesh_extrude_n 2 1, the extrude_quad9_shared_nodes1 plate].
+  The extrusion must give the new mid / inner plane nodes their z in
+  node_start_refined too [old GNU: copied from the z = 0 source node,
+  so point_el located the post points in collapsed elements: (2, 1,
+  0.5) disy -3.51050e-5, (1, 0.5, 0.5) -1.13556e-5, (0.5, 0.5, 0.5)
+  -3.25367e-6, (1.3, 0.37, 0.61) -1.78447e-5]. Targets: the
+  Professional 02-08-2026 post_point_dof disy [= the exact hex27
+  interpolation of the nodal dofs; GNU nodal dofs = Professional to
+  2e-13]. The first three points are nodes of the inner plane z = 0.5. )
+echo -no
+number_of_space_dimensions 3
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+
+start_define
+  x_start geometry_quadrilateral 1
+end_define
+x_start  0. 0. 0.   0. 1. 0.   0. 0. 1.   0. 1. 1.  1.e-4
+start_define
+  x_end geometry_quadrilateral 2
+end_define
+x_end  2. 0. 0.   2. 1. 0.   2. 0. 1.   2. 1. 1.  1.e-4
+
+bounda_dof  1  -x_start -velx -vely -velz
+bounda_time 1  0. 0. 100. 0.
+
+force_edge          1  0. -1. 0.
+force_edge_geometry 1  -x_end
+
+group_type 0  -materi
+group_materi_memory 0  -total_linear
+group_materi_elasti_young   0  1.e6
+group_materi_elasti_poisson 0  0.3
+
+control_mesh_extrude   0  0. 1.
+control_mesh_extrude_n 0  2 1
+control_timestep 0  1. 1.
+
+post_point 1  2 1 0.5
+post_point 2  1 0.5 0.5
+post_point 3  0.5 0.5 0.5
+post_point 4  1.3 0.37 0.61
+
+target_item  1  -post_point_dof 1 -disy
+target_value 1  -3.518022736261e-05 1.e-11
+target_item  2  -post_point_dof 2 -disy
+target_value 2  -1.165093891518e-05 1.e-11
+target_item  3  -post_point_dof 3 -disy
+target_value 3  -3.574477516044e-06 1.e-11
+target_item  4  -post_point_dof 4 -disy
+target_value 4  -1.805292272921e-05 1.e-11
+
+node  1  0.0 0.0 0.
+node  2  0.5 0.0 0.
+node  3  1.0 0.0 0.
+node  4  1.5 0.0 0.
+node  5  2.0 0.0 0.
+node  6  0.0 0.5 0.
+node  7  0.5 0.5 0.
+node  8  1.0 0.5 0.
+node  9  1.5 0.5 0.
+node 10  2.0 0.5 0.
+node 11  0.0 1.0 0.
+node 12  0.5 1.0 0.
+node 13  1.0 1.0 0.
+node 14  1.5 1.0 0.
+node 15  2.0 1.0 0.
+element 1 -quad9  1  2  3   6  7  8  11 12 13
+element 2 -quad9  3  4  5   8  9 10  13 14 15
+end_data

@@ -1,0 +1,11 @@
+( F4 T6a / BACKLOG C56: a data word longer than the 100-character
+  parser buffer [MCHAR - 1 = 99 characters] is an input error. The old
+  GNU wrote it past the buffer [stack overflow] and then failed on
+  the corrupted word. The record name below has 150 characters.
+  EXPECTED_ERROR: Word too long )
+echo -no
+number_of_space_dimensions 1
+materi_velocity
+end_initia
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 0 1
+end_data

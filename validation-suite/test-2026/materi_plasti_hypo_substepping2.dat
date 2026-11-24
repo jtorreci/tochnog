@@ -1,0 +1,72 @@
+(F5 T3 C1: control_materi_plasti_hypo_substepping, manual 6.149, wins
+ over the global materi_plasti_hypo_substepping for its timestep index:
+ global -no, control 20 -yes gives the substepping result of hypo1,
+ sigyy -862.926 {Professional 02-08-2026 -862.929}.)
+
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+materi_strain_total
+materi_plasti_hypo_history
+end_initia
+
+node 1  0.00 0.00
+node 2  1.00 0.00
+node 3  0.00 1.00
+node 4  1.00 1.00
+
+element 1 -quad4 1 2 3 4
+
+(left edge)
+geometry_line 0  0.00 0.00 0.00 1.00 1.e-5
+(lower edge)
+geometry_line 1  0.00 0.00 1.00 0.00 1.e-5
+(upper edge)
+geometry_line 2  0.00 1.00 1.00 1.00 1.e-5
+(right edge)
+geometry_line 3  1.00 0.00 1.00 1.00 1.e-5
+
+force_edge_normal_geometry   0  -geometry_line 3
+force_edge_normal            0  -200.
+
+bounda_dof 0  -geometry_line 0 -velx
+bounda_time    0  0. 0. 1.e10 0.
+bounda_dof 1  -geometry_line 1 -vely
+bounda_time    1  0. 0. 1.e10 0.
+bounda_dof 2  -geometry_line 2 -vely
+bounda_time    2  0. -1. 1.e10 -1.
+
+group_type           0  -materi
+group_materi_memory  0  -total_linear
+group_materi_plasti_hypo_wolffersdorff 0  
+                        30.   (deg)
+                        5800.e3 (kPa)
+                        0.28 
+                        0.84
+                        0.53 
+                        1.00 
+                        0.13 
+                        1.05 
+
+post_point 1 0.05 0.05
+
+control_reset_dof                        1  -sigxx -sigyy -sigzz
+control_reset_value_constant             1  -200.
+control_reset_dof                        2  -hyhis0
+control_reset_value_constant             2  0.6
+
+control_timestep                        20  0.001 0.04
+(
+control_print                           20  -time_current
+control_print_data_versus_data          20  -post_point_dof 1 -eptyy
+				            -post_point_dof 1 -sigyy
+				            -post_point_dof 1 -sigxx
+				            -post_point_dof 1 -hyhis0
+)
+materi_plasti_hypo_substepping -no
+control_materi_plasti_hypo_substepping 20 -yes
+target_item 1 -post_point_dof 1 -sigyy
+target_value 1 -862.926 1.e-2
+end_data

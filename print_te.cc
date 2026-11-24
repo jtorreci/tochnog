@@ -19,11 +19,18 @@
 
 #include "tochnog.h"
 
-void print_tecplot( long int ival[] )
+// end_of_calculation: 1 for print_tecplot_calculation (6.998) at the end
+// of the run; it appends to the same <base>.plt and is skipped when the
+// file already holds the state at this time (= Professional 02-08-2026).
+// File names (= Professional 02-08-2026, C99): -yes appends to <base>.plt,
+// emptied by the first print of the run; -separate_index writes
+// <base>_<icontrol, 4 digits>.plt and -separate_sequential
+// <base>_<print counter, 4 digits>.plt, each a new file with its mesh.
+void print_tecplot( long int ival[], long int end_of_calculation )
 
 {
   long int i=0, element=0, inol=0, idim=0, nplot=0, nnol=0, name=0, 
-    length=0, inod=0, max_node=0, max_element=0, new_file=0, 
+    length=0, inod=0, max_node=0, max_element=0, new_file=0, base_file=0,
     print_tecplot_new_mesh=-NO, number_of_elements=0, icalcul=0,
     number_of_nodes=0, ipuknwn=0, iuknwn=0,
     ncalcul=0, ieigen=0, neigen=0, icontrol=0,
@@ -32,9 +39,32 @@ void print_tecplot( long int ival[] )
   double time_current=0., ddum[1], node[MDIM], 
     *control_eigen_values=NULL, *node_eigen=NULL, 
     *node_dof=NULL, *node_dof_calcul=NULL;
-  char outname[MCHAR];
+  char outname[MCHAR], filename[MCHAR];
+  static long int tecplot_printed=0, tecplot_started=0, tecplot_sequential=0;
+  static double tecplot_time=0.;
 
-  if ( ival[0]==-MESH || !db_active_index( CONTROL_PRINT_TECPLOT_MESH, 0, VERSION_NORMAL ) ) {
+  db( TIME_CURRENT, 0, idum, &time_current, ldum, VERSION_NORMAL,
+    GET_IF_EXISTS );
+  db( ICONTROL, 0, &icontrol, ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS );
+  if      ( !end_of_calculation && ival[0]==-SEPARATE_INDEX ) {
+    snprintf( filename, MCHAR, "%s_%04ld.plt", data_file_base, icontrol );
+    new_file = 1;
+  }
+  else if ( !end_of_calculation && ival[0]==-SEPARATE_SEQUENTIAL ) {
+    snprintf( filename, MCHAR, "%s_%04ld.plt", data_file_base,
+      tecplot_sequential++ );
+    new_file = 1;
+  }
+  else {
+    if ( end_of_calculation && tecplot_printed && tecplot_time==time_current )
+      return;
+    tecplot_printed = 1; tecplot_time = time_current;
+    snprintf( filename, MCHAR, "%s.plt", data_file_base );
+    new_file = !tecplot_started; base_file = 1;
+  }
+
+  if ( new_file || ival[0]==-MESH ||
+       !db_active_index( CONTROL_PRINT_TECPLOT_MESH, 0, VERSION_NORMAL ) ) {
     print_tecplot_new_mesh = -YES; length=1;
     db( CONTROL_PRINT_TECPLOT_MESH, 0, &print_tecplot_new_mesh, ddum, 
       length, VERSION_NORMAL, PUT );
@@ -77,11 +107,8 @@ void print_tecplot( long int ival[] )
   ieigen = ival[0];
   if ( ieigen>=0 && ieigen>(neigen-1) ) db_error( CONTROL_PRINT_TECPLOT, icontrol );
 
-  ifstream in( "tecplot.plt" );
-  if ( !in ) new_file = 1;
-  in.close();
-
-  ofstream out( "tecplot.plt", ios::app );
+  ofstream out( filename, new_file ? ios::out|ios::trunc : ios::app );
+  if ( base_file ) tecplot_started = 1;
   out.precision(TN_PRECISION);
 
     // general header

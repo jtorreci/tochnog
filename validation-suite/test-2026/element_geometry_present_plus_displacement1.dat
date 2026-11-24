@@ -1,0 +1,31 @@
+(F5 T2 V3: print_element_geometry_present_node_type -plus_displacement,
+ manual 6.976. The element translates rigidly at velx 0.2; at the start
+ of the last step (t=0.5) the displacement is 0.1, so the displaced nodes
+ x 0.1 / 1.1 lie in geometry_quadrilateral 7 (x 0.05 to 1.15) and the
+ start coordinates x 0 / 1 do not. Expected: element_geometry_present 1
+ -geometry_quadrilateral 7. The Professional 02-08-2026 rejects the word
+ -plus_displacement (DIVERGENCES EGP-PLUS-DISP).)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 0 0
+node 2 1 0
+node 3 0 1
+node 4 1 1
+element 1 -quad4 1 2 3 4
+group_type 0 -materi
+group_materi_memory 0 -total_linear
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.3
+geometry_line 1 0 0 1 0 0.01
+bounda_dof 0 -geometry_line 1 -vely
+bounda_dof 1 -ra 1 4 -ra -velx
+bounda_time 1 0.2
+control_timestep 0 0.5 1.0
+print_element_geometry_present -yes
+print_element_geometry_present_node_type -plus_displacement
+geometry_quadrilateral 7 0.05 -0.05 1.15 -0.05 0.05 1.05 1.15 1.05 0.001
+end_data

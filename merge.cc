@@ -24,10 +24,11 @@ void merge( void )
 {
   long int element=0, merge=0, max_element=0, max_node=0, tmp_max_node=-1,
     tmp_node_number=0, swit=0, inol=0, inod=0, nnol=0, length=0, 
-    icontrol=0, in_geometry=0, length_macro_generate=0,
+    icontrol=0, in_geometry=0, length_macro_generate=0, kpair=0,
     node_macro_generate=0, equal, ldum=0, 
     idum[1], el[MNOL+1], nodes[MNOL], 
-    geometry_entity[2], macro_generate[DATA_ITEM_SIZE], 
+    geometry_entity[2], macro_generate[DATA_ITEM_SIZE],
+    geometry_vals[DATA_ITEM_SIZE],
     *old_node_numbers=NULL, *ordered_nodes=NULL, 
     *new_node_numbers=NULL, *node_merge_not=NULL;
   double eps_coord=EPS_COORD, rdum=0., ddum[MDIM], node[MDIM];
@@ -50,13 +51,49 @@ void merge( void )
       node_merge_not = get_new_int(1+max_node);
       array_set( node_merge_not, 0, 1+max_node );
 
-      if ( db( CONTROL_MESH_MERGE_NOT, icontrol, geometry_entity, 
-          ddum, ldum, VERSION_NORMAL, GET_IF_EXISTS ) ) {
-        for ( inod=0; inod<=max_node; inod++ ) {
-          if ( db_active_index( NODE, inod, VERSION_NORMAL ) ) {
-            geometry( inod, ddum, geometry_entity, in_geometry, rdum, ddum, rdum,
-              ddum, NODE_START_REFINED, PROJECT_EXACT, VERSION_NORMAL );
-            if ( in_geometry ) node_merge_not[inod] = 1;
+      // control_mesh_merge_geometry_not (manual Professional 6.215):
+      // nodes on the listed geometries are NOT merged (the loop below
+      // marks them; pairs are geometry_entity + geometry_index).
+      if ( db_active_index( CONTROL_MESH_MERGE_NOT, icontrol,
+          VERSION_NORMAL ) ) {
+        long int length_geom=0, inode=0;
+        db( CONTROL_MESH_MERGE_NOT, icontrol, geometry_vals, ddum,
+          length_geom, VERSION_NORMAL, GET );
+        for ( inode=0; inode<=max_node; inode++ ) {
+          if ( db_active_index( NODE, inode, VERSION_NORMAL ) ) {
+            for ( kpair=0; kpair+1<length_geom; kpair+=2 ) {
+              geometry_entity[0] = geometry_vals[kpair];
+              geometry_entity[1] = geometry_vals[kpair+1];
+              geometry( inode, ddum, geometry_entity, in_geometry, rdum,
+                ddum, rdum, ddum, NODE_START_REFINED, PROJECT_EXACT,
+                VERSION_NORMAL );
+              if ( in_geometry ) { node_merge_not[inode] = 1; break; }
+            }
+          }
+        }
+      }
+
+      // control_mesh_merge_geometry (manual Professional 6.214): when
+      // present, only nodes on the listed geometries are merged (nodes
+      // off the geometries are marked no-merge).
+      if ( db_active_index( CONTROL_MESH_MERGE_GEOMETRY, icontrol,
+          VERSION_NORMAL ) ) {
+        long int length_geom=0, inode=0;
+        db( CONTROL_MESH_MERGE_GEOMETRY, icontrol, geometry_vals, ddum,
+          length_geom, VERSION_NORMAL, GET );
+        for ( inode=0; inode<=max_node; inode++ ) {
+          if ( db_active_index( NODE, inode, VERSION_NORMAL ) &&
+               node_merge_not[inode]==0 ) {
+            in_geometry = 0;
+            for ( kpair=0; kpair+1<length_geom; kpair+=2 ) {
+              geometry_entity[0] = geometry_vals[kpair];
+              geometry_entity[1] = geometry_vals[kpair+1];
+              geometry( inode, ddum, geometry_entity, in_geometry, rdum,
+                ddum, rdum, ddum, NODE_START_REFINED, PROJECT_EXACT,
+                VERSION_NORMAL );
+              if ( in_geometry ) break;
+            }
+            if ( !in_geometry ) node_merge_not[inode] = 1;
           }
         }
       }

@@ -1,0 +1,33 @@
+( F5 T4 U9f owner decision 2026-11-13: -method1 also tests the integration
+  points. The quad4 of group 2 spans the gap 1.5 < x < 1.7 between two
+  reference elements; its nodes are inside them but its integration points
+  at x = 1 +- 0.577 include x = 1.577, in the gap: kept. The Professional
+  02-08-2026 tests the nodes only and removes it (DIVERGENCES
+  REMOVE-METHOD1-INTPNT). )
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1 -1. -1.
+node 2 1.5 -1.
+node 3 -1. 3.
+node 4 1.5 3.
+node 5 1.7 -1.
+node 6 3. -1.
+node 7 1.7 3.
+node 8 3. 3.
+element 1 -quad4 1 2 3 4
+element 3 -quad4 5 6 7 8
+element_group -ra 1 3 -ra 1
+node 11 0 0
+node 12 2 0
+node 13 0 1
+node 14 2 1
+element 2 -quad4 11 12 13 14
+element_group 2 2
+control_mesh_remove 10 -method1 2 1
+group_type -ra 0 1 2 3 -ra -materi
+group_materi_elasti_young -ra 0 1 2 3 -ra 1.
+end_data
