@@ -19,6 +19,11 @@
     `interpolation_polynomial()` Lagrange bases (xi fastest, zeta
     slowest), full isoparametric geometry.
 
+- `print_gi.cc`, `print_gid_post_point_mesh()`: the GiD Point mesh
+  `PostPoint`, called by `print_gid_6()` (`print_g6.cc`) after
+  `safety_slip_print_gid_mesh()`, which returns the highest node and
+  element it wrote.
+
 ## Implementation details
 
 - The descent stops when every iso step is below `EPS_SIZE` (1e-6); its
@@ -48,6 +53,9 @@
   (`point_el()` unchanged); a post point on a node returns the nodal
   value.
 - `tet10`: quadratic interpolation (Professional linear, TET10-PPOINT).
+- GiD mesh with slip surfaces: the post point elements follow the slip
+  elements; the Professional reuses the slip element numbers
+  (POST-POINT-GID-ELEMENT-NUMBERS).
 
 ## Pending refactorings
 

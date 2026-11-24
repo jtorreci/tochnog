@@ -32,6 +32,10 @@ GiD output options: `control_print_gid_*` (manual Professional 6.295-6.315) and 
 4. Mesh: `MTYPES` 12 (spring2 added); `print_gid_element_selected()` applies
    `_element_group`, `_element_mpc`, `_mesh_activate_gravity -no` and the spring2 switch; `print_coordinates()` takes its
    coordinates from `print_gid_node_coord()` (`_node_type`).
+4b. After the element meshes: `safety_slip_print_gid_mesh()` (slip surfaces) and
+   `print_gid_post_point_mesh()` (post points as a Point mesh `PostPoint`, material 1000 +
+   index), both numbered after the highest node and element, the post points after the slip
+   surfaces. The post point nodes have no results.
 5. `print_gid_gauss_points()` declares the Gauss point sets once, when the `.flavia.res` is
    created, if any index (or `print_gid_group`) requests an element result.
 6. Dof loop: a field not selected by `_dof` (and a post field not selected by `_dof_calcul`) is
@@ -74,9 +78,11 @@ existing results are unchanged.
   `control_print_gid_smooth_dof2`.
 - L8: named fields in `_dof_calcul` are written alone (Professional: the field is removed). Guard
   `control_print_gid_dof_calcul1`.
+- L18: with slip surfaces the post point elements follow the slip elements (Professional: the
+  slip element numbers again). Guard `control_print_gid_post_point2`.
 
 ## Tests
 
-31 inputs `validation-suite/test-2026/control_print_gid_*.dat` and `print_gid_*.dat`, checked in
+33 inputs `validation-suite/test-2026/control_print_gid_*.dat` and `print_gid_*.dat`, checked in
 `scripts/build_safe.sh` (block "GiD output options", helpers `gid_opt_run`, `gid_val`,
 `gid_near`, `gid_msh_ids`, `gid_eg_ids`) after the mesh_gid checks.

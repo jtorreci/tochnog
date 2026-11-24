@@ -73,7 +73,8 @@ return 1;
 long int print_gid_6( long int task, long int icontrol )
 
 {
-  long int inod=0, element=0, max_node=0, max_element=0, max_group=0, name=0, itype,
+  long int gid_node=0, gid_element=0,
+    inod=0, element=0, max_node=0, max_element=0, max_group=0, name=0, itype,
     eltype[MTYPES],
     element_group=0, length=0, idim=0, jdim=0, ipuknwn=0, iuknwn=0,
     icalcul=0, nval=0, ready=0, indx=0, eigen_analysis=0, neigen=0,
@@ -391,7 +392,11 @@ for (int igroup=0; igroup<=max_group; igroup++)
 }
 }
   // slip surfaces of control_safety_slip (manual Professional 6.310)
-  safety_slip_print_gid_mesh( outmesh, max_node, max_element );
+  // the slip surfaces and the post points number their nodes and elements
+  // after the mesh, in this order
+  gid_node = max_node; gid_element = max_element;
+  safety_slip_print_gid_mesh( outmesh, gid_node, gid_element );
+  print_gid_post_point_mesh( outmesh, gid_node, gid_element );
   // Gauss points of the element results (control_print_gid_group, ...)
   print_gid_gauss_points( outres, max_element );
 }//end first time gid

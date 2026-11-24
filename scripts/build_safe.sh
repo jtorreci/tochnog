@@ -3848,6 +3848,17 @@ grep -q '^MESH Spring2Gr2 dimension 2 ElemType Linear Nnode 2' "$GO_MSH" &&
   [ "$(grep -c 'OnGaussPoints "element_spring2"' "$GO_RES")" = "2" ] &&
   [ "$(awk '/OnGaussPoints "element_spring2"/{f=1} f&&$1==3{print $2; exit}' "$GO_RES")" = "2" ]
 gid_opt_done "global 2: Linear spring2 and its element_group 2" $?
+# post_point as a Point mesh PostPoint (6.953), after the mesh and after
+# the slip surfaces of control_safety_slip
+gid_pp_block() { awk '/^MESH PostPoint/{f=1} f' "$GO_MSH" | tr '\t\n' ' |'; }
+gid_opt_run control_print_gid_post_point1
+[ "$(gid_pp_block)" = "MESH PostPoint dimension 2 ElemType Point Nnode 1|Coordinates|7 0.25 0.5|8 1.75 0.75|9 7 8|End Coordinates|Elements|3 7 1000|4 8 1003|5 9 1005|End Elements|" ] &&
+  [ "$(grep -c '^MESH' "$GO_MSH")" = "2" ]
+gid_opt_done "PostPoint mesh: nodes 7 8 9, elements 3 4 5, materials 1000 1003 1005" $?
+gid_opt_run control_print_gid_post_point2
+[ "$(gid_pp_block)" = "MESH PostPoint dimension 2 ElemType Point Nnode 1|Coordinates|96 0.5 0.5|97 1.5 0.5|End Coordinates|Elements|80 96 1000|81 97 1002|End Elements|" ] &&
+  [ "$(awk '/^MESH SafetySlip/{f=1} f&&/^Elements/{e=1;next} e&&/^End Elements/{exit} e{n=$1} END{print n}' "$GO_MSH")" = "79" ]
+gid_opt_done "PostPoint after the slip surfaces: nodes 96 97, elements 80 81" $?
 gid_opt_run control_print_gid_truss_vector1
 gid_near "$(gid_val truss_vector 1 2)" "1 -1" && gid_near "$(gid_val truss_vector 1 2 +)" "1 -1" &&
   gid_near "$(gid_val truss_vector 1 1)" "0 0"

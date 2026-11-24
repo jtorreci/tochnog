@@ -2722,8 +2722,8 @@ void      pol( long int element, long int element_group,
             double volume[] );
 void      post( long int task );
 void      safety_slip( void );
-void      safety_slip_print_gid_mesh( ofstream &outmesh, long int max_node,
-            long int max_element );
+void      safety_slip_print_gid_mesh( ofstream &outmesh, long int &max_node,
+            long int &max_element );
 void      safety_slip_print_gid_results( ofstream &outres, double step_val,
             long int max_node );
 void      post_global( void );
@@ -2761,6 +2761,8 @@ long int  print_gid_dof_selected( long int dof_type );
 long int  print_gid_post_selected( long int icalcul );
 long int  print_gid_other( void );
 long int  print_gid_spring2_nodes( void );
+void      print_gid_post_point_mesh( ofstream &outmesh, long int max_node,
+            long int max_element );
 void      print_gid_node_coord( long int inod, double coord[] );
 void      print_gid_smooth( long int max_node, long int old_node_numbers[] );
 void      print_gid_gauss_points( ofstream &outres, long int max_element );

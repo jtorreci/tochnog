@@ -37,7 +37,25 @@ target_value 1  -1.805292272921e-05 1.e-11
 
 (`validation-suite/test-2026/post_point_extrude_hex27_1.dat`.)
 
+## GiD plots
+
+With `control_print_gid` the post points are drawn in the GiD mesh, as the
+Professional 02-08-2026 does: a Point mesh `PostPoint` with one node per
+active post point at its coordinates, numbered after the highest node, and
+one Point element per node, numbered after the highest element, with the
+material number 1000 plus the post point index. Every post point is
+written, also one outside the mesh. The post point nodes carry no nodal
+results. With slip surfaces (`control_safety_slip`) the post point nodes and
+elements follow the slip surface nodes and elements.
+(`control_print_gid_post_point1`, `control_print_gid_post_point2`.)
+
 ## Differences with the Professional version
+
+- GiD mesh with slip surfaces (POST-POINT-GID-ELEMENT-NUMBERS,
+  Professional-suspect): the Professional numbers the post point elements
+  after the solid mesh, on the numbers of the first slip surface elements
+  (duplicate element numbers); the GNU numbers them after the slip
+  elements. Without slip surfaces both write the same mesh.
 
 - Curved or distorted quad9 / hex27 elements (deliberate divergence C78,
   project owner 2026-10-13): the GNU locates the point with the full

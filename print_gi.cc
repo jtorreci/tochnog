@@ -695,3 +695,44 @@ void print_gid_element_results( ofstream &outres, double step_val,
     }
   }
 }
+
+// post_point (manual Professional 6.953) as a GiD Point mesh, as the
+// Professional 02-08-2026: one node per active post point, numbered after
+// max_node in post_point order, and one Point element per node, numbered
+// after max_element, with material 1000 plus the post_point index. Every
+// post point is written, also one outside the mesh; the post point nodes
+// carry no nodal results.
+void print_gid_post_point_mesh( ofstream &outmesh, long int max_node,
+  long int max_element )
+
+{
+  long int ipoint=0, max_point=-1, npoint=0, idim=0, inod=0, length=0,
+    idum[1];
+  double coord[MDIM];
+
+  db_max_index( POST_POINT, max_point, VERSION_NORMAL, GET );
+  for ( ipoint=0; ipoint<=max_point; ipoint++ )
+    if ( db_active_index( POST_POINT, ipoint, VERSION_NORMAL ) ) npoint++;
+  if ( npoint==0 ) return;
+
+  outmesh << "MESH PostPoint dimension " << ndim
+    << " ElemType Point Nnode 1" << endl << "Coordinates" << endl;
+  inod = max_node;
+  for ( ipoint=0; ipoint<=max_point; ipoint++ ) {
+    if ( !db_active_index( POST_POINT, ipoint, VERSION_NORMAL ) ) continue;
+    db( POST_POINT, ipoint, idum, coord, length, VERSION_NORMAL, GET );
+    inod++;
+    outmesh << inod;
+    for ( idim=0; idim<ndim; idim++ ) outmesh << "\t" << coord[idim];
+    outmesh << endl;
+  }
+  outmesh << "End Coordinates" << endl << "Elements" << endl;
+  inod = max_node;
+  for ( ipoint=0; ipoint<=max_point; ipoint++ ) {
+    if ( !db_active_index( POST_POINT, ipoint, VERSION_NORMAL ) ) continue;
+    inod++;
+    outmesh << max_element+inod-max_node << "\t" << inod << "\t"
+      << 1000+ipoint << endl;
+  }
+  outmesh << "End Elements" << endl;
+}

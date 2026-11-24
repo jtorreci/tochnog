@@ -40,8 +40,9 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
 | T2 | S3 | delegated writer (context backstop) | done (L12) | f4fe4ca |
 | T3 | S3 | delegated writer | done; Q-DEF resolved (L13, 0d6b607), Q-MAG in T6 | f4fe4ca |
 | T4 | S3 | delegated writer | done (L12) | f4fe4ca |
-| T6 | S3 | delegated writer | done (L15) | this commit |
-| T5 | S6 | inline | done (L16) | this commit |
+| T6 | S3 | delegated writer | done (L15) | 8a53ace |
+| T5 | S6 | inline | done (L16) | 8a53ace |
+| T7 | S3 | inline | done (L18) | this commit |
 
 ## Log
 
@@ -129,3 +130,13 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
   Advisories: stale comments (fixed in this commit); phreatic_static_submerged1.dbs stores force_element_edge_water by
   raw name number, which shifts when keywords are added (pre-existing, not physics); without gid a stale <idx>.dat would
   be read (as the Professional). Feature closed.
+- L18 (2026-11-25) Owner: "hacé lo de los post_point en la malla GiD. Sube la rama y actualiza las divergencias".
+  Professional measured (pp1/pp2 probes and control_print_gid_post_point2): `mesh point ... elemtype Point`, one node
+  per active post_point after the highest node, one element per node after the highest element, material
+  1000 + index, also a point outside the mesh; no nodal results on those nodes. With slip surfaces its post point
+  nodes follow the slip nodes (96 97) but the elements restart at 17 18, the numbers of slip elements: duplicate ids.
+  GNU: `print_gid_post_point_mesh()` (print_gi.cc) after `safety_slip_print_gid_mesh()`, which now returns its
+  highest node and element; elements 80 81 there (DIVERGENCES POST-POINT-GID-ELEMENT-NUMBERS, class D, no owner
+  decision). Tests control_print_gid_post_point1/2. DIVERGENCES class counts recomputed from the rows (A 54, B 62,
+  C 46, D 67, 229); SEGUIMIENTO discard rows added for GID-SMOOTH-NAMED, GID-DOFCALCUL-NAMED, MESH-GID-BATCH-ERRORS
+  and the new row.

@@ -1,0 +1,32 @@
+(post_point [6.953] in the GiD mesh, as the Professional 02-08-2026: one
+ Point mesh PostPoint, one node per active post point numbered after the
+ highest node [7 8 9], one Point element per node numbered after the
+ highest element [3 4 5], material 1000 plus the post_point index
+ [1000 1003 1005]. The post point 5 lies outside the mesh and is written
+ too. build_safe.sh runs it in a scratch copy and checks the .flavia.msh.)
+echo -no
+number_of_space_dimensions 2
+materi_velocity
+materi_displacement
+materi_stress
+end_initia
+node 1  0 0
+node 2  1 0
+node 3  1 1
+node 4  0 1
+node 5  2 0
+node 6  2 1
+element 1  -quad4 1 2 4 3
+element 2  -quad4 2 5 3 6
+group_type 0 -materi
+group_materi_elasti_young 0 1000.
+group_materi_elasti_poisson 0 0.2
+group_materi_memory 0 -total_linear
+bounda_dof 0  1 -velx -vely
+bounda_dof 1  4 -velx
+post_point 0 0.25 0.5
+post_point 3 1.75 0.75
+post_point 5 7. 8.
+control_timestep 20 1. 1.
+control_print_gid 20 -yes
+end_data

@@ -1035,15 +1035,17 @@ static long int safety_slip_print_triangles( long int isurface,
   return ( length>=3 && elements[2]!=-NONE );
 }
 
-void safety_slip_print_gid_mesh( ofstream &outmesh, long int max_node,
-  long int max_element )
+void safety_slip_print_gid_mesh( ofstream &outmesh, long int &max_node,
+  long int &max_element )
 
 // GiD mesh of the slip surfaces (manual Professional 6.310): line elements
 // between the points of the 2D surfaces, triangles on the 3D surfaces (a
 // mesh per element type; the line mesh is SafetySlip, the triangle mesh
 // SafetySlip too unless both exist); node and element numbers follow the
 // highest node and element of the mesh, the nodes numbered over the
-// plotted surfaces in surface order (as the results)
+// plotted surfaces in surface order (as the results); on return max_node
+// and max_element are the highest node and element written, so a following
+// mesh (post_point) numbers after the slip surfaces
 
 {
   long int isurface=0, max_surface=-1, length=0, nelement=0, k=0, inod=0,
@@ -1106,6 +1108,10 @@ void safety_slip_print_gid_mesh( ofstream &outmesh, long int max_node,
       inod += npoint;
     }
     outmesh << "End Elements" << endl;
+  }
+  if ( nline>0 || ntriangle>0 ) {
+    max_node = inod;
+    max_element = element;
   }
   delete[] elements; delete[] nodes;
 }
