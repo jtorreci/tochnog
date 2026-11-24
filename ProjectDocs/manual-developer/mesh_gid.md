@@ -58,9 +58,10 @@
 - The file ends with `Mescape Quit\nNo` without newline; .gitattributes marks `*.bch -text`.
 - Circles are skipped in 3D (the Professional writes `CreateAlwaysNewPoint 1` without newline
   and no circle).
-- `input_control_input` (input.cc) only creates the `node_start_refined` records when
-  `nuknwn>0`; a model without unknowns fails after reading the generated mesh. The fake-gid
-  test declares `materi_velocity` and `materi_displacement`.
+- `input_control_input` (input.cc) creates the `node_start_refined` records of the nodes it
+  reads also when `nuknwn==0` (fixed with this feature: before, a mesh-only model stopped with
+  "Error detected for data item : node_start_refined"). `control_mesh_gid_batch1` declares
+  dofs, `control_mesh_gid_batch3` has none.
 
 ## Tests
 

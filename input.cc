@@ -2138,6 +2138,19 @@ void input_control_input( long int icontrol )
       delete[] dworkmnol;
       delete[] dworknei;
     }
+    else {
+        // a model without dofs (a mesh-only run, e.g. the mesh_gid examples
+        // of control_mesh_gid_batch) still needs the start coordinates
+      db_max_index( NODE, max_node, VERSION_NORMAL, GET );
+      for ( inod=0; inod<=max_node; inod++ ) {
+        if ( !db_active_index( NODE, inod, VERSION_NORMAL ) ) continue;
+        if ( !db_active_index( NODE_START_REFINED, inod, VERSION_NORMAL ) ) {
+          length = db_len( NODE, inod, VERSION_NORMAL );
+          db( NODE_START_REFINED, inod, idum,
+            db_dbl( NODE, inod, VERSION_NORMAL ), length, VERSION_NORMAL, PUT );
+        }
+      }
+    }
     mesh_has_changed( VERSION_NORMAL );
   }
 }

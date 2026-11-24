@@ -89,3 +89,7 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
   examples stop after reading 10.dat; GNU stricter than the Pro on bad assign_conditions indices; 3D circles skipped
   (the Pro writes a broken command); 2D cylinder/sphere/volume rejected at batch time. Windows makefile mirrored by
   the parent. Risk: item 6 (the real-gid branch is tested only with a fake gid).
+- L11 (2026-11-24) Pre-existing GNU defect fixed (found by the T1 writer): control_input in a model without dofs did not
+  create node_start_refined for the nodes read ("Error detected for data item : node_start_refined"), so the
+  Professional mesh_gid examples could not read their mesh. RED observed on d61231c with control_mesh_gid_batch3, GREEN
+  after the fix. Suite 1393 OK / 0 FALLO.

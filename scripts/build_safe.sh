@@ -3716,15 +3716,21 @@ X
 echo extra > mesh_gid.gid/mesh_gid.geo
 MGEOF
 chmod +x "$MGDIR/bin/gid"
-cp "$T2026/control_mesh_gid_batch1.dat" "$MGDIR/"
-( cd "$MGDIR" && ulimit -v "$TN_MEMLIMIT_KB" &&
-  PATH="$MGDIR/bin:/usr/bin:/bin" timeout 60 "$REPO_DIR/build/$TN_BIN" control_mesh_gid_batch1.dat > control_mesh_gid_batch1.out 2>&1 ); MGRC=$?
-if [ "$MGRC" = "0" ] && [ -f "$MGDIR/10.dat" ] && grep -q '^node 5 0.5 0.5$' "$MGDIR/10.dat" &&
-   [ ! -e "$MGDIR/GidMeshBatch.bch" ] && [ ! -e "$MGDIR/mesh_gid.gid" ]; then
-  check_ok "control_mesh_gid_batch1 (fake gid: 10.dat read by control_input, .bch and mesh_gid.gid removed)"
-else
-  check_fail "control_mesh_gid_batch1" "rc=$MGRC or 10.dat missing or GidMeshBatch.bch/mesh_gid.gid left"
-fi
+# batch1 declares dofs; batch3 is a mesh-only model without dofs (the
+# Professional mesh_gid examples), whose control_input mesh needs the
+# node_start_refined records too.
+for MGT in control_mesh_gid_batch1 control_mesh_gid_batch3; do
+  rm -rf "$MGDIR/10.dat" "$MGDIR/GidMeshBatch.bch" "$MGDIR/mesh_gid.gid"
+  cp "$T2026/$MGT.dat" "$MGDIR/"
+  ( cd "$MGDIR" && ulimit -v "$TN_MEMLIMIT_KB" &&
+    PATH="$MGDIR/bin:/usr/bin:/bin" timeout 60 "$REPO_DIR/build/$TN_BIN" $MGT.dat > $MGT.out 2>&1 ); MGRC=$?
+  if [ "$MGRC" = "0" ] && [ -f "$MGDIR/10.dat" ] && grep -q '^node 5 0.5 0.5$' "$MGDIR/10.dat" &&
+     [ ! -e "$MGDIR/GidMeshBatch.bch" ] && [ ! -e "$MGDIR/mesh_gid.gid" ]; then
+    check_ok "$MGT (fake gid: 10.dat read by control_input, .bch and mesh_gid.gid removed)"
+  else
+    check_fail "$MGT" "rc=$MGRC or 10.dat missing or GidMeshBatch.bch/mesh_gid.gid left"
+  fi
+done
 rm -rf -- "${MGDIR:?}"
 # control_mesh_gid_batch -no: records accepted, no batch file written
 MGDIR=$(mktemp -d)

@@ -17,7 +17,8 @@ done the same way in the GNU:
 - the file is read at the start of the index (an index 0 file affects the
   first timestep);
 - a record replaces an existing record with the same index; new records
-  are added (also nodes and elements: the mesh is extended, new nodes
+  are added (also nodes and elements: the mesh is extended, also in a model
+  without dofs; new nodes
   start with zero dofs);
 - each record is checked as in the data part;
 - a missing file is skipped without a message; `-no` does not read it;

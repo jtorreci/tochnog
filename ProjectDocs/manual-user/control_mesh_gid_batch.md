@@ -81,6 +81,5 @@ newline.
   name. The record is `control_mesh_gid_batch`.
 - Input errors in the `mesh_gid_*` records end the Professional with exit code 0; GNU ends with
   exit code 1.
-- A model without unknowns (no `materi_velocity`) cannot yet read the generated mesh with
-  `control_input` in GNU (error on `node_start_refined`); declare the unknowns of the
-  calculation in the initialization part.
+- A mesh-only model without unknowns (as the Professional examples) reads the generated mesh
+  with `control_input` too (test `control_mesh_gid_batch3`).
