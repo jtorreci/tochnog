@@ -1286,6 +1286,27 @@ long int print_option( long int global_name, long int control_name,
   return value;
 }
 
+// print_option_list: the same precedence as print_option for a print
+// record whose value is a list of names (print_gid_smooth_dof and
+// control_print_gid_smooth_dof, ...): the control record at index icontrol
+// overrules the global record. list must hold DATA_ITEM_SIZE values; n is
+// the number of values read, 0 when neither record is set. global_name<0
+// reads only the control record, control_name<0 or icontrol<0 only the
+// global record.
+void print_option_list( long int global_name, long int control_name,
+  long int icontrol, long int list[], long int &n )
+
+{
+  double ddum[1];
+
+  n = 0;
+  if ( global_name>=0 )
+    db( global_name, 0, list, ddum, n, VERSION_NORMAL, GET_IF_EXISTS );
+  if ( control_name>=0 && icontrol>=0 &&
+       db_active_index( control_name, icontrol, VERSION_NORMAL ) )
+    db( control_name, icontrol, list, ddum, n, VERSION_NORMAL, GET );
+}
+
 void exit_tn( long int print_database_type )
 
 {
@@ -1333,7 +1354,7 @@ void exit_tn( long int print_database_type )
   db( PRINT_GID_CALCULATION, 0, &print_gid_calculation, ddum, ldum,
     VERSION_NORMAL, GET_IF_EXISTS );
   if ( print_gid_calculation!=-NO )
-    print_gid( -YES );
+    print_gid( -YES, -1 );
   if ( db_partialname_any("control_print_dx") ) print_dx( -YES );
 
   // print_gmsh_calculation (6.991, default -no), print_tecplot_calculation
@@ -1531,7 +1552,7 @@ void exit_tn_on_error( void )
   parallel_sys_lock();
   parallel_active = 0;
   print_database( -1, VERSION_NORMAL, -EVERYTHING );
-  print_gid( -YES );
+  print_gid( -YES, -1 );
   cout << flush;
   exit(TN_EXIT_STATUS);
   parallel_sys_unlock();

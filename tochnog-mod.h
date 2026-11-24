@@ -443,6 +443,23 @@ enum {
   CONTROL_PRINT_FILTER,
   CONTROL_PRINT_GID,
   CONTROL_PRINT_GID_EMPTY,
+  // GiD output options (manual Professional 6.295-6.315), print_gi.cc
+  CONTROL_PRINT_GID_BEAM_VECTORS,
+  CONTROL_PRINT_GID_BEAM_VECTORS_NORMAL,
+  CONTROL_PRINT_GID_COORD,
+  CONTROL_PRINT_GID_DOF,
+  CONTROL_PRINT_GID_DOF_CALCUL,
+  CONTROL_PRINT_GID_ELEMENT_GROUP,
+  CONTROL_PRINT_GID_ELEMENT_MPC,
+  CONTROL_PRINT_GID_GROUP,
+  CONTROL_PRINT_GID_MESH_ACTIVATE_GRAVITY,
+  CONTROL_PRINT_GID_NODE_TYPE,
+  CONTROL_PRINT_GID_OTHER,
+  CONTROL_PRINT_GID_SMOOTH_DOF,
+  CONTROL_PRINT_GID_SMOOTH_N,
+  CONTROL_PRINT_GID_SPRING2,
+  CONTROL_PRINT_GID_TRUSS_VECTOR,
+  CONTROL_PRINT_GID_TRUSS_VECTOR_NORMAL,
   CONTROL_PRINT_GID_TIME,
   CONTROL_PRINT_GID_MESH,
   CONTROL_PRINT_GMV,
@@ -1749,6 +1766,15 @@ enum {
   CONTROL_POST_ELEMENT_FORCE,
   PRINT_DATABASE_CALCULATION,
   PRINT_GID_CALCULATION,
+  // global GiD output defaults (manual Professional 6.982-6.989)
+  PRINT_GID_COORD,
+  PRINT_GID_DEFINE,
+  PRINT_GID_GROUP,
+  PRINT_GID_MESH_ACTIVATE_GRAVITY,
+  PRINT_GID_NODE_TYPE,
+  PRINT_GID_SMOOTH_DOF,
+  PRINT_GID_SMOOTH_N,
+  PRINT_GID_SPRING2,
   PRINT_GMSH_CALCULATION,
   PRINT_GMSH_DUMMY,
   PRINT_GMSH_NODE_TYPE,
@@ -2647,9 +2673,26 @@ void      print_data_versus_data( long int ival[], long int length );
 void      print_database( long int task, long int version, long int idat );
 void      print_dx( long int final_call );
 void      print_element( long int data_item_name );
-void      print_gid( long int task );
+void      print_gid( long int task, long int icontrol );
 long int  print_gid_5( long int task );
-long int  print_gid_6( long int task );
+long int  print_gid_6( long int task, long int icontrol );
+// GiD output options (print_gi.cc)
+void      print_gid_options_get( long int icontrol, long int max_node,
+            long int old_node_numbers[] );
+void      print_gid_options_free( void );
+long int  print_gid_element_selected( long int element, long int name,
+            long int element_group, long int nnol, long int nodes[] );
+long int  print_gid_dof_selected( long int dof_type );
+long int  print_gid_post_selected( long int icalcul );
+long int  print_gid_other( void );
+long int  print_gid_spring2_nodes( void );
+void      print_gid_node_coord( long int inod, double coord[] );
+void      print_gid_smooth( long int max_node, long int old_node_numbers[] );
+void      print_gid_gauss_points( ofstream &outres, long int max_element );
+void      print_gid_coord_result( ofstream &outres, double step_val,
+            long int max_node );
+void      print_gid_element_results( ofstream &outres, double step_val,
+            long int max_element );
 void      mesh_gid_batch( long int icontrol );
 void      print_giddata( long int task );
 void      print_gmv( long int icontrol, long int ival[] );
@@ -2667,6 +2710,8 @@ void      print_unknownsrhside( void );
  void      print_frd( long int icontrol, long int task );
  long int  print_option( long int global_name, long int control_name,
              long int icontrol, long int default_value );
+void      print_option_list( long int global_name, long int control_name,
+            long int icontrol, long int list[], long int &n );
  void      print_interface_stress( long int icontrol, long int task );
  void      print_tabular( long int icontrol );
  bool      calc_derived( const double sig[6], double out[5] );

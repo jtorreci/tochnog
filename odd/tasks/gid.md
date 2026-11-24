@@ -37,8 +37,8 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
 |---|---|---|---|---|
 | T0 | S1 | delegated (explorers) | done (L4, L5) | - |
 | T1 | S4, S5 | delegated writer (context backstop) | done (L10) | see L10 |
-| T2 | S3 | after T1 (shared files) | pending: icontrol plumbing, coord/group/other/dof/dof_calcul/element_group/node_type | |
-| T3 | S3 | after T1 | pending: spring2, beam/truss vectors, element_mpc, mesh_activate_gravity, define | |
+| T2 | S3 | delegated writer (context backstop) | done (L12) | see L12 |
+| T3 | S3 | delegated writer | done except open questions Q-DEF, Q-MAG (L12) | see L12 |
 | T4 | S3 | after T1 | pending: smooth_dof/smooth_n (manual behaviour, L7) | |
 | T5 | S6 | inline | pending: docs, divergences, tracker, probe | |
 
@@ -93,3 +93,13 @@ Runner: `scripts/build_safe.sh` (`TN_SKIP_SUITE=1` for builds); Professional bin
   create node_start_refined for the nodes read ("Error detected for data item : node_start_refined"), so the
   Professional mesh_gid examples could not read their mesh. RED observed on d61231c with control_mesh_gid_batch3, GREEN
   after the fix. Suite 1393 OK / 0 FALLO.
+- L12 (2026-11-24) T2-T4 done (writer): 16 control_print_gid_* + 8 print_gid_* records, print_gid(task, icontrol),
+  print_option_list() in miscel.cc, 27 tests (RED on HEAD: "I do not know", GREEN 27/27); L7 guard
+  control_print_gid_smooth_dof2, L8 guard control_print_gid_dof_calcul1; smoothing, truss_vector, beam_vectors,
+  -node_deformed_mesh and _element_mpc -no equal to the Professional to 1e-9 (smoothing = Jacobi pass 0.75 old + 0.25
+  mean of element neighbours, bounded dofs kept). Differential HEAD vs new on 1170 inputs: 1818 flavia files identical.
+  Suite 1420 OK / 0 FALLO. Open: Q-DEF the Professional writes coord and element_group by default (GNU only on request,
+  to keep existing output); Q-MAG _mesh_activate_gravity parse-only (Pro default prints only the activated elements);
+  _other -no removes only what the GNU writer writes (no truss_force, beam_force_moment, bounda_force, node_boundary);
+  print_gid_define parse-only (no Pro effect); a spring2 solution difference GNU vs Pro noticed (not in scope).
+  Risk: item 3 (print_gid signature, renumbering arrays), covered by the differential.

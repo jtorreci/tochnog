@@ -1049,6 +1049,28 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   data_length[PRINT_GID_CALCULATION] = 1;
   no_index[PRINT_GID_CALCULATION] = 1;
 
+  // global GiD output defaults (manual Professional 6.982-6.989): the
+  // defaults of the control_print_gid_* records of the same meaning, which
+  // overrule them for their own index (print_option, miscel.cc).
+  // print_gid_define has no effect in the GNU (no geometry names in the
+  // GiD files); print_gid_smooth_n has no index (manual erratum, L9).
+  strcpy(name[PRINT_GID_COORD],"print_gid_coord");
+  strcpy(name[PRINT_GID_DEFINE],"print_gid_define");
+  strcpy(name[PRINT_GID_GROUP],"print_gid_group");
+  strcpy(name[PRINT_GID_MESH_ACTIVATE_GRAVITY],"print_gid_mesh_activate_gravity");
+  strcpy(name[PRINT_GID_NODE_TYPE],"print_gid_node_type");
+  strcpy(name[PRINT_GID_SMOOTH_DOF],"print_gid_smooth_dof");
+  strcpy(name[PRINT_GID_SMOOTH_N],"print_gid_smooth_n");
+  strcpy(name[PRINT_GID_SPRING2],"print_gid_spring2");
+  for ( long int iprint=PRINT_GID_COORD; iprint<=PRINT_GID_SPRING2;
+        iprint++ ) {
+    type[iprint] = INTEGER;
+    data_length[iprint] = 1;
+    no_index[iprint] = 1;
+  }
+  data_length[PRINT_GID_SMOOTH_DOF] = DATA_ITEM_SIZE;
+  fixed_length[PRINT_GID_SMOOTH_DOF] = 0;
+
   // F5 W2 V2: global print records (manual Professional 6.979, 6.980,
   // 6.991-6.993, 6.998-6.1002). print_*_calculation: end-of-run output
   // (exit_tn, miscel.cc); the others are the defaults of the
@@ -2166,6 +2188,58 @@ void db_initialize( long int dof_type[], long int dof_label[] )
   no_index[CONTROL_PRINT_GID_TIME] = 1;
   external[CONTROL_PRINT_GID_TIME] = 0;
   data_class[CONTROL_PRINT_GID_TIME] = CONTROL;
+
+  // GiD output options (manual Professional 6.295-6.315), read in
+  // print_gid_options_get (print_gi.cc) for the control_print_gid of the
+  // same index. Switches, numbers and name lists; the normals are 3 values.
+  {
+    long int gid_switch[] = { CONTROL_PRINT_GID_BEAM_VECTORS,
+      CONTROL_PRINT_GID_COORD, CONTROL_PRINT_GID_ELEMENT_MPC,
+      CONTROL_PRINT_GID_GROUP, CONTROL_PRINT_GID_MESH_ACTIVATE_GRAVITY,
+      CONTROL_PRINT_GID_NODE_TYPE, CONTROL_PRINT_GID_OTHER,
+      CONTROL_PRINT_GID_SMOOTH_N, CONTROL_PRINT_GID_SPRING2,
+      CONTROL_PRINT_GID_TRUSS_VECTOR };
+    long int gid_list[] = { CONTROL_PRINT_GID_DOF,
+      CONTROL_PRINT_GID_DOF_CALCUL, CONTROL_PRINT_GID_ELEMENT_GROUP,
+      CONTROL_PRINT_GID_SMOOTH_DOF };
+    long int gid_normal[] = { CONTROL_PRINT_GID_BEAM_VECTORS_NORMAL,
+      CONTROL_PRINT_GID_TRUSS_VECTOR_NORMAL };
+    strcpy(name[CONTROL_PRINT_GID_BEAM_VECTORS],"control_print_gid_beam_vectors");
+    strcpy(name[CONTROL_PRINT_GID_COORD],"control_print_gid_coord");
+    strcpy(name[CONTROL_PRINT_GID_ELEMENT_MPC],"control_print_gid_element_mpc");
+    strcpy(name[CONTROL_PRINT_GID_GROUP],"control_print_gid_group");
+    strcpy(name[CONTROL_PRINT_GID_MESH_ACTIVATE_GRAVITY],"control_print_gid_mesh_activate_gravity");
+    strcpy(name[CONTROL_PRINT_GID_NODE_TYPE],"control_print_gid_node_type");
+    strcpy(name[CONTROL_PRINT_GID_OTHER],"control_print_gid_other");
+    strcpy(name[CONTROL_PRINT_GID_SMOOTH_N],"control_print_gid_smooth_n");
+    strcpy(name[CONTROL_PRINT_GID_SPRING2],"control_print_gid_spring2");
+    strcpy(name[CONTROL_PRINT_GID_TRUSS_VECTOR],"control_print_gid_truss_vector");
+    strcpy(name[CONTROL_PRINT_GID_DOF],"control_print_gid_dof");
+    strcpy(name[CONTROL_PRINT_GID_DOF_CALCUL],"control_print_gid_dof_calcul");
+    strcpy(name[CONTROL_PRINT_GID_ELEMENT_GROUP],"control_print_gid_element_group");
+    strcpy(name[CONTROL_PRINT_GID_SMOOTH_DOF],"control_print_gid_smooth_dof");
+    strcpy(name[CONTROL_PRINT_GID_BEAM_VECTORS_NORMAL],"control_print_gid_beam_vectors_normal");
+    strcpy(name[CONTROL_PRINT_GID_TRUSS_VECTOR_NORMAL],"control_print_gid_truss_vector_normal");
+    for ( long int i=0; i<10; i++ ) {
+      type[gid_switch[i]] = INTEGER;
+      data_length[gid_switch[i]] = 1;
+      data_class[gid_switch[i]] = CONTROL;
+      data_required[gid_switch[i]] = CONTROL_PRINT_GID;
+    }
+    for ( long int i=0; i<4; i++ ) {
+      type[gid_list[i]] = INTEGER;
+      data_length[gid_list[i]] = DATA_ITEM_SIZE;
+      fixed_length[gid_list[i]] = 0;
+      data_class[gid_list[i]] = CONTROL;
+      data_required[gid_list[i]] = CONTROL_PRINT_GID;
+    }
+    for ( long int i=0; i<2; i++ ) {
+      type[gid_normal[i]] = DOUBLE_PRECISION;
+      data_length[gid_normal[i]] = 3;
+      data_class[gid_normal[i]] = CONTROL;
+      data_required[gid_normal[i]] = CONTROL_PRINT_GID;
+    }
+  }
 
   strcpy(name[CONTROL_PRINT_GMV],"control_print_gmv");
   type[CONTROL_PRINT_GMV] = INTEGER;

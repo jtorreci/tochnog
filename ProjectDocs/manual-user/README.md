@@ -437,6 +437,20 @@ page lists its own in "Differences with the Professional version".
 - [bounda_time_smc](bounda_time_smc.md) - base excitation read from a USGS SMC file (acceleration, velocity or displacement), with offset and units.
 - [control_mesh_gid_batch](control_mesh_gid_batch.md) - write the mesh_gid_* geometry as the GiD batch file GidMeshBatch.bch and, with gid on the PATH, mesh it into <index>.dat for control_input.
 - [mesh_gid](mesh_gid.md) - the 36 mesh_gid_* GiD geometry records (points, lines, arcs, circles, rectangles, cylinders, spheres, surfaces, volumes, conditions, size).
+- [control_print_gid_coord](control_print_gid_coord.md) - nodal result coord in the GiD files; also print_gid_coord (6.298, 6.982).
+- [control_print_gid_group](control_print_gid_group.md) - element result element_group on the Gauss points; also print_gid_group (6.304, 6.984).
+- [control_print_gid_other](control_print_gid_other.md) - -no drops mesh deform and element_group from the GiD files (6.308).
+- [control_print_gid_dof](control_print_gid_dof.md) - only the named dof fields, or -none, in the GiD files (6.299).
+- [control_print_gid_dof_calcul](control_print_gid_dof_calcul.md) - only the named post fields, or -none (6.300); named fields follow the manual (Professional-suspect L8).
+- [control_print_gid_element_group](control_print_gid_element_group.md) - only the mesh blocks of the listed element groups (6.301).
+- [control_print_gid_element_mpc](control_print_gid_element_mpc.md) - -no omits the elements with an mpc'd (slave) node (6.302).
+- [control_print_gid_mesh_activate_gravity](control_print_gid_mesh_activate_gravity.md) - accepted, no effect in the GNU; also print_gid_mesh_activate_gravity (6.305, 6.985).
+- [control_print_gid_node_type](control_print_gid_node_type.md) - node coordinates of the GiD mesh: -node, -node_start_refined, -node_deformed_mesh; also print_gid_node_type (6.307, 6.986).
+- [control_print_gid_spring2](control_print_gid_spring2.md) - spring2 in the GiD mesh with 1 or 2 nodes; also print_gid_spring2 (6.313, 6.987).
+- [control_print_gid_truss_vector](control_print_gid_truss_vector.md) - truss normal force as the vector N (t x n), with control_print_gid_truss_vector_normal (6.314, 6.315).
+- [control_print_gid_beam_vectors](control_print_gid_beam_vectors.md) - beam forces and moments as vectors beam_vectors_0..5, with control_print_gid_beam_vectors_normal (6.295, 6.296).
+- [control_print_gid_smooth_dof](control_print_gid_smooth_dof.md) - nodal smoothing of dof fields in the GiD files, with control_print_gid_smooth_n and the global print_gid_smooth_dof/_n (6.311, 6.312, 6.988, 6.989); named dofs follow the manual (Professional-suspect L7).
+- [print_gid_define](print_gid_define.md) - accepted, no effect (no geometry names in the GNU GiD files) (6.983).
 - [group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils](group_materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils.md) - bonded-soil generalised Cam clay (Nova model, Lagioia-Puzrin-Potts surfaces, bonding p_m and tensile strength k p_m); GNU definition, 11 values.
 - [materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history](materi_plasti_generalised_non_associate_cam_clay_for_bonded_soils_history.md) - initia: history dofs gencamhis0 (p_s) and gencamhis1 (p_m) of the bonded-soil Cam clay.
 - [materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils](materi_strain_plasti_generalised_non_associate_cam_clay_for_bonded_soils.md) - initia: plastic strain of the bonded-soil Cam clay (dofs eppgencam*).

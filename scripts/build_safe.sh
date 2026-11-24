@@ -3743,6 +3743,146 @@ else
   check_fail "control_mesh_gid_batch2" "rc=$MGRC or GidMeshBatch.bch written"
 fi
 rm -rf -- "${MGDIR:?}"
+# GiD output options: control_print_gid_* (6.295-6.315) and the global
+# print_gid_* (6.982-6.989). Each test runs in a scratch copy; the checks
+# read the .flavia files. Without these records the GiD files are the ones
+# the GNU always wrote. Professional values: 02-08-2026 probes.
+gid_opt_run() {
+  GO_T="$1"; GO_DIR=$(mktemp -d)
+  cp "$T2026/$GO_T.dat" "$GO_DIR/"
+  ( cd "$GO_DIR" && ulimit -v "$TN_MEMLIMIT_KB" &&
+    timeout 60 "$REPO_DIR/build/$TN_BIN" "$GO_T.dat" > "$GO_T.out" 2>&1 ); GO_RC=$?
+  GO_MSH="$GO_DIR/$GO_T.flavia.msh"; GO_RES="$GO_DIR/$GO_T.flavia.res"
+}
+# gid_opt_done "<what>" <status of the test command>
+gid_opt_done() {
+  if [ "$GO_RC" = "0" ] && [ "$2" = "0" ]; then check_ok "$GO_T ($1)"
+  else check_fail "$GO_T" "rc=$GO_RC, expected: $1"; fi
+  rm -rf -- "${GO_DIR:?}"
+}
+# number of result blocks with this (possibly shortened) name
+gid_nres() { grep -c "^Result  \"$1\"" "$GO_RES"; }
+gid_nmesh_deform() { grep -c '^Result "mesh deform"' "$GO_RES"; }
+# values of node/element <id> in the <k>-th block of result <name>;
+# with "+" as 4th argument the line after it (the 2nd Gauss point)
+gid_val() {
+  awk -v r="\"$1\"" -v k="$2" -v id="$3" -v nx="${4:-}" '
+    $1=="Result" { if ($2==r) c++; f=($2==r && c==k); next }
+    f && g { $1=$1; print; exit }
+    f && $1==id { if (nx=="+") { g=1; next } $1=""; sub(/^ +/, ""); print; exit }' "$GO_RES"
+}
+# gid_near "<a b ...>" "<x y ...>" [rel_tol]: all values equal within tol
+gid_near() {
+  awk -v a="$1" -v b="$2" -v t="${3:-1.e-9}" 'BEGIN{
+    n=split(a,x," "); m=split(b,y," "); if (n!=m || n==0) exit 1
+    for (i=1;i<=n;i++){ d=x[i]-y[i]; if (d<0) d=-d; s=(y[i]<0?-y[i]:y[i]);
+      if (d>t*(s>1?s:1)) exit 1 } exit 0 }'
+}
+gid_opt_run control_print_gid_coord1
+[ "$(gid_nres coord)" = "2" ] && gid_near "$(gid_val coord 1 3)" "1 1"
+gid_opt_done "coord result at both prints, node 3 = 1 1" $?
+gid_opt_run control_print_gid_coord2
+[ "$(gid_nres coord)" = "0" ] && [ "$(gid_nres materi_velocity)" = "2" ]
+gid_opt_done "control -no overrules print_gid_coord -yes: no coord" $?
+gid_opt_run print_gid_coord1
+[ "$(gid_nres coord)" = "2" ]
+gid_opt_done "global -yes: coord result" $?
+gid_opt_run control_print_gid_group1
+[ "$(gid_nres element_group)" = "4" ] &&
+  grep -q '^GaussPoints "element_quad4" ElemType Quadrilateral' "$GO_RES" &&
+  grep -q '^GaussPoints "element_trussbeam" ElemType Linear' "$GO_RES" &&
+  [ "$(gid_val element_group 2 2)" = "1" ] && [ "$(gid_val element_group 2 2 +)" = "1" ]
+gid_opt_done "element_group on the Gauss points of quad4 and truss_beam" $?
+gid_opt_run print_gid_group1
+[ "$(gid_nres element_group)" = "4" ]
+gid_opt_done "global -yes: element_group results" $?
+gid_opt_run control_print_gid_other1
+[ "$(gid_nres element_group)" = "0" ] && [ "$(gid_nmesh_deform)" = "0" ] &&
+  [ "$(gid_nres materi_velocity)" = "2" ] && [ "$(gid_nres temp)" = "2" ]
+gid_opt_done "-no: no mesh deform, no element_group; dof fields kept" $?
+gid_opt_run control_print_gid_dof1
+[ "$(gid_nres materi_displace)" = "2" ] && [ "$(gid_nres temp)" = "2" ] &&
+  [ "$(gid_nres materi_velocity)" = "0" ] && [ "$(gid_nres materi_stress)" = "0" ] &&
+  [ "$(gid_nres rotz)" = "0" ] && [ "$(gid_nmesh_deform)" = "2" ]
+gid_opt_done "only materi_displacement and condif_temperature, mesh deform kept" $?
+gid_opt_run control_print_gid_dof2
+[ "$(grep -c '^Result  ' "$GO_RES")" = "0" ] && [ "$(gid_nmesh_deform)" = "2" ]
+gid_opt_done "-none: no dof field, mesh deform kept" $?
+# L8 guard: a named post field is written alone (manual); the Professional
+# 02-08-2026 suppresses it
+gid_opt_run control_print_gid_dof_calcul1
+[ "$(gid_nres mises-sig)" = "1" ] && [ "$(gid_nres aept)" = "0" ] &&
+  [ "$(gid_nres materi_stress)" = "1" ]
+gid_opt_done "named -materi_stress: only its post field mises-sig (L8)" $?
+gid_opt_run control_print_gid_dof_calcul2
+[ "$(gid_nres mises-sig)" = "0" ] && [ "$(gid_nres aept)" = "0" ] &&
+  [ "$(gid_nres materi_stress)" = "1" ]
+gid_opt_done "-none: no post field, dof fields kept" $?
+gid_opt_run control_print_gid_element_group1
+! grep -q '^MESH Quad' "$GO_MSH" && grep -q '^MESH TrussBeamGr1' "$GO_MSH" &&
+  [ "$(awk '/^# node number/{f=1;next} /^end coordinates/{f=0} f' "$GO_MSH" | wc -l)" = "6" ] &&
+  [ "$(gid_nres element_group)" = "2" ] && ! grep -q 'OnGaussPoints "element_quad4"' "$GO_RES"
+gid_opt_done "only the group 1 mesh block, all 6 nodes, its element_group only" $?
+gid_opt_run control_print_gid_node_type1
+gid_near "$(awk '/^# node number/{f=1;next} f&&$1==2{print $2, $3; exit}' "$GO_MSH")" \
+  "1.001361713241 4.120553669363e-03" 1.e-8
+gid_opt_done "-node_deformed_mesh: node 2 at 1.001361713241 0.004120553669 (= Professional)" $?
+gid_opt_run print_gid_node_type1
+gid_near "$(awk '/^# node number/{f=1;next} f&&$1==2{print $2, $3; exit}' "$GO_MSH")" "1 0"
+gid_opt_done "control -node overrules the global -node_deformed_mesh: node 2 at 1 0" $?
+gid_opt_run control_print_gid_spring2_1
+grep -q '^MESH Spring2Gr2 dimension 2 ElemType Linear Nnode 2' "$GO_MSH" &&
+  [ "$(awk '/^MESH Spring2/{f=1} f&&$1==3{print $2, $3, $4; exit}' "$GO_MSH")" = "5 6 2" ]
+gid_opt_done "spring2 as Linear 2 nodes: 3 5 6 2" $?
+gid_opt_run control_print_gid_spring2_2
+grep -q '^MESH Spring2Gr2 dimension 2 ElemType Point Nnode 1' "$GO_MSH" &&
+  [ "$(awk '/^MESH Spring2/{f=1} f&&$1==3{print $2, $3, NF; exit}' "$GO_MSH")" = "5 2 3" ]
+gid_opt_done "spring2 as Point 1 node: 3 5 2" $?
+gid_opt_run print_gid_spring2_1
+grep -q '^MESH Spring2Gr2 dimension 2 ElemType Linear Nnode 2' "$GO_MSH" &&
+  grep -q '^GaussPoints "element_spring2" ElemType Linear' "$GO_RES" &&
+  [ "$(grep -c 'OnGaussPoints "element_spring2"' "$GO_RES")" = "2" ] &&
+  [ "$(awk '/OnGaussPoints "element_spring2"/{f=1} f&&$1==3{print $2; exit}' "$GO_RES")" = "2" ]
+gid_opt_done "global 2: Linear spring2 and its element_group 2" $?
+gid_opt_run control_print_gid_truss_vector1
+gid_near "$(gid_val truss_vector 1 2)" "1 -1" && gid_near "$(gid_val truss_vector 1 2 +)" "1 -1" &&
+  gid_near "$(gid_val truss_vector 1 1)" "0 0"
+gid_opt_done "N (t x n): element 2 (1,-1) at both points (= Professional)" $?
+gid_opt_run control_print_gid_truss_vector_normal1
+gid_near "$(gid_val truss_vector 1 2)" "-1 1"
+gid_opt_done "normal 0 0 -1: element 2 (-1,1)" $?
+gid_opt_run control_print_gid_beam_vectors1
+gid_near "$(gid_val beam_vectors_5 1 1)" "0 -4" && gid_near "$(gid_val beam_vectors_5 1 1 +)" "0 -2" &&
+  gid_near "$(gid_val beam_vectors_1 1 2)" "1 -1" && [ "$(grep -c '^Result  "beam_vectors_' "$GO_RES")" = "6" ]
+gid_opt_done "beam_vectors_0..5, element 1 _5 (0,-4) (0,-2), element 2 _1 (1,-1) (= Professional)" $?
+gid_opt_run control_print_gid_beam_vectors_normal1
+gid_near "$(gid_val beam_vectors_5 1 1)" "0 4" && gid_near "$(gid_val beam_vectors_5 1 1 +)" "0 2"
+gid_opt_done "normal 0 0 -1: element 1 beam_vectors_5 (0,4) (0,2)" $?
+gid_opt_run control_print_gid_smooth_dof1
+gid_near "$(gid_val materi_displace 1 4)" "1.641643319165e-03 3.561877474457e-02" &&
+  gid_near "$(gid_val materi_displace 1 1)" "0 0" &&
+  gid_near "$(gid_val materi_stress 1 1 | awk '{print $1, $2}')" "3.949939433216e-02 -6.043124470405e-02"
+gid_opt_done "-all, 10 passes: node 4 displacement, node 1 sigxx sigyy = Professional; fixed node 1 kept" $?
+# L7 guard: a named dof is smoothed alone (manual); the Professional
+# 02-08-2026 smooths nothing with named dofs
+gid_opt_run control_print_gid_smooth_dof2
+gid_near "$(gid_val materi_stress 1 1 | awk '{print $1, $2}')" "3.949939433216e-02 1.643865948818" &&
+  gid_near "$(gid_val materi_displace 1 4)" "1.562080120261e-02 6.070001469534e-02"
+gid_opt_done "named -sigxx: sigxx smoothed, sigyy and displacements not (L7)" $?
+gid_opt_run control_print_gid_smooth_n1
+gid_near "$(gid_val materi_displace 1 2)" "5.968776266505e-03 1.140636743103e-02"
+gid_opt_done "1 pass: node 2 displacement = Professional" $?
+gid_opt_run print_gid_smooth_dof1
+gid_near "$(gid_val materi_displace 1 2)" "4.387732160430e-03 1.229581318156e-02"
+gid_opt_done "global -all with print_gid_smooth_n 2: node 2 displacement = Professional" $?
+gid_opt_run control_print_gid_element_mpc1
+[ "$(awk '/^Elements/{f=1;getline;next} /^end elements/{f=0} f' "$GO_MSH" | awk '{print $1}' | tr '\n' ' ')" = "1 " ]
+gid_opt_done "-no: elements 2 and 3 with the mpc'd node 7 not written" $?
+for GT in control_print_gid_mesh_activate_gravity1 print_gid_define1; do
+  gid_opt_run $GT
+  [ "$(awk '/^Elements/{f=1;getline;next} /^end elements/{f=0} f' "$GO_MSH" | wc -l)" = "3" ]
+  gid_opt_done "accepted, no effect: 3 elements" $?
+done
 # F5 T5 U9: bounda_baseline_correction (6.19), _parameters (6.20)
 run_ok "$T2026" bounda_baseline_correction1
 run_ok "$T2026" bounda_baseline_correction2
